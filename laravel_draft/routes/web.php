@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthDraftController;
+use App\Http\Controllers\Billing\BillingDraftController;
 
 Route::get('/login', [AuthDraftController::class, 'showLogin']);
 Route::post('/login', [AuthDraftController::class, 'login']);
@@ -33,8 +34,13 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {
-    // Guard-shell routes only. No billing/month domain logic implemented.
-    Route::post('/billing/lock', fn () => response()->json(['status' => 'ok', 'route' => '/billing/lock', 'mode' => 'guard-shell-pass']));
+    // Guard-shell routes only. No month domain logic implemented.
     Route::post('/month/open', fn () => response()->json(['status' => 'ok', 'route' => '/month/open', 'mode' => 'guard-shell-pass']));
     Route::post('/month/transition', fn () => response()->json(['status' => 'ok', 'route' => '/month/transition', 'mode' => 'guard-shell-exception-pass']));
+
+    // Billing foundation shell (draft-only; no financial logic).
+    Route::post('/api/billing/precheck', [BillingDraftController::class, 'precheck']);
+    Route::post('/api/billing/finalize', [BillingDraftController::class, 'finalize']);
+    Route::post('/billing/lock', [BillingDraftController::class, 'lock']);
+    Route::post('/billing/approve', [BillingDraftController::class, 'approve']);
 });

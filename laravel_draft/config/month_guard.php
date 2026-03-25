@@ -13,6 +13,9 @@ return [
         '/month/open',
         '/month/transition',
         '/billing/lock',
+        '/billing/approve',
+        '/api/billing/precheck',
+        '/api/billing/finalize',
     ],
 
     // Intentional exception routes that bypass lock block in shell mode.

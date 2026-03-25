@@ -14,6 +14,7 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 - Auth audit events (login success/fail, reset flow, password change, logout)
 - RBAC truth-table enforcement for auth shell routes via `shell.rbac`
 - Month-guard shell middleware (`month.guard.shell`) with config-driven lock state + exception policy
+- Billing foundation shell routes/controllers/requests/services (draft-only, no financial logic)
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
@@ -31,11 +32,11 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 - reports/exports domain logic
 
 ## Month-guard shell behavior (non-billing)
-- **Locked month + protected write route** (`/month/open`, `/billing/lock`): blocked with `423 month locked`
-- **Unlocked month + protected write route**: allowed through shell route
-- **Exception route configured** (`/month/transition`): allowed even when locked
-- **Unauthorized role** (`DATA_ENTRY` on month write shell routes): denied by role middleware (`403`) before month-guard
-- **Unauthenticated**: redirected to `/login` before role/month-guard
+- **Locked month + protected write route** (`/month/open`, `/billing/lock`, `/api/billing/precheck`): blocked with `423 month locked`
+- **Unlocked month + protected write route**: allowed through shell route stack
+- **Exception route configured** (`/month/transition`, `/api/billing/finalize`): allowed even when locked
+- **Unauthorized role** (`DATA_ENTRY` on billing shell routes): denied by role middleware (`403`) before month-guard
+- **Unauthenticated API**: blocked with `401` before role/month-guard
 
 ## Remaining blockers before billing implementation
 - month-lock exception governance sign-off for domain routes
