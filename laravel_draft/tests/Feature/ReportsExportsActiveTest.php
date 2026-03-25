@@ -50,12 +50,11 @@ class ReportsExportsActiveTest extends TestCase
             'force_change_password' => 0,
         ]);
 
-        DB::shouldReceive('selectOne')->twice()->andReturn((object) ['id' => 21, 'run_status' => 'LOCKED'], (object) ['billed_total' => 500.00]);
-        DB::shouldReceive('select')->times(4)->andReturn(
+        DB::shouldReceive('selectOne')->times(3)->andReturn((object) ['id' => 21, 'run_status' => 'LOCKED'], (object) ['billed_total' => 500.00], (object) ['recovered_total' => 200.00]);
+        DB::shouldReceive('select')->times(3)->andReturn(
             [(object) ['utility_type' => 'ELEC', 'billed_amount' => 500.00]],
             [(object) ['employee_id' => 'E-10', 'billed_amount' => 500.00]],
-            [(object) ['employee_id' => 'E-10', 'recovered_amount' => 200.00]],
-            []
+            [(object) ['employee_id' => 'E-10', 'recovered_amount' => 200.00]]
         );
 
         $res = $this->get('/export/excel/reconciliation?month_cycle=03-2026');

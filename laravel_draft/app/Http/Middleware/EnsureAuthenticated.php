@@ -10,7 +10,7 @@ class EnsureAuthenticated
     public function handle(Request $request, Closure $next)
     {
         if (!session()->has('user_id')) {
-            return $request->is('api/*')
+            return ($request->is('api/*') || $request->expectsJson())
                 ? response()->json(['status' => 'error', 'error' => 'authentication required'], 401)
                 : redirect('/login');
         }

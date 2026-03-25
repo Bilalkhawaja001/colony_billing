@@ -1,17 +1,18 @@
 # FINAL_GO_NO_GO
 
-Status: **NO-GO**
+Status: **LIMITED GO**
 
-## Runtime Validation Status (Current Batch)
-- `composer install` => failed (`composer` not found)
-- `php -v` => failed (`php` not found)
-- `artisan` + migrations + tests => not executable in current host environment
+## Runtime Validation Status
+- `composer install`: success (explicit binaries)
+- `.env` + `key:generate`: success
+- sqlite provision + migrations: success
+- full tests: success (44 passed, 0 failed)
 
-## Risk Update
-- Code-level LIMITED GO surfaces are implemented.
-- Runtime proof is blocked by missing PHP/Composer toolchain.
-- Export/full parity and month-guard domainization still open.
+## Why not full GO yet
+- export parity is not final (CSV adapter in place of true XLSX writer)
+- finalize compute internals still marked draft approximation
+- month guard still shell/session config, not domain month-state implementation
 
 ## Decision
-- **NO-GO** for launch until runtime validation is executed on a host with PHP + Composer.
-- Keep working state at **LIMITED GO (code complete, runtime unvalidated)**.
+- **LIMITED GO** for current launch track (runtime validated)
+- full **GO** after listed parity blockers close
