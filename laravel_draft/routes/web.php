@@ -4,6 +4,12 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthDraftController;
 use App\Http\Controllers\Billing\BillingDraftController;
 
+Route::get('/', function () {
+    return session()->has('user_id')
+        ? redirect('/ui/dashboard')
+        : redirect('/login');
+});
+
 Route::get('/login', [AuthDraftController::class, 'showLogin']);
 Route::post('/login', [AuthDraftController::class, 'login']);
 Route::get('/logout', [AuthDraftController::class, 'logout']);
