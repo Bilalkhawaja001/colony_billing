@@ -30,11 +30,17 @@ class BillingDraftController extends Controller
 
     public function lock(BillingLockRequest $request)
     {
-        return response()->json($this->service->lock($request->validated()), 501);
+        $result = $this->service->lock($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
     }
 
     public function approve(BillingApproveRequest $request)
     {
-        return response()->json($this->service->approve($request->validated()), 501);
+        $result = $this->service->approve($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
     }
 }

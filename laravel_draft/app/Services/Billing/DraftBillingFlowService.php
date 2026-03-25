@@ -362,11 +362,41 @@ class DraftBillingFlowService implements BillingFlowContract
 
     public function lock(array $payload): array
     {
-        return $this->blocked('billing.lock', $payload);
+        $runId = (int)($payload['run_id'] ?? 0);
+        if ($runId <= 0) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'run_id is required'];
+        }
+
+        $run = DB::selectOne('SELECT id, month_cycle, run_status FROM util_billing_run WHERE id=?', [$runId]);
+        if (!$run) {
+            return ['_http' => 404, 'status' => 'error', 'error' => 'billing_run not found'];
+        }
+
+        if (($run->run_status ?? null) !== 'APPROVED') {
+            return ['_http' => 409, 'status' => 'error', 'error' => 'Invalid billing_run transition from '.($run->run_status ?? 'UNKNOWN')];
+        }
+
+        $month = DB::selectOne('SELECT state FROM util_month_cycle WHERE month_cycle=?', [$run->month_cycle]);
+        if (!$month) {
+            return ['_http' => 409, 'status' => 'error', 'error' => 'month_cycle not found for billing_run'];
+        }
+
+        if (($month->state ?? null) !== 'APPROVAL') {
+            return ['_http' => 409, 'status' => 'error', 'error' => 'Month must be in APPROVAL before lock'];
+        }
+
+        DB::update("UPDATE util_billing_run SET run_status='LOCKED' WHERE id=? AND run_status='APPROVED'", [$runId]);
+
+        return ['status' => 'ok', 'run_id' => $runId, 'run_status' => 'LOCKED'];
     }
 
     public function approve(array $payload): array
     {
-        return $this->blocked('billing.approve', $payload);
+        return [
+            '_http' => 410,
+            'status' => 'error',
+            'error' => 'approval flow removed; use direct finalize flow',
+            'parity_note' => 'Flask evidence keeps /billing/approve intentionally removed',
+        ];
     }
 }

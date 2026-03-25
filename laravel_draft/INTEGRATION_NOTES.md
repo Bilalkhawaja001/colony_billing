@@ -31,8 +31,8 @@ In `bootstrap/app.php` aliases:
 - Routes:
   - `POST /api/billing/precheck` (**real read-only precheck implemented**)
   - `POST /api/billing/finalize` (**real finalize boundary implemented**)
-  - `POST /billing/lock` (placeholder)
-  - `POST /billing/approve` (placeholder)
+  - `POST /billing/lock` (**real state-transition boundary implemented**)
+  - `POST /billing/approve` (**real 410 removed-flow parity behavior implemented**)
 - Controller: `BillingDraftController`
 - Validation:
   - precheck expects `month_cycle` in `MM-YYYY` format

@@ -22,5 +22,7 @@ return [
     'intentional_exceptions' => [
         '/month/transition',
         '/api/billing/finalize',
+        '/billing/lock',
+        '/billing/approve',
     ],
 ];

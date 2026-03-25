@@ -14,8 +14,7 @@ class BillingLockRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'month' => ['required', 'string', 'max:20'],
-            'reason' => ['nullable', 'string', 'max:255'],
+            'run_id' => ['required', 'integer', 'min:1'],
         ];
     }
 }

@@ -13,9 +13,7 @@ class BillingApproveRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'month' => ['required', 'string', 'max:20'],
-            'note' => ['nullable', 'string', 'max:255'],
-        ];
+        // Flask evidence: approval flow removed; payload ignored.
+        return [];
     }
 }

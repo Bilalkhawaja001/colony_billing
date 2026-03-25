@@ -16,8 +16,9 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 - Month-guard shell middleware (`month.guard.shell`) with config-driven lock state + exception policy
 - Billing foundation shell routes/controllers/requests/services
   - `POST /api/billing/precheck` is real read-only precheck path
-  - `POST /api/billing/finalize` is now real finalize boundary (transaction + same-month replace semantics)
-  - lock/approve remain placeholders
+  - `POST /api/billing/finalize` is real finalize boundary (transaction + same-month replace semantics)
+  - `POST /billing/lock` is real state-transition boundary
+  - `POST /billing/approve` is real evidence-aligned 410 removed-flow endpoint
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
