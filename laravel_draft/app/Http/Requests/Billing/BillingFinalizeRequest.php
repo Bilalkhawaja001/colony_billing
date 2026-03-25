@@ -14,9 +14,15 @@ class BillingFinalizeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'month' => ['required', 'string', 'max:20'],
-            'fingerprint' => ['nullable', 'string', 'max:128'],
-            'force' => ['nullable', 'boolean'],
+            // Flask evidence: finalize takes month_cycle
+            'month_cycle' => ['required', 'string', 'regex:/^\d{2}-\d{4}$/'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'month_cycle.regex' => 'month_cycle must be MM-YYYY',
         ];
     }
 }

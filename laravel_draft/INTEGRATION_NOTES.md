@@ -30,16 +30,20 @@ In `bootstrap/app.php` aliases:
 ## Billing foundation shell boundaries
 - Routes:
   - `POST /api/billing/precheck` (**real read-only precheck implemented**)
-  - `POST /api/billing/finalize` (placeholder)
+  - `POST /api/billing/finalize` (**real finalize boundary implemented**)
   - `POST /billing/lock` (placeholder)
   - `POST /billing/approve` (placeholder)
 - Controller: `BillingDraftController`
 - Validation:
   - precheck expects `month_cycle` in `MM-YYYY` format
+  - finalize expects `month_cycle` in `MM-YYYY` format
 - Service boundary contract: `BillingFlowContract`
 - Current behavior:
   - precheck reads source tables and returns parity-shaped response
-  - finalize/lock/approve return safe blocked placeholders (no domain writes)
+  - finalize executes txn + same-month replace writes and returns Flask-aligned status keys
+  - lock/approve remain blocked placeholders
+- Explicit non-parity note:
+  - finalize computation internals currently use draft approximation pending full evidence-complete engine port
 
 ## Explicitly not implemented
 - billing/month/reconciliation/adjustments/electric_v1 domain logic

@@ -15,8 +15,9 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 - RBAC truth-table enforcement for auth shell routes via `shell.rbac`
 - Month-guard shell middleware (`month.guard.shell`) with config-driven lock state + exception policy
 - Billing foundation shell routes/controllers/requests/services
-  - `POST /api/billing/precheck` is now real read-only precheck path
-  - finalize/lock/approve remain placeholders
+  - `POST /api/billing/precheck` is real read-only precheck path
+  - `POST /api/billing/finalize` is now real finalize boundary (transaction + same-month replace semantics)
+  - lock/approve remain placeholders
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
@@ -40,18 +41,23 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 - **Unauthorized role** (`DATA_ENTRY` on billing shell routes): denied by role middleware (`403`) before month-guard
 - **Unauthenticated API**: blocked with `401` before role/month-guard
 
-## Billing precheck status (this batch)
-- Implemented real read-only precheck boundary for `POST /api/billing/precheck`.
-- Reads proven Flask source tables by `month_cycle`: `hr_input`, `map_room`, `readings`, `ro_drinking`.
-- Returns proven shape keys: `status`, `stop`, `logs`, `rows_preview`.
-- Includes proven critical checks: `BAD_MONTH`, `DUP_HR`, `BAD_DAYS`.
-- No finalize writes, lock/approve domain logic, reconciliation, adjustments, or electric_v1 logic added.
+## Billing finalize status (this batch)
+- `POST /api/billing/finalize` moved from placeholder to real finalize boundary.
+- Enforces `month_cycle` (`MM-YYYY`) validation.
+- Uses explicit transaction handling (begin/commit/rollback) for finalize writes.
+- Implements proven same-month delete-and-replace semantics for:
+  - `billing_rows`
+  - `logs`
+  - `billing_run`
+  and upserts `finalized_months`.
+- Handles proven duplicate-HR fail-fast (`DUP_HR`) with `409` failed finalize response path.
+- Keeps unproven compute internals explicitly marked as draft approximation.
 
 ## Remaining blockers before billing implementation
 - month-lock exception governance sign-off for domain routes
-- finalize/lock/approve still placeholder-only in Laravel
+- lock/approve remain placeholder-only in Laravel
 - month-guard currently shell-only (session/config driven), not backed by real month-state domain service
-- precheck allocation internals are partial approximation until full Flask engine parity port is approved
+- full finalize compute parity still open (current finalize uses draft compute approximation)
 
 ## Remaining unproven/deferred parity
 - OTP delivery transport (SMS/email) not wired

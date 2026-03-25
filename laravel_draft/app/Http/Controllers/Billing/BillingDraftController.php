@@ -22,7 +22,10 @@ class BillingDraftController extends Controller
 
     public function finalize(BillingFinalizeRequest $request)
     {
-        return response()->json($this->service->finalize($request->validated()), 501);
+        $result = $this->service->finalize($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
     }
 
     public function lock(BillingLockRequest $request)
