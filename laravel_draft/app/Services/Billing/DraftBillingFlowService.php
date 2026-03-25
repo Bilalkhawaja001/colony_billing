@@ -399,4 +399,124 @@ class DraftBillingFlowService implements BillingFlowContract
             'parity_note' => 'Flask evidence keeps /billing/approve intentionally removed',
         ];
     }
+
+    public function adjustmentCreate(array $payload): array
+    {
+        return [
+            '_http' => 410,
+            'status' => 'error',
+            'error' => 'deduction/adjustment flow removed; billing generation only',
+            'parity_note' => 'Flask evidence has immediate 410 for /billing/adjustments/create',
+        ];
+    }
+
+    public function adjustmentApprove(array $payload): array
+    {
+        return [
+            '_http' => 410,
+            'status' => 'error',
+            'error' => 'adjustment approvals removed',
+            'parity_note' => 'Flask evidence has immediate 410 for /billing/adjustments/approve',
+        ];
+    }
+
+    public function recoveryPayment(array $payload): array
+    {
+        return [
+            '_http' => 410,
+            'status' => 'error',
+            'error' => 'payment receiving disabled; billing generation only',
+            'parity_note' => 'Flask evidence has immediate 410 for /recovery/payment',
+        ];
+    }
+
+    public function reconciliationReport(array $payload): array
+    {
+        $monthCycle = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($monthCycle)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle is required'];
+        }
+
+        $run = DB::selectOne(
+            "SELECT id, run_status FROM util_billing_run
+             WHERE month_cycle=? AND run_status IN ('LOCKED','APPROVED')
+             ORDER BY CASE run_status WHEN 'LOCKED' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END, id DESC
+             LIMIT 1",
+            [$monthCycle]
+        );
+
+        if (!$run) {
+            return ['_http' => 404, 'status' => 'error', 'error' => 'No APPROVED/LOCKED billing run found'];
+        }
+
+        $billedTotalRow = DB::selectOne('SELECT ROUND(COALESCE(SUM(amount),0),2) AS billed_total FROM util_billing_line WHERE billing_run_id=?', [$run->id]);
+        $billedTotal = (float)($billedTotalRow->billed_total ?? 0);
+
+        $billedByUtility = DB::select(
+            'SELECT utility_type, ROUND(COALESCE(SUM(amount),0),2) AS billed_amount
+             FROM util_billing_line WHERE billing_run_id=? GROUP BY utility_type ORDER BY utility_type',
+            [$run->id]
+        );
+
+        $billedByEmployee = DB::select(
+            'SELECT employee_id, ROUND(COALESCE(SUM(amount),0),2) AS billed_amount
+             FROM util_billing_line WHERE billing_run_id=? GROUP BY employee_id ORDER BY employee_id',
+            [$run->id]
+        );
+
+        $recoveredTotal = 0.0;
+        $recoveredByEmployee = [];
+        try {
+            $tot = DB::selectOne('SELECT ROUND(COALESCE(SUM(amount_paid),0),2) AS recovered_total FROM util_recovery_payment WHERE month_cycle=?', [$monthCycle]);
+            $recoveredTotal = (float)($tot->recovered_total ?? 0);
+            $empRows = DB::select('SELECT employee_id, ROUND(COALESCE(SUM(amount_paid),0),2) AS recovered_amount FROM util_recovery_payment WHERE month_cycle=? GROUP BY employee_id', [$monthCycle]);
+            foreach ($empRows as $r) {
+                $recoveredByEmployee[(string)$r->employee_id] = (float)($r->recovered_amount ?? 0);
+            }
+        } catch (\Throwable) {
+            $recoveredTotal = 0.0;
+            $recoveredByEmployee = [];
+        }
+
+        $byUtility = [];
+        foreach ($billedByUtility as $b) {
+            $billed = (float)($b->billed_amount ?? 0);
+            $byUtility[] = [
+                'utility_type' => (string)$b->utility_type,
+                'billed_amount' => round($billed, 2),
+                'recovered_amount' => 0.0,
+                'outstanding_amount' => round($billed, 2),
+            ];
+        }
+
+        $byEmployee = [];
+        foreach ($billedByEmployee as $b) {
+            $eid = (string)$b->employee_id;
+            $billed = (float)($b->billed_amount ?? 0);
+            $rec = (float)($recoveredByEmployee[$eid] ?? 0.0);
+            $byEmployee[] = [
+                'employee_id' => $eid,
+                'billed_amount' => round($billed, 2),
+                'recovered_amount' => round($rec, 2),
+                'outstanding_amount' => round($billed - $rec, 2),
+            ];
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $monthCycle,
+            'billing_run_id' => (int)$run->id,
+            'summary' => [
+                'billed_total' => round($billedTotal, 2),
+                'recovered_total' => round($recoveredTotal, 2),
+                'outstanding_total' => round($billedTotal - $recoveredTotal, 2),
+                'recovery_ratio' => $billedTotal == 0.0 ? 0 : round(($recoveredTotal / $billedTotal) * 100, 2),
+            ],
+            'by_utility' => $byUtility,
+            'by_employee' => $byEmployee,
+            'notes' => [
+                'Recovery totals are sourced from util_recovery_payment.amount_paid.',
+            ],
+        ];
+    }
 }

@@ -38,9 +38,18 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/month/open', fn () => response()->json(['status' => 'ok', 'route' => '/month/open', 'mode' => 'guard-shell-pass']));
     Route::post('/month/transition', fn () => response()->json(['status' => 'ok', 'route' => '/month/transition', 'mode' => 'guard-shell-exception-pass']));
 
-    // Billing foundation shell (draft-only; no financial logic).
+    // Billing core endpoints currently in migration.
     Route::post('/api/billing/precheck', [BillingDraftController::class, 'precheck']);
     Route::post('/api/billing/finalize', [BillingDraftController::class, 'finalize']);
     Route::post('/billing/lock', [BillingDraftController::class, 'lock']);
     Route::post('/billing/approve', [BillingDraftController::class, 'approve']);
+
+    // Adjustments / recovery (evidence shows removed/disabled flow -> explicit real 410 parity behavior).
+    Route::post('/billing/adjustments/create', [BillingDraftController::class, 'adjustmentCreate']);
+    Route::post('/billing/adjustments/approve', [BillingDraftController::class, 'adjustmentApprove']);
+    Route::post('/recovery/payment', [BillingDraftController::class, 'recoveryPayment']);
+});
+
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,VIEWER'])->group(function () {
+    Route::get('/reports/reconciliation', [BillingDraftController::class, 'reconciliationReport']);
 });

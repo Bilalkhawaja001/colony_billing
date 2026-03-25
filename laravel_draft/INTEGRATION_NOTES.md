@@ -33,6 +33,10 @@ In `bootstrap/app.php` aliases:
   - `POST /api/billing/finalize` (**real finalize boundary implemented**)
   - `POST /billing/lock` (**real state-transition boundary implemented**)
   - `POST /billing/approve` (**real 410 removed-flow parity behavior implemented**)
+  - `POST /billing/adjustments/create` (**real 410 removed-flow parity behavior implemented**)
+  - `POST /billing/adjustments/approve` (**real 410 removed-flow parity behavior implemented**)
+  - `POST /recovery/payment` (**real 410 disabled-flow parity behavior implemented**)
+  - `GET /reports/reconciliation` (**real read-only reconciliation report implemented**)
 - Controller: `BillingDraftController`
 - Validation:
   - precheck expects `month_cycle` in `MM-YYYY` format
@@ -41,9 +45,12 @@ In `bootstrap/app.php` aliases:
 - Current behavior:
   - precheck reads source tables and returns parity-shaped response
   - finalize executes txn + same-month replace writes and returns Flask-aligned status keys
-  - lock/approve remain blocked placeholders
+  - lock enforces proven APPROVED->LOCKED transition with month APPROVAL guard
+  - approve/adjustment create/adjustment approve/recovery payment return evidence-aligned 410 behavior
+  - reconciliation returns read-only parity response shape (`summary`, `by_utility`, `by_employee`, `notes`)
 - Explicit non-parity note:
   - finalize computation internals currently use draft approximation pending full evidence-complete engine port
+  - legacy unreachable code below Flask 410 endpoints (adjustment/recovery) remains intentionally unported
 
 ## Explicitly not implemented
 - billing/month/reconciliation/adjustments/electric_v1 domain logic

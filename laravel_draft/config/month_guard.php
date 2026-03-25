@@ -14,6 +14,9 @@ return [
         '/month/transition',
         '/billing/lock',
         '/billing/approve',
+        '/billing/adjustments/create',
+        '/billing/adjustments/approve',
+        '/recovery/payment',
         '/api/billing/precheck',
         '/api/billing/finalize',
     ],
@@ -24,5 +27,8 @@ return [
         '/api/billing/finalize',
         '/billing/lock',
         '/billing/approve',
+        '/billing/adjustments/create',
+        '/billing/adjustments/approve',
+        '/recovery/payment',
     ],
 ];

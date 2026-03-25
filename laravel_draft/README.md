@@ -19,6 +19,10 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
   - `POST /api/billing/finalize` is real finalize boundary (transaction + same-month replace semantics)
   - `POST /billing/lock` is real state-transition boundary
   - `POST /billing/approve` is real evidence-aligned 410 removed-flow endpoint
+  - `POST /billing/adjustments/create` is real evidence-aligned 410 removed-flow endpoint
+  - `POST /billing/adjustments/approve` is real evidence-aligned 410 removed-flow endpoint
+  - `POST /recovery/payment` is real evidence-aligned 410 disabled-flow endpoint
+  - `GET /reports/reconciliation` is real read-only parity report endpoint
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
