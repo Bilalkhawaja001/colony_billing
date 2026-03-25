@@ -1,13 +1,6 @@
 <?php
 
 return [
-    // Shell lock state source. Non-domain placeholder until real month service is wired.
-    'state' => [
-        'default_locked' => true,
-        'session_key' => 'month_guard_locked',
-        'header_override' => 'X-Month-Locked', // optional test/dev override: 1|0
-    ],
-
     // Protected write endpoints for month-sensitive operations (shell only).
     'protected_write_paths' => [
         '/month/open',

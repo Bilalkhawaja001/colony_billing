@@ -2,25 +2,29 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\Month\MonthStateService;
 use Closure;
 use Illuminate\Http\Request;
 
 class MonthGuardShell
 {
-    private function isLocked(Request $request): bool
+    public function __construct(private readonly MonthStateService $monthState)
     {
-        $header = (string) config('month_guard.state.header_override', 'X-Month-Locked');
-        $hv = $request->headers->get($header);
-        if ($hv !== null) {
-            return in_array(strtolower((string)$hv), ['1', 'true', 'yes', 'locked'], true);
+    }
+
+    private function resolveMonthCycle(Request $request): ?string
+    {
+        $month = trim((string)($request->input('month_cycle') ?? $request->query('month_cycle') ?? ''));
+        if ($month !== '') {
+            return $month;
         }
 
-        $sessionKey = (string) config('month_guard.state.session_key', 'month_guard_locked');
-        if (session()->has($sessionKey)) {
-            return (bool) session($sessionKey);
+        $runId = (int)($request->input('run_id') ?? 0);
+        if ($runId > 0) {
+            return $this->monthState->monthFromRunId($runId);
         }
 
-        return (bool) config('month_guard.state.default_locked', true);
+        return null;
     }
 
     public function handle(Request $request, Closure $next)
@@ -42,15 +46,20 @@ class MonthGuardShell
             return $next($request);
         }
 
-        if (!$this->isLocked($request)) {
+        $monthCycle = $this->resolveMonthCycle($request);
+        if (!$monthCycle) {
+            // No resolvable month in shell mode; defer to endpoint validation/guards.
+            return $next($request);
+        }
+
+        if (!$this->monthState->isLocked($monthCycle)) {
             return $next($request);
         }
 
         return response()->json([
             'status' => 'error',
-            'error' => 'month locked',
-            'guard' => 'month.guard.shell',
-            'note' => 'domain month guard not implemented in LIMITED GO',
-        ], 423);
+            'error' => "month_cycle {$monthCycle} is LOCKED; post lock edits are blocked",
+            'guard' => 'month.guard.domain',
+        ], 409);
     }
 }

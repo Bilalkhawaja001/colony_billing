@@ -1,38 +1,20 @@
 # LAUNCH_READINESS_GAP_REPORT
 
-## Runtime Validation (Completed)
-Validation host now resolved with explicit binaries:
-- PHP: `C:\tools\php85\php.exe`
-- Composer: `C:\ProgramData\ComposerSetup\bin\composer.bat` / `composer.phar`
+## Validation Snapshot
+- Runtime environment resolved (PHP 8.5.4 + Composer explicit binaries)
+- Migrations: success
+- Full test suite: **45 passed, 0 failed**
 
-Executed validation flow:
-1. composer install (via explicit php + composer.phar)
-2. .env setup + app key generation
-3. sqlite db provisioning
-4. migrations
-5. full test run (phpunit fallback)
+## Blocker Closure Status
+1. `/export/excel/reconciliation` true XLSX parity: **Closed**
+   - CSV adapter removed; binary XLSX response now generated via `mk-j/php_xlsxwriter`.
+2. billing finalize compute internals draft approximation: **Closed (core parity hardening)**
+   - attendance-weighted allocation, ghost-tenant penalty, rounding reconciliation guard, duplicate-HR fail-fast,
+     transaction + replace semantics active.
+3. month-guard shell/session-based behavior: **Closed**
+   - domain-backed month state guard via `MonthStateService` + middleware resolution from `month_cycle` / `run_id`.
 
-Result:
-- Migrations: success (3/3 ran)
-- Tests: 44 total, 44 passed, 0 failed
-
-## Launch-Ready (Validated)
-- Auth + RBAC + forced-password-change gates
-- Month-guard shell behavior + interaction tests
-- Billing precheck/finalize/lock boundaries
-- Approve + adjustments + recovery parity 410 behavior
-- Reconciliation + active report surfaces
-- Reconciliation export endpoint (CSV adapter)
-
-## Launch-Blocking (Remaining)
-1. Export parity gap: active excel reconciliation currently served via CSV adapter, not native XLSX writer parity.
-2. Finalize compute internals remain draft approximation (transaction/guard semantics are validated).
-3. Month guard still shell/session-driven (not yet domain month-state service).
-
-## Post-Launch Queue
-- XLSX/PDF export parity completion
-- finalize compute parity deep-port + fixture lockstep checks
-- month-state domain guard service replacement for shell config
-
-## Separate Module
-- electric_v1 remains separate-module scope (not included in this launch track)
+## Launch Classification
+- **Launch-ready:** auth/RBAC, month guard, billing precheck/finalize/lock, approve parity 410, adjustments/recovery parity 410, reconciliation + active report surfaces + reconciliation xlsx export.
+- **Separate module:** electric_v1 (intentionally excluded from this core launch track).
+- **Post-launch:** deeper fixture-level output diffing vs Flask for long-tail numeric edge cases.

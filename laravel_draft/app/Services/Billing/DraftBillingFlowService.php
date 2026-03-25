@@ -42,6 +42,12 @@ class DraftBillingFlowService implements BillingFlowContract
         );
     }
 
+    private function lastInsertId(): int
+    {
+        $row = DB::selectOne('SELECT last_insert_rowid() AS id');
+        return (int)($row->id ?? 0);
+    }
+
     private function deterministicFingerprint(string $monthCycle, array $billingRows): string
     {
         $lines = [];
@@ -50,8 +56,9 @@ class DraftBillingFlowService implements BillingFlowContract
                 $monthCycle,
                 (string)($r['company_id'] ?? ''),
                 'TOTAL',
-                '1',
-                '1',
+                number_format((float)($r['water_amt'] ?? 0), 2, '.', ''),
+                number_format((float)($r['power_amt'] ?? 0), 2, '.', ''),
+                number_format((float)($r['drink_amt'] ?? 0), 2, '.', ''),
                 number_format((float)($r['total_amt'] ?? 0), 2, '.', ''),
                 (string)($r['unit_id'] ?? ''),
             ]);
@@ -68,9 +75,10 @@ class DraftBillingFlowService implements BillingFlowContract
         $roRows = $inputs['ro_rows'];
 
         $logs = [];
-        $rowsPreview = [];
+        $billingRows = [];
 
         $seen = [];
+        $companyToDays = [];
         foreach ($hrRows as $r) {
             $companyId = trim((string)($r->company_id ?? ''));
             $key = $monthCycle.'|'.$companyId;
@@ -81,7 +89,7 @@ class DraftBillingFlowService implements BillingFlowContract
                     'message' => 'Duplicate HR row for CompanyID + Month_Cycle',
                     'ref_json' => ['company_id' => $companyId],
                 ];
-                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'billing_rows' => [], 'rows_preview' => []];
+                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'unit_totals' => [], 'billing_rows' => []];
             }
             $seen[$key] = true;
 
@@ -93,17 +101,49 @@ class DraftBillingFlowService implements BillingFlowContract
                     'message' => 'Active_Days is non-numeric',
                     'ref_json' => ['company_id' => $companyId],
                 ];
-                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'billing_rows' => [], 'rows_preview' => []];
+                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'unit_totals' => [], 'billing_rows' => []];
             }
 
-            if ((float)$daysRaw < 0) {
+            $d = (float)$daysRaw;
+            if ($d < 0) {
                 $logs[] = [
                     'severity' => 'CRIT',
                     'code' => 'BAD_DAYS',
                     'message' => 'Active_Days is negative',
                     'ref_json' => ['company_id' => $companyId, 'active_days' => (string)$daysRaw],
                 ];
-                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'billing_rows' => [], 'rows_preview' => []];
+                return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'unit_totals' => [], 'billing_rows' => []];
+            }
+
+            $companyToDays[$companyId] = $d;
+        }
+
+        $unitToCompanies = [];
+        foreach ($mapRows as $m) {
+            $u = trim((string)($m->unit_id ?? ''));
+            $c = trim((string)($m->company_id ?? ''));
+            if ($u === '') {
+                continue;
+            }
+            $unitToCompanies[$u] ??= [];
+            $unitToCompanies[$u][] = $c;
+        }
+
+        $hrCompanies = array_keys($companyToDays);
+        $mappedCompanies = [];
+        foreach ($unitToCompanies as $arr) {
+            foreach ($arr as $c) {
+                $mappedCompanies[$c] = true;
+            }
+        }
+        foreach ($hrCompanies as $c) {
+            if (!isset($mappedCompanies[$c])) {
+                $logs[] = [
+                    'severity' => 'INFO',
+                    'code' => 'HR_UNUSED',
+                    'message' => 'HR row not used because no room mapping',
+                    'ref_json' => ['company_id' => $c],
+                ];
             }
         }
 
@@ -126,17 +166,7 @@ class DraftBillingFlowService implements BillingFlowContract
             $unitTotals[$u]['drink'] += (float)($r->amount ?? 0);
         }
 
-        $unitToCompanies = [];
-        foreach ($mapRows as $m) {
-            $u = trim((string)($m->unit_id ?? ''));
-            $c = trim((string)($m->company_id ?? ''));
-            if ($u === '') {
-                continue;
-            }
-            $unitToCompanies[$u] ??= [];
-            $unitToCompanies[$u][] = $c;
-        }
-
+        $reconUnitTotals = [];
         foreach ($unitTotals as $unitId => $totals) {
             $occupants = $unitToCompanies[$unitId] ?? [];
             if (count($occupants) === 0) {
@@ -149,30 +179,123 @@ class DraftBillingFlowService implements BillingFlowContract
                 continue;
             }
 
-            $split = 1 / max(count($occupants), 1);
-            foreach ($occupants as $companyId) {
-                $water = round($totals['water'] * $split, 2);
-                $power = round($totals['power'] * $split, 2);
-                $drink = round($totals['drink'] * $split, 2);
-                $row = [
-                    'company_id' => $companyId,
+            $reconUnitTotals[$unitId] = $totals;
+
+            $dayMap = [];
+            foreach ($occupants as $c) {
+                if (array_key_exists($c, $companyToDays)) {
+                    $dayMap[$c] = (float)$companyToDays[$c];
+                } else {
+                    $dayMap[$c] = 30.0;
+                    $logs[] = [
+                        'severity' => 'WARN',
+                        'code' => 'GHOST_TENANT_PENALTY',
+                        'message' => 'Mapped employee missing in HR; penalty days=30 applied',
+                        'ref_json' => ['unit_id' => $unitId, 'company_id' => $c],
+                    ];
+                }
+            }
+
+            $unitTotalDays = array_sum($dayMap);
+
+            if (count($occupants) === 1) {
+                $c = $occupants[0];
+                $billingRows[] = [
+                    'company_id' => $c,
+                    'unit_id' => $unitId,
+                    'water_amt' => round($totals['water'], 2),
+                    'power_amt' => round($totals['power'], 2),
+                    'drink_amt' => round($totals['drink'], 2),
+                    'adjustment' => 0.00,
+                    'total_amt' => round($totals['water'] + $totals['power'] + $totals['drink'], 2),
+                ];
+                continue;
+            }
+
+            if ($unitTotalDays <= 0) {
+                $logs[] = [
+                    'severity' => 'CRIT',
+                    'code' => 'UNIT_ZERO_DAYS',
+                    'message' => 'Multi-occupant unit has zero total days; no bill generated',
+                    'ref_json' => ['unit_id' => $unitId],
+                ];
+                continue;
+            }
+
+            foreach ($occupants as $c) {
+                $ratio = ((float)$dayMap[$c]) / $unitTotalDays;
+                $water = round($totals['water'] * $ratio, 2);
+                $power = round($totals['power'] * $ratio, 2);
+                $drink = round($totals['drink'] * $ratio, 2);
+                $billingRows[] = [
+                    'company_id' => $c,
                     'unit_id' => $unitId,
                     'water_amt' => $water,
                     'power_amt' => $power,
                     'drink_amt' => $drink,
-                    'adjustment' => 0.0,
+                    'adjustment' => 0.00,
                     'total_amt' => round($water + $power + $drink, 2),
                 ];
-                $rowsPreview[] = $row;
             }
+
+            // deterministic remainder correction per utility
+            $idx = [];
+            foreach ($billingRows as $k => $br) {
+                if (($br['unit_id'] ?? '') === $unitId) {
+                    $idx[] = $k;
+                }
+            }
+            if (!empty($idx)) {
+                $lastK = end($idx);
+                foreach (['water_amt' => $totals['water'], 'power_amt' => $totals['power'], 'drink_amt' => $totals['drink']] as $k => $total) {
+                    $cur = 0.0;
+                    foreach ($idx as $j) {
+                        $cur += (float)$billingRows[$j][$k];
+                    }
+                    $diff = round(((float)$total - $cur), 2);
+                    if (abs($diff) > 0.0001) {
+                        $billingRows[$lastK][$k] = round(((float)$billingRows[$lastK][$k]) + $diff, 2);
+                    }
+                }
+                $billingRows[$lastK]['total_amt'] = round(
+                    (float)$billingRows[$lastK]['water_amt'] +
+                    (float)$billingRows[$lastK]['power_amt'] +
+                    (float)$billingRows[$lastK]['drink_amt'] +
+                    (float)$billingRows[$lastK]['adjustment'],
+                    2
+                );
+            }
+        }
+
+        $sumEmp = 0.0;
+        foreach ($billingRows as $r) {
+            $sumEmp += (float)$r['total_amt'];
+        }
+        $sumEmp = round($sumEmp, 2);
+
+        $sumUnits = 0.0;
+        foreach ($reconUnitTotals as $t) {
+            $sumUnits += (float)$t['water'] + (float)$t['power'] + (float)$t['drink'];
+        }
+        $sumUnits = round($sumUnits, 2);
+
+        if (abs($sumEmp - $sumUnits) > 0.01) {
+            $logs[] = [
+                'severity' => 'CRIT',
+                'code' => 'RECON_FAIL',
+                'message' => 'Employee totals and unit totals mismatch',
+                'ref_json' => ['employee_total' => (string)$sumEmp, 'unit_total' => (string)$sumUnits],
+            ];
+            return ['status' => 'failed', 'stop' => true, 'logs' => $logs, 'unit_totals' => $unitTotals, 'billing_rows' => $billingRows];
         }
 
         return [
             'status' => 'ok',
             'stop' => false,
             'logs' => $logs,
-            'billing_rows' => $rowsPreview,
-            'rows_preview' => $rowsPreview,
+            'unit_totals' => $unitTotals,
+            'billing_rows' => $billingRows,
+            'rows_preview' => $billingRows,
         ];
     }
 
@@ -205,7 +328,7 @@ class DraftBillingFlowService implements BillingFlowContract
             'stop' => (bool)($out['stop'] ?? true),
             'logs' => $out['logs'] ?? [],
             'rows_preview' => array_slice($out['rows_preview'] ?? [], 0, 20),
-            'parity_note' => 'Core precheck boundary is real/read-only; allocation split is draft approximation pending full evidence port.',
+            'parity_note' => 'Precheck logic aligned to evidenced engine phases (validation, allocation, reconciliation guard).',
         ];
     }
 
@@ -229,19 +352,18 @@ class DraftBillingFlowService implements BillingFlowContract
 
         $dupHr = $this->duplicateHrRows($monthCycle);
         if (!empty($dupHr)) {
-            $runId = substr(bin2hex(random_bytes(8)), 0, 12);
 
             DB::beginTransaction();
             try {
-                DB::delete('DELETE FROM billing_rows WHERE month_cycle=?', [$monthCycle]);
-                DB::delete('DELETE FROM logs WHERE month_cycle=?', [$monthCycle]);
-                DB::delete('DELETE FROM billing_run WHERE month_cycle=?', [$monthCycle]);
+                DB::delete('DELETE FROM util_billing_line WHERE month_cycle=?', [$monthCycle]);
+                DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
 
-                DB::insert('INSERT INTO billing_run(run_id,month_cycle,status,started_at) VALUES(?,?,?,CURRENT_TIMESTAMP)', [$runId, $monthCycle, 'failed']);
+                DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                $failRunId = $this->lastInsertId();
                 foreach ($dupHr as $r) {
                     DB::insert(
-                        'INSERT INTO logs(run_id,month_cycle,severity,code,message,ref_json) VALUES(?,?,?,?,?,?)',
-                        [$runId, $monthCycle, 'CRIT', 'DUP_HR', 'Duplicate HR entry for company/month', json_encode(['month_cycle' => $monthCycle, 'company_id' => $r->company_id ?? null])]
+                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
+                        [$failRunId, $monthCycle, 'CRIT', 'DUP_HR', 'Duplicate HR entry for company/month', json_encode(['month_cycle' => $monthCycle, 'company_id' => $r->company_id ?? null])]
                     );
                 }
 
@@ -254,76 +376,85 @@ class DraftBillingFlowService implements BillingFlowContract
             return [
                 '_http' => 409,
                 'status' => 'failed',
-                'run_id' => $runId,
+                'run_id' => $failRunId ?? null,
                 'error' => 'Duplicate HR entry for company/month',
             ];
         }
 
         $inputs = $this->loadInputs($monthCycle);
         $out = $this->draftEngine($monthCycle, $inputs);
-        $runId = substr(bin2hex(random_bytes(8)), 0, 12);
 
         DB::beginTransaction();
         try {
             // Proven idempotent replace for same month
-            DB::delete('DELETE FROM billing_rows WHERE month_cycle=?', [$monthCycle]);
-            DB::delete('DELETE FROM logs WHERE month_cycle=?', [$monthCycle]);
-            DB::delete('DELETE FROM billing_run WHERE month_cycle=?', [$monthCycle]);
+            DB::delete('DELETE FROM util_billing_line WHERE month_cycle=?', [$monthCycle]);
+            DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
 
             if (!empty($out['stop'])) {
-                DB::insert('INSERT INTO billing_run(run_id,month_cycle,status,started_at) VALUES(?,?,?,CURRENT_TIMESTAMP)', [$runId, $monthCycle, 'failed']);
+                DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                $failedRunId = $this->lastInsertId();
                 foreach (($out['logs'] ?? []) as $lg) {
                     DB::insert(
-                        'INSERT INTO logs(run_id,month_cycle,severity,code,message,ref_json) VALUES(?,?,?,?,?,?)',
-                        [$runId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
+                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
+                        [$failedRunId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
                     );
                 }
                 DB::commit();
-                return ['status' => 'failed', 'run_id' => $runId, 'parity_note' => 'Stopped by proven precheck/finalize guard'];
+                return ['status' => 'failed', 'run_id' => $failedRunId, 'parity_note' => 'Stopped by proven precheck/finalize guard'];
             }
 
             $billingRows = $out['billing_rows'] ?? [];
             $fp = $this->deterministicFingerprint($monthCycle, $billingRows);
 
             DB::insert(
-                'INSERT INTO billing_run(run_id,month_cycle,status,started_at,finalized_at,fingerprint) VALUES(?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,?)',
-                [$runId, $monthCycle, 'final', $fp]
+                'INSERT INTO util_billing_run(month_cycle, run_status, fingerprint) VALUES(?,?,?)',
+                [$monthCycle, 'APPROVED', $fp]
             );
+            $newRunId = $this->lastInsertId();
 
             foreach ($billingRows as $r) {
-                DB::insert(
-                    'INSERT INTO billing_rows(run_id,month_cycle,company_id,unit_id,water_amt,power_amt,drink_amt,adjustment,total_amt,rounded_2dp) VALUES(?,?,?,?,?,?,?,?,?,?)',
-                    [
-                        $runId,
-                        $monthCycle,
-                        (string)$r['company_id'],
-                        (string)$r['unit_id'],
-                        (float)$r['water_amt'],
-                        (float)$r['power_amt'],
-                        (float)$r['drink_amt'],
-                        (float)$r['adjustment'],
-                        (float)$r['total_amt'],
-                        (float)$r['total_amt'],
-                    ]
-                );
+                $employeeId = (string)$r['company_id'];
+                $unitId = (string)$r['unit_id'];
+                $water = (float)$r['water_amt'];
+                $power = (float)$r['power_amt'];
+                $drink = (float)$r['drink_amt'];
+
+                if (abs($water) > 0.0001) {
+                    DB::insert(
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'WATER', 1, $water, $unitId]
+                    );
+                }
+                if (abs($power) > 0.0001) {
+                    DB::insert(
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'ELEC', 1, $power, $unitId]
+                    );
+                }
+                if (abs($drink) > 0.0001) {
+                    DB::insert(
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'WATER_DRINKING', 1, $drink, $unitId]
+                    );
+                }
             }
 
             foreach (($out['logs'] ?? []) as $lg) {
                 DB::insert(
-                    'INSERT INTO logs(run_id,month_cycle,severity,code,message,ref_json) VALUES(?,?,?,?,?,?)',
-                    [$runId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
+                    'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
+                    [$newRunId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
                 );
             }
 
-            DB::statement('INSERT OR REPLACE INTO finalized_months(month_cycle,finalized_at) VALUES(?,CURRENT_TIMESTAMP)', [$monthCycle]);
+            DB::statement('INSERT OR REPLACE INTO finalized_months(month_cycle, finalized_at) VALUES(?, CURRENT_TIMESTAMP)', [$monthCycle]);
 
             DB::commit();
 
             return [
                 'status' => 'ok',
-                'run_id' => $runId,
+                'run_id' => $newRunId,
                 'rows' => count($billingRows),
-                'parity_note' => 'Finalize boundary is real with proven transaction + same-month replace semantics; computation internals still draft approximation.',
+                'parity_note' => 'Finalize compute aligned to evidenced run_colony_billing phases; transaction and idempotent replace are active.',
             ];
         } catch (QueryException $e) {
             DB::rollBack();
@@ -332,11 +463,11 @@ class DraftBillingFlowService implements BillingFlowContract
                 $runId2 = substr(bin2hex(random_bytes(8)), 0, 12);
                 DB::beginTransaction();
                 try {
-                    DB::delete('DELETE FROM logs WHERE month_cycle=?', [$monthCycle]);
-                    DB::delete('DELETE FROM billing_run WHERE month_cycle=?', [$monthCycle]);
-                    DB::insert('INSERT INTO billing_run(run_id,month_cycle,status,started_at) VALUES(?,?,?,CURRENT_TIMESTAMP)', [$runId2, $monthCycle, 'failed']);
+                    DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
+                    DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                    $runId2 = $this->lastInsertId();
                     DB::insert(
-                        'INSERT INTO logs(run_id,month_cycle,severity,code,message,ref_json) VALUES(?,?,?,?,?,?)',
+                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
                         [$runId2, $monthCycle, 'CRIT', 'DUP_HR', 'Duplicate HR entry for company/month', json_encode(['month_cycle' => $monthCycle])]
                     );
                     DB::commit();
@@ -647,29 +778,41 @@ class DraftBillingFlowService implements BillingFlowContract
 
     public function exportExcelReconciliation(array $payload): array
     {
-        // Active export surface is proven; in LIMITED GO provide deterministic CSV payload adapter.
         $rep = $this->reconciliationReport($payload);
         if (($rep['_http'] ?? 200) !== 200) {
             return $rep;
         }
 
-        $lines = ["employee_id,billed_amount,recovered_amount,outstanding_amount"];
+        if (!class_exists('\XLSXWriter')) {
+            return ['_http' => 500, 'status' => 'error', 'error' => 'XLSX writer package not available'];
+        }
+
+        $writer = new \XLSXWriter();
+        $writer->setAuthor('mbs_project');
+        $writer->writeSheetRow('reconciliation', ['employee_id', 'billed_amount', 'recovered_amount', 'outstanding_amount']);
         foreach ($rep['by_employee'] as $r) {
-            $lines[] = implode(',', [
-                $r['employee_id'],
-                $r['billed_amount'],
-                $r['recovered_amount'],
-                $r['outstanding_amount'],
+            $writer->writeSheetRow('reconciliation', [
+                (string)$r['employee_id'],
+                (float)$r['billed_amount'],
+                (float)$r['recovered_amount'],
+                (float)$r['outstanding_amount'],
             ]);
         }
+
+        $tmp = tempnam(sys_get_temp_dir(), 'mbs_recon_');
+        $xlsx = $tmp.'.xlsx';
+        @unlink($tmp);
+        $writer->writeToFile($xlsx);
+        $bytes = file_get_contents($xlsx) ?: '';
+        @unlink($xlsx);
 
         return [
             'status' => 'ok',
             'month_cycle' => $rep['month_cycle'],
-            'filename' => 'reconciliation_'.$rep['month_cycle'].'.csv',
-            'content_type' => 'text/csv',
-            'content' => implode("\n", $lines),
-            'parity_note' => 'Export endpoint active; CSV adapter used in LIMITED GO instead of XLSX binary writer.',
+            'filename' => 'reconciliation_'.$rep['month_cycle'].'.xlsx',
+            'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content' => $bytes,
+            'parity_note' => 'XLSX export enabled for active reconciliation export surface.',
         ];
     }
 }

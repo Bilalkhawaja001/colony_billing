@@ -13,9 +13,9 @@ class BillingFoundationShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
 
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
         DB::shouldReceive('select')->andReturn([], [], [], []);
 
         $res = $this->postJson('/api/billing/precheck', ['month_cycle' => '03-2026']);
@@ -30,8 +30,9 @@ class BillingFoundationShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
+
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
 
         $res = $this->postJson('/api/billing/precheck', ['month_cycle' => '2026-03']);
         $res->assertStatus(422);
@@ -49,7 +50,6 @@ class BillingFoundationShellTest extends TestCase
             'user_id' => 10,
             'role' => 'DATA_ENTRY',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
 
         $res = $this->postJson('/api/billing/precheck', ['month_cycle' => '03-2026']);
@@ -62,11 +62,12 @@ class BillingFoundationShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => true,
         ]);
 
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'LOCKED']);
+
         $res = $this->postJson('/api/billing/precheck', ['month_cycle' => '03-2026']);
-        $res->assertStatus(423)->assertJsonPath('error', 'month locked');
+        $res->assertStatus(409)->assertJsonPath('guard', 'month.guard.domain');
     }
 
     public function test_response_shape_parity_keys_present(): void
@@ -75,9 +76,9 @@ class BillingFoundationShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
 
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
         DB::shouldReceive('select')->andReturn([], [], [], []);
 
         $res = $this->postJson('/api/billing/precheck', ['month_cycle' => '03-2026']);

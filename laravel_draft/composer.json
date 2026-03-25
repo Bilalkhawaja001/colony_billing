@@ -3,7 +3,8 @@
   "type": "project",
   "require": {
     "php": "^8.2",
-    "laravel/framework": "^12.0"
+    "laravel/framework": "^12.0",
+    "mk-j/php_xlsxwriter": "^0.39.0"
   },
   "autoload": {
     "psr-4": {

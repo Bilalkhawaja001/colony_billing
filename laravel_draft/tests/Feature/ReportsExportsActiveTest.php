@@ -59,7 +59,8 @@ class ReportsExportsActiveTest extends TestCase
 
         $res = $this->get('/export/excel/reconciliation?month_cycle=03-2026');
         $res->assertOk();
-        $this->assertStringContainsString('text/csv', (string)$res->headers->get('content-type'));
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', (string)$res->headers->get('content-type'));
+        $this->assertStringStartsWith('PK', $res->getContent());
     }
 
     public function test_response_shape_parity_where_proven(): void

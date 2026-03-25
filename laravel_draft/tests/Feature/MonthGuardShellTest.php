@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class MonthGuardShellTest extends TestCase
@@ -12,11 +13,12 @@ class MonthGuardShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => true,
         ]);
 
-        $res = $this->post('/month/open');
-        $res->assertStatus(423)->assertJsonPath('error', 'month locked');
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'LOCKED']);
+
+        $res = $this->postJson('/month/open', ['month_cycle' => '03-2026']);
+        $res->assertStatus(409)->assertJsonPath('guard', 'month.guard.domain');
     }
 
     public function test_allowed_write_on_unlocked_month(): void
@@ -25,10 +27,11 @@ class MonthGuardShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
 
-        $res = $this->post('/month/open');
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
+
+        $res = $this->postJson('/month/open', ['month_cycle' => '03-2026']);
         $res->assertOk()->assertJsonPath('status', 'ok');
     }
 
@@ -38,10 +41,9 @@ class MonthGuardShellTest extends TestCase
             'user_id' => 10,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => true,
         ]);
 
-        $res = $this->post('/month/transition');
+        $res = $this->postJson('/month/transition', ['month_cycle' => '03-2026']);
         $res->assertOk()->assertJsonPath('mode', 'guard-shell-exception-pass');
     }
 
@@ -57,10 +59,9 @@ class MonthGuardShellTest extends TestCase
             'user_id' => 20,
             'role' => 'DATA_ENTRY',
             'force_change_password' => 0,
-            'month_guard_locked' => false,
         ]);
 
-        $res = $this->post('/month/open');
+        $res = $this->post('/month/open', ['month_cycle' => '03-2026']);
         $res->assertStatus(403);
     }
 }
