@@ -1,19 +1,26 @@
-# Integration Notes (Draft)
+# Integration Notes (LIMITED GO batch)
 
-Because full Laravel runtime is not bootstrapped in this workspace, these aliases must be wired when integrating into real Laravel app:
+This draft is now structured as a runnable Laravel app layer (pending PHP/Composer availability on host).
 
-In `app/Http/Kernel.php` route middleware:
+## Middleware wiring (implemented)
+In `bootstrap/app.php` aliases:
 - `ensure.auth` => `App\Http\Middleware\EnsureAuthenticated::class`
 - `force.password.change` => `App\Http\Middleware\ForcePasswordChange::class`
 - `role` => `App\Http\Middleware\RoleGate::class`
 
-## Proven parity mapped
-- Public auth endpoints: `/login`, `/logout`, `/forgot-password`, `/reset-password`
-- Forced password change gate redirect to `/ui/profile`
-- API unauthorized/forbidden JSON shape retained as draft target
+## Session parity fields wired
+- `user_id`
+- `role`
+- `admin_user_id`
+- `actor_user_id`
+- `force_change_password`
 
-## Explicitly unproven/deferred
-- Real DB auth provider integration
-- OTP persistence/attempt lock
-- Password hash verify compatibility layer
-- Any billing/month/reconciliation behavior
+## Auth tables added
+- `auth_users`
+- `auth_password_reset_otp`
+- `auth_audit_log`
+
+## Explicitly not implemented
+- billing/month/reconciliation/adjustments/electric_v1
+- report/export domain logic
+- OTP transport delivery
