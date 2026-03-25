@@ -1,0 +1,5910 @@
+[
+  {
+    "flask_path": "/",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "home",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1313,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/admin/users/create",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_admin_users_create",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1644,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "Decorator require_roles('SUPER_ADMIN',); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert"
+    ],
+    "downstream_calls": [
+      "_password_hash",
+      "app.post",
+      "d.get",
+      "jsonify",
+      "lower",
+      "q",
+      "require_roles"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/admin/users/reset-password",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_admin_users_reset_password",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1673,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "id",
+        "temp_password"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "_password_hash",
+      "app.post",
+      "d.get",
+      "jsonify",
+      "q",
+      "require_roles"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1673-1682",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [
+        "auth_audit_log"
+      ],
+      "update": [
+        "auth_users"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/api/admin/users/update",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_admin_users_update",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1660,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "Decorator require_roles('SUPER_ADMIN',); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "jsonify",
+      "lower",
+      "q",
+      "require_roles"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/billing/finalize",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_billing_finalize",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4580,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "company_id",
+        "month_cycle",
+        "ref_json"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "delete",
+      "finalize",
+      "insert"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "build_line",
+      "con.cursor",
+      "cur.execute",
+      "d.get",
+      "deterministic_fingerprint",
+      "exec_txn",
+      "json_dumps_safe",
+      "jsonify",
+      "lg.get",
+      "lines.append",
+      "lower",
+      "q",
+      "r.get",
+      "run_colony_billing",
+      "uuid.uuid4"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "4580-4663",
+    "table_touch_summary": {
+      "read": [
+        "billing_rows",
+        "billing_run",
+        "domain",
+        "hr_input",
+        "logs",
+        "map_room",
+        "readings",
+        "ro_drinking"
+      ],
+      "insert": [
+        "billing_rows",
+        "billing_run",
+        "finalized_months",
+        "logs"
+      ],
+      "update": [],
+      "delete": [
+        "billing_rows",
+        "billing_run",
+        "logs"
+      ],
+      "transactionality_visible": true,
+      "idempotency": "Visible hints",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "None observed in handler-level scan"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "Intentional bypass: rerun allowed on finalized month (idempotent replace)",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "Proven month-level delete+replace",
+    "transaction_boundary_proof_state": "Proven via exec_txn",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "VIEWER mutating api blocked"
+      }
+    },
+    "rollback_proof_state": "Proven via exec_txn except/rollback",
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "Closed",
+    "month_lock_exception_status": "Documented exception path",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/api/billing/precheck",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_billing_precheck",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4565,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "month_cycle"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "jsonify",
+      "q",
+      "run_colony_billing"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "4565-4576",
+    "table_touch_summary": {
+      "read": [
+        "domain",
+        "hr_input",
+        "map_room",
+        "readings",
+        "ro_drinking"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A read-only",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "VIEWER mutating api blocked"
+      }
+    },
+    "rollback_proof_state": "N/A read-only",
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/api/dashboard/colony-kpis",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_dashboard_colony_kpis",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1269,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_dashboard_colony_kpis",
+      "_resolve_dashboard_month_cycle",
+      "app.get",
+      "jsonify",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/dashboard/family-members",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_dashboard_family_members",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1276,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_table_exists",
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/dashboard/van-kids",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_dashboard_van_kids",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1294,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_table_exists",
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/electric-v1/outputs",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_electric_v1_outputs_bundle",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1436,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "cycle_end",
+        "cycle_start",
+        "run_id"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [
+      "finalize"
+    ],
+    "downstream_calls": [
+      "ElectricBillingV1ReadService",
+      "_ev1_err",
+      "_ev1_ok",
+      "app.get",
+      "con.close",
+      "get_con",
+      "request.args.get",
+      "service.get_bundle"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/electric-v1/run",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_electric_v1_run",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1470,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [
+        "cycle_end",
+        "cycle_start",
+        "flat_rate"
+      ],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [
+      "finalize"
+    ],
+    "downstream_calls": [
+      "ElectricBillingV1OrchestrationService",
+      "_ev1_err",
+      "_ev1_ok",
+      "app.post",
+      "con.close",
+      "get_con",
+      "payload.get",
+      "svc.run"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/logs",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_logs",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4688,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/occupancy/autofill",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "occupancy_autofill",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3029,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "delete",
+      "finalize",
+      "insert"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable_shared",
+      "con.commit",
+      "con.cursor",
+      "con.rollback",
+      "cur.execute",
+      "fetchall",
+      "fetchone",
+      "get_db",
+      "jsonify",
+      "normalize_month_cycle",
+      "occupancy_data.append",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/profile/change-password",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_profile_change_password",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1543,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "new_password",
+        "old_password",
+        "password_hash"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "update"
+    ],
+    "downstream_calls": [
+      "_current_user_row",
+      "_password_hash",
+      "_safe_auth_fail",
+      "_verify_password",
+      "app.post",
+      "d.get",
+      "full.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1543-1556",
+    "table_touch_summary": {
+      "read": [
+        "auth_users"
+      ],
+      "insert": [],
+      "update": [
+        "auth_users"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "VIEWER mutating api blocked"
+      }
+    }
+  },
+  {
+    "flask_path": "/api/results/employee-wise",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_results_employee_wise",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4667,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/results/unit-wise",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_results_unit_wise",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4676,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/rooms/cascade",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_rooms_cascade",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4713,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "block_floor",
+        "category",
+        "colony_type",
+        "month_cycle",
+        "room_no"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_derive_residence_type",
+      "app.get",
+      "category.lower",
+      "colony_type.lower",
+      "jsonify",
+      "merged.append",
+      "q",
+      "r.get",
+      "request.args.get",
+      "seen.add",
+      "sorted",
+      "x.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/units/reference",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_units_reference_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2300,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "q"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.extend",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/units/reference/<unit_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_units_reference_get",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2314,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "unit_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/units/reference/cascade",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_units_reference_cascade",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2323,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "block_floor",
+        "category",
+        "colony_type",
+        "room_no"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "category.lower",
+      "jsonify",
+      "q",
+      "request.args.get",
+      "sorted",
+      "x.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/units/reference/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_units_reference_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2353,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/water/allocation-preview",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_water_allocation_preview",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 5253,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_water_occupancy_rows",
+      "_water_zone_inputs_for_month",
+      "app.get",
+      "jsonify",
+      "max",
+      "out.append",
+      "request.args.get",
+      "round",
+      "x.get",
+      "zone_basis_persons.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/water/occupancy-snapshot",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_water_occupancy_snapshot",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 5129,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_water_occupancy_rows",
+      "app.get",
+      "jsonify",
+      "request.args.get",
+      "x.get",
+      "zone_summary.setdefault"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/api/water/zone-adjustments",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "api_water_zone_adjustments_get",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 5186,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "month_cycle"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "_water_zone_inputs_for_month",
+      "app.get",
+      "jsonify",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "5186-5196",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/api/water/zone-adjustments",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "api_water_zone_adjustments_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 5200,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "common_use_liters",
+        "month_cycle",
+        "notes",
+        "raw_liters",
+        "reason_code",
+        "rows",
+        "source_ref",
+        "water_zone"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "_water_zone_inputs_for_month",
+      "app.post",
+      "d.get",
+      "enumerate",
+      "get",
+      "isinstance",
+      "jsonify",
+      "normalized.append",
+      "q",
+      "round",
+      "upper"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "5200-5249",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [
+        "util_water_zone_monthly_input"
+      ],
+      "update": [
+        "SET"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/billing/adjustments/approve",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_adjustment_approve",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3676,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "approve"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "jsonify"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3676-3678",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "N/A disabled endpoint (410)",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "Not Proven",
+    "transaction_boundary_proof_state": "Not Proven",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/billing/adjustments/create",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_adjustment_create",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3645,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "amount_delta",
+        "employee_id",
+        "month_cycle",
+        "reason",
+        "utility_type"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "insert"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "audit_log",
+      "con.cursor",
+      "cur.execute",
+      "d.get",
+      "exec_txn",
+      "jsonify",
+      "month_state",
+      "require_admin_from_request",
+      "upper"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3645-3672",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [
+        "util_billing_adjustment"
+      ],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": true,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "N/A disabled endpoint (410)",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "Not Proven",
+    "transaction_boundary_proof_state": "Proven",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/billing/adjustments/list",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "billing_adjustment_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3682,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "employee_id",
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "employee_id",
+        "month_cycle"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3682-3694",
+    "table_touch_summary": {
+      "read": [
+        "util_billing_adjustment"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/billing/approve",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_approve",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3594,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "approve",
+      "finalize"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "jsonify"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3594-3596",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "N/A disabled endpoint (410)",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "Not Proven",
+    "transaction_boundary_proof_state": "Not Proven",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/billing/elec/compute",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_elec_compute",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3320,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_compute_elec_for_month",
+      "app.post",
+      "d.get",
+      "exec_txn",
+      "jsonify",
+      "lower"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/billing/fingerprint",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "billing_fingerprint",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3909,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [
+        "amount"
+      ],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "approve"
+    ],
+    "downstream_calls": [
+      "_billing_lines_for_run",
+      "app.get",
+      "deterministic_fingerprint",
+      "hashlib.sha256",
+      "hexdigest",
+      "join",
+      "jsonify",
+      "payload.encode",
+      "r.get",
+      "reporting_run_id",
+      "request.args.get",
+      "sorted",
+      "x.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/billing/lock",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_lock",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3600,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "run_id"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "approve",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "audit_log",
+      "d.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3600-3629",
+    "table_touch_summary": {
+      "read": [
+        "util_billing_run",
+        "util_month_cycle"
+      ],
+      "insert": [],
+      "update": [
+        "util_billing_run"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "Indirect guard via util_month_cycle state APPROVAL check",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "Not Proven",
+    "transaction_boundary_proof_state": "Not Proven",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Documented exception path",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/billing/print/<month_cycle>/<employee_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "billing_print_view",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3968,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "month_cycle",
+        "employee_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.route",
+      "emp.get",
+      "get",
+      "items.append",
+      "join",
+      "jsonify",
+      "q",
+      "r.get",
+      "render_template",
+      "round",
+      "sum",
+      "title",
+      "ut.replace",
+      "x.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/billing/run",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_run",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3486,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "approve",
+      "delete",
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "_rebuild_school_van_monthly_charge",
+      "app.post",
+      "audit_log",
+      "d.get",
+      "get",
+      "jsonify",
+      "lower",
+      "msg.lower",
+      "normalize_month_cycle",
+      "q",
+      "reject_if_month_locked",
+      "request.get_json",
+      "uuid.uuid4"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/billing/water/compute",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "billing_water_compute",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3428,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "_compute_water_for_month",
+      "app.post",
+      "d.get",
+      "exec_txn",
+      "jsonify",
+      "lower"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "employees_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2021,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "active_only",
+        "q"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.extend",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/<company_id>",
+    "method": "DELETE",
+    "methods": [
+      "DELETE"
+    ],
+    "function_name": "employees_delete",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2570,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "company_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.delete",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/<company_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "employees_get",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2219,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "company_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/<company_id>",
+    "method": "PATCH",
+    "methods": [
+      "PATCH"
+    ],
+    "function_name": "employees_edit",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2638,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "company_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "any",
+      "app.patch",
+      "current.get",
+      "d.get",
+      "is_next_month",
+      "join",
+      "json_dumps_safe",
+      "jsonify",
+      "params.append",
+      "q",
+      "unit_exists",
+      "updates.append"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/add",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "employees_add",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2581,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "join",
+      "json_dumps_safe",
+      "jsonify",
+      "missing.append",
+      "normalize_employee_payload",
+      "q",
+      "unit_exists"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/import",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "employees_import",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2417,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "export",
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "StringIO",
+      "_norm_header_token",
+      "app.post",
+      "bool",
+      "build_employee_header_index",
+      "cnic_is_sane",
+      "csv.DictReader",
+      "d.get",
+      "enumerate",
+      "errors.append",
+      "existing.get",
+      "header_idx.get",
+      "join",
+      "jsonify",
+      "mapped.items",
+      "mapped.values",
+      "normalize_employee_payload",
+      "preview.append",
+      "q",
+      "raw.get",
+      "row.get",
+      "unit_exists",
+      "unknown.append"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/meta/departments",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "employees_meta_departments",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2227,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/search",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "employees_search",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2206,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "q"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/employees/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "employees_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2504,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "any",
+      "app.post",
+      "cnic_is_sane",
+      "d.get",
+      "existing.get",
+      "is_next_month",
+      "join",
+      "json_dumps_safe",
+      "jsonify",
+      "normalize_employee_payload",
+      "q",
+      "unit_exists"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/expenses/monthly-variable",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "monthly_variable_expenses_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1881,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "expense_type",
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/expenses/monthly-variable/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "monthly_variable_expenses_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1897,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "jsonify",
+      "q",
+      "reject_if_month_locked",
+      "upper"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/export/excel/monthly-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "export_excel_monthly_summary",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4196,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "excel/file",
+    "side_effects": [
+      "approve",
+      "export"
+    ],
+    "downstream_calls": [
+      "BytesIO",
+      "StringIO",
+      "app.get",
+      "buf.getvalue",
+      "csv.writer",
+      "encode",
+      "jsonify",
+      "out.seek",
+      "q",
+      "reporting_run_id",
+      "request.args.get",
+      "send_file",
+      "w.writerow"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/export/excel/reconciliation",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "export_excel_reconciliation",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4108,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "amount_paid",
+        "elec_bill",
+        "employee_id",
+        "employee_name",
+        "month_cycle",
+        "total_billed",
+        "unit_id",
+        "van_bill",
+        "water_bill"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json",
+      "excel/file"
+    ],
+    "side_effects": [
+      "approve",
+      "export"
+    ],
+    "downstream_calls": [
+      "BytesIO",
+      "app.get",
+      "billed_map.get",
+      "billed_map.keys",
+      "df.to_excel",
+      "emp.get",
+      "export_rows.append",
+      "jsonify",
+      "out.seek",
+      "paid_map.get",
+      "paid_map.keys",
+      "pd.DataFrame",
+      "pd.ExcelWriter",
+      "q",
+      "r.get",
+      "reporting_run_id",
+      "request.args.get",
+      "round",
+      "send_file",
+      "sorted"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "4108-4192",
+    "table_touch_summary": {
+      "read": [
+        "util_billing_line",
+        "util_recovery_payment"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Branch-dependent response type",
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/export/pdf/monthly-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "export_pdf_monthly_summary",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4212,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "pdf",
+    "side_effects": [
+      "approve",
+      "export"
+    ],
+    "downstream_calls": [
+      "BytesIO",
+      "app.get",
+      "c.drawString",
+      "c.save",
+      "canvas.Canvas",
+      "jsonify",
+      "out.seek",
+      "q",
+      "reporting_run_id",
+      "request.args.get",
+      "round",
+      "send_file"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/family/details",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "family_details_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4825,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "company_id",
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "append",
+      "g.get",
+      "g.setdefault",
+      "join",
+      "jsonify",
+      "params.append",
+      "pr.extend",
+      "q",
+      "r.get",
+      "request.args.get",
+      "x.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/family/details/context",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "family_details_context",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4795,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "company_id",
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "emp.get",
+      "get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/family/details/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "family_details_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4868,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "delete",
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "enumerate",
+      "get",
+      "isinstance",
+      "jsonify",
+      "lower",
+      "min",
+      "parsed_children.append",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/forgot-password",
+    "method": "GET,POST",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "function_name": "forgot_password",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1560,
+    "auth_requirement": "No (AUTH_EXEMPT_PATHS)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "identity",
+        "last_sent_at"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "html template",
+      "json"
+    ],
+    "side_effects": [
+      "insert"
+    ],
+    "downstream_calls": [
+      "_otp_hash",
+      "_safe_reset_msg",
+      "_send_otp_email",
+      "app.route",
+      "jsonify",
+      "latest.get",
+      "payload.get",
+      "q",
+      "random.randint",
+      "render_template",
+      "replace",
+      "total_seconds"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1560-1590",
+    "table_touch_summary": {
+      "read": [
+        "auth_password_reset_otp",
+        "auth_users"
+      ],
+      "insert": [
+        "auth_audit_log",
+        "auth_password_reset_otp"
+      ],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "No (AUTH_EXEMPT_PATHS)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Branch-dependent response type",
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "method-based branch",
+      "conditional branch"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "VIEWER": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      }
+    }
+  },
+  {
+    "flask_path": "/health",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "health",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1423,
+    "auth_requirement": "No (AUTH_EXEMPT_PATHS)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/imports/error-report/<token>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "imports_error_report",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2011,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "token"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "excel/file",
+    "side_effects": [
+      "export"
+    ],
+    "downstream_calls": [
+      "BytesIO",
+      "ERROR_REPORT_CACHE.get",
+      "app.get",
+      "jsonify",
+      "out.seek",
+      "send_file"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/imports/mark-validated",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "import_validated",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1925,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/imports/meter-register/ingest-preview",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "meter_register_ingest_preview",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1938,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "export"
+    ],
+    "downstream_calls": [
+      "StringIO",
+      "accepted.append",
+      "app.post",
+      "canonical_header_map",
+      "csv.DictReader",
+      "csv.writer",
+      "csv_text.strip",
+      "d.get",
+      "encode",
+      "enumerate",
+      "err_buf.getvalue",
+      "errors.append",
+      "is_garbage_header_like",
+      "jsonify",
+      "map_row_keys",
+      "mapped.get",
+      "mapped_headers.values",
+      "sorted",
+      "uuid.uuid4",
+      "w.writerow"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/imports/unit-id-aliases",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "unit_id_aliases",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1933,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/login",
+    "method": "GET,POST",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "function_name": "login",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1512,
+    "auth_requirement": "No (AUTH_EXEMPT_PATHS)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "force_change_password",
+        "is_active",
+        "password",
+        "password_hash",
+        "username"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "html template",
+      "redirect"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "_safe_auth_fail",
+      "_verify_password",
+      "app.route",
+      "payload.get",
+      "q",
+      "redirect",
+      "render_template",
+      "row.get",
+      "session.clear"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1512-1528",
+    "table_touch_summary": {
+      "read": [
+        "auth_users"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "No (AUTH_EXEMPT_PATHS)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Branch-dependent response type",
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "method-based branch",
+      "conditional branch"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "VIEWER": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      }
+    }
+  },
+  {
+    "flask_path": "/logout",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "logout",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1532,
+    "auth_requirement": "No (AUTH_EXEMPT_PATHS)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "redirect"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "redirect",
+      "session.clear"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1532-1534",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "No (AUTH_EXEMPT_PATHS)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "VIEWER": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      }
+    }
+  },
+  {
+    "flask_path": "/meter-reading/latest/<unit_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "meter_reading_latest",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2759,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "unit_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/meter-reading/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "meter_reading_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2771,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "jsonify",
+      "lower",
+      "q",
+      "round"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/meter-unit",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "meter_unit_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2826,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle",
+        "unit_id"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/meter-unit/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "meter_unit_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2844,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/month/open",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "month_open",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1686,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "month_cycle"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "mixed/unknown"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.post",
+      "audit_log",
+      "d.get",
+      "q",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1686-1694",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [
+        "util_month_cycle"
+      ],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "Intentional bypass: month control endpoint",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Documented exception path",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/month/transition",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "month_transition",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1698,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "month_cycle",
+        "to_state"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "mixed/unknown"
+    ],
+    "side_effects": [
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "audit_log",
+      "d.get",
+      "q",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1698-1712",
+    "table_touch_summary": {
+      "read": [
+        "util_month_cycle"
+      ],
+      "insert": [],
+      "update": [
+        "util_month_cycle"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "Intentional bypass: month control endpoint",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Documented exception path",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/monthly-rates/config",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "monthly_rates_get_config",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1812,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "normalize_month_cycle",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/monthly-rates/config/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "monthly_rates_upsert_config",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1837,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; plus admin check (SUPER_ADMIN/BILLING_ADMIN); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "audit_log",
+      "d.get",
+      "jsonify",
+      "normalize_month_cycle",
+      "q",
+      "reject_if_month_locked",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/monthly-rates/history",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "monthly_rates_history",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1825,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "limit"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "max",
+      "min",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/monthly-rates/initialize",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "monthly_rates_initialize",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1788,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; plus admin check (SUPER_ADMIN/BILLING_ADMIN); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "bool",
+      "d.get",
+      "initialize_new_month",
+      "jsonify",
+      "normalize_month_cycle",
+      "reject_if_month_locked",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/occupancy",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "occupancy_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2938,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "category",
+        "month_cycle",
+        "unit_id"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/occupancy/<int:row_id>",
+    "method": "DELETE",
+    "methods": [
+      "DELETE"
+    ],
+    "function_name": "occupancy_delete",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3018,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "int:row_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "delete"
+    ],
+    "downstream_calls": [
+      "app.delete",
+      "assert_month_editable",
+      "jsonify",
+      "q",
+      "row.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/occupancy/context",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "occupancy_context",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2869,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "company_id",
+        "employee_id",
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "emp.get",
+      "get",
+      "infer_cat",
+      "jsonify",
+      "lower",
+      "q",
+      "ref.get",
+      "request.args.get",
+      "u.startswith",
+      "upper"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/occupancy/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "occupancy_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2968,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "emp.get",
+      "existing.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/rates/approve",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "rates_approve",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1740,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [
+      "approve",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/rates/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "rates_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1716,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; plus admin check (SUPER_ADMIN/BILLING_ADMIN); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "mixed/unknown",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "q",
+      "reject_if_month_locked",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "Medium",
+    "notes": ""
+  },
+  {
+    "flask_path": "/recovery/payment",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "recovery_payment_create",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3853,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "amount_paid",
+        "employee_id",
+        "month_cycle",
+        "payment_date",
+        "payment_method",
+        "reference_no"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "insert"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "audit_log",
+      "con.cursor",
+      "cur.execute",
+      "d.get",
+      "exec_txn",
+      "jsonify",
+      "q",
+      "require_admin_from_request"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3853-3905",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [
+        "util_recovery_payment"
+      ],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": true,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "N/A disabled endpoint (410)",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "handler helper require_admin_from_request"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/registry/employees/<company_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "registry_employee_get",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2057,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "company_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/registry/employees/import-commit",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "registry_import_commit",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2119,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "export",
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "StringIO",
+      "any",
+      "app.post",
+      "csv.DictReader",
+      "d.get",
+      "join",
+      "jsonify",
+      "q",
+      "raw.get",
+      "raw.keys",
+      "row.get",
+      "unit_exists"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/registry/employees/import-preview",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "registry_import_preview",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2065,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "export"
+    ],
+    "downstream_calls": [
+      "StringIO",
+      "accepted.append",
+      "app.post",
+      "bool",
+      "buf.getvalue",
+      "csv.DictReader",
+      "csv.writer",
+      "d.get",
+      "encode",
+      "enumerate",
+      "join",
+      "jsonify",
+      "q",
+      "raw.get",
+      "raw.keys",
+      "row.get",
+      "row_errors.append",
+      "seen.add",
+      "unit_exists",
+      "uuid.uuid4",
+      "w.writerow"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/registry/employees/promote-to-master",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "registry_promote_to_master",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2160,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "bool",
+      "d.get",
+      "join",
+      "jsonify",
+      "q",
+      "r.get",
+      "unit_exists"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/registry/employees/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "registry_employees_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2038,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "join",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/reports/elec-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "elec_summary_report",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3936,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle",
+        "unit_id"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get",
+      "share_params.append"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/reports/employee-bill-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "employee_bill_summary_report",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3725,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "approve"
+    ],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "reporting_run_id",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/reports/monthly-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "monthly_summary",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3706,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "approve"
+    ],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "reporting_run_id",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/reports/reconciliation",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "reconciliation_report",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3761,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "billed_amount",
+        "billed_total",
+        "employee_id",
+        "month_cycle",
+        "recovered_amount",
+        "recovered_total",
+        "utility_type"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [
+      "approve"
+    ],
+    "downstream_calls": [
+      "app.get",
+      "b.get",
+      "employee_rows.append",
+      "get",
+      "jsonify",
+      "q",
+      "r.get",
+      "recovered_by_employee.get",
+      "reporting_run_id",
+      "request.args.get",
+      "round",
+      "utility_rows.append"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3761-3849",
+    "table_touch_summary": {
+      "read": [
+        "util_billing_line",
+        "util_recovery_payment"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "single-mode"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "passes path gate / api path bypasses path-level _role_allowed check"
+      },
+      "BILLING_ADMIN": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "DATA_ENTRY": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      },
+      "VIEWER": {
+        "decision": "DENY",
+        "reason": "before_request non-api path blocked by _role_allowed"
+      }
+    },
+    "rbac_truth_table_status": "Closed (scoped evidence)",
+    "transaction_rollback_proof_status": "N/A",
+    "month_lock_exception_status": "Not Applicable",
+    "guard_coverage_status": "Closed (scoped evidence)"
+  },
+  {
+    "flask_path": "/reports/recovery",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "recovery",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3717,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "month_cycle"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "json"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "3717-3721",
+    "table_touch_summary": {
+      "read": [
+        "util_billing_line"
+      ],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/reports/van",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "van_report",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 3928,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "month_cycle"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/reset-password",
+    "method": "GET,POST",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "function_name": "reset_password",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1594,
+    "auth_requirement": "No (AUTH_EXEMPT_PATHS)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "attempts",
+        "identity",
+        "new_password",
+        "otp",
+        "otp_hash"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "html template",
+      "json"
+    ],
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "_otp_hash",
+      "_password_hash",
+      "_safe_auth_fail",
+      "app.route",
+      "d.get",
+      "hmac.compare_digest",
+      "jsonify",
+      "q",
+      "re.match",
+      "rec.get",
+      "render_template",
+      "replace"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1594-1632",
+    "table_touch_summary": {
+      "read": [
+        "auth_password_reset_otp",
+        "auth_users"
+      ],
+      "insert": [
+        "auth_audit_log"
+      ],
+      "update": [
+        "auth_password_reset_otp",
+        "auth_users"
+      ],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "No (AUTH_EXEMPT_PATHS)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Branch-dependent response type",
+      "Idempotency not explicit in this handler"
+    ],
+    "rbac_proof_type": "explicit truth-table from global+handler gates",
+    "month_lock_coverage": "No direct guard",
+    "response_mode_proof": [
+      "method-based branch",
+      "conditional branch"
+    ],
+    "finalize_idempotency_proof_state": "N/A",
+    "transaction_boundary_proof_state": "N/A",
+    "rbac_truth_table": {
+      "SUPER_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "BILLING_ADMIN": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "DATA_ENTRY": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      },
+      "VIEWER": {
+        "decision": "ALLOW",
+        "reason": "Public route in AUTH_EXEMPT_PATHS"
+      }
+    }
+  },
+  {
+    "flask_path": "/rooms",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "rooms_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2691,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "category",
+        "month_cycle",
+        "unit_id"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.append",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/rooms/<int:row_id>",
+    "method": "DELETE",
+    "methods": [
+      "DELETE"
+    ],
+    "function_name": "rooms_delete",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2748,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "int:row_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "delete"
+    ],
+    "downstream_calls": [
+      "app.delete",
+      "assert_month_editable",
+      "jsonify",
+      "q",
+      "row.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/rooms/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "rooms_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2722,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "assert_month_editable",
+      "d.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/admin/users",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_admin_users",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1637,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "Decorator require_roles('SUPER_ADMIN',); role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "q",
+      "render_template",
+      "require_roles"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/billing",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_billing",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1351,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/dashboard",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_dashboard",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4482,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/elec-summary",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_elec_summary",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1408,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/electric-v1-outputs",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_electric_v1_outputs",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1418,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/electric-v1-run",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_electric_v1_run",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1413,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/employee-helper",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_employee_helper",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1376,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "lower",
+      "os.environ.get",
+      "redirect",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/employee-master",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_employee_master",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1366,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/employees",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_employees",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1371,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/family-details",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_family_details",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4532,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/finalized-months",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_finalized_months",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4552,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "html template"
+    ],
+    "side_effects": [
+      "finalize"
+    ],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "4552-4553",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/ui/imports",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_imports",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1341,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/inputs/hr",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_inputs_hr",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4517,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/inputs/mapping",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_inputs_mapping",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4512,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/inputs/readings",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_inputs_readings",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4522,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/inputs/ro",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_inputs_ro",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4527,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/logs",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_logs",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4547,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/masters/employees",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_masters_employees",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4492,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/masters/meters",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_masters_meters",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4502,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/masters/rates",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_masters_rates",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4507,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/masters/units",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_masters_units",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4497,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/meter-master",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_meter_master",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1388,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/meter-register-ingest",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_meter_register_ingest",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1393,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/month-control",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_month_control",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4487,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "html template"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "4487-4488",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/ui/month-cycle",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_month_cycle",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1318,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "html template"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1318-1319",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/ui/monthly-setup",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_monthly_setup",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1328,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [
+        "actor_user_id",
+        "admin_user_id"
+      ],
+      "path_params": []
+    },
+    "response_type": [
+      "html template"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "bool",
+      "render_template",
+      "session.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1328-1332",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Yes/likely"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN']",
+      "month_or_finalize_guard": "handler-referenced"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/ui/occupancy",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_occupancy",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1403,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/profile",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_profile",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1538,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/rates",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_rates",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1323,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/reconciliation",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_reconciliation",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1361,
+    "auth_requirement": "Yes (before_request enforce_auth_and_rbac)",
+    "role_requirement": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_or_payload_keys": [],
+      "path_params": []
+    },
+    "response_type": [
+      "html template"
+    ],
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "P0-Verified",
+    "confidence": "High",
+    "notes": "",
+    "line_range": "1361-1362",
+    "table_touch_summary": {
+      "read": [],
+      "insert": [],
+      "update": [],
+      "delete": [],
+      "transactionality_visible": false,
+      "idempotency": "Not Proven",
+      "month_locked_blocks_write": "Not direct in handler (may be upstream)"
+    },
+    "guard_summary": {
+      "auth_gate": "Yes (before_request enforce_auth_and_rbac)",
+      "forced_password_change_gate": "global before_request",
+      "rbac": "Path RBAC roles=['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER']",
+      "month_or_finalize_guard": "not explicit in handler"
+    },
+    "known_ambiguity": [
+      "Idempotency not explicit in this handler"
+    ]
+  },
+  {
+    "flask_path": "/ui/reports",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_reports",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1356,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/results/employee-wise",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_results_employee",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4537,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/results/unit-wise",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_results_unit",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 4542,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/rooms",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_rooms",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1398,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/unit-master",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_unit_master",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1383,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/van",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_van",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1346,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/ui/water-meters",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "ui_water_meters",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 1336,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "html template",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "render_template"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/units",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "units_list",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2236,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "q"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "params.extend",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/units/<unit_id>",
+    "method": "DELETE",
+    "methods": [
+      "DELETE"
+    ],
+    "function_name": "units_delete",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2290,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "unit_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "delete",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.delete",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": false,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/units/resolve/<unit_id>",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "unit_resolve",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2401,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [
+        "unit_id"
+      ],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/units/suggest",
+    "method": "GET",
+    "methods": [
+      "GET"
+    ],
+    "function_name": "units_suggest",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2377,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [
+        "block_floor",
+        "colony_type",
+        "room_no"
+      ],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [],
+    "downstream_calls": [
+      "app.get",
+      "jsonify",
+      "q",
+      "request.args.get"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  },
+  {
+    "flask_path": "/units/upsert",
+    "method": "POST",
+    "methods": [
+      "POST"
+    ],
+    "function_name": "units_upsert",
+    "source_file": "unified_app/api/app.py",
+    "source_line": 2263,
+    "auth_requirement": "Yes (enforce_auth_and_rbac before_request)",
+    "role_requirement": "RBAC by path via ROLE_PERMISSIONS + hard guards in enforce_auth_and_rbac; role map candidates=['SUPER_ADMIN']",
+    "input_sources": {
+      "query_params": [],
+      "form_fields": [],
+      "json_fields": [],
+      "path_params": [],
+      "has_request_files": false
+    },
+    "response_type": "json",
+    "side_effects": [
+      "insert",
+      "update"
+    ],
+    "downstream_calls": [
+      "app.post",
+      "d.get",
+      "jsonify",
+      "q"
+    ],
+    "month_or_finalization_guard_dependency": true,
+    "target_laravel_controller_action": "Needs mapping",
+    "parity_status": "Analyzed",
+    "confidence": "High",
+    "notes": ""
+  }
+]
