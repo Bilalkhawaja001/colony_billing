@@ -23,6 +23,8 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
   - `POST /billing/adjustments/approve` is real evidence-aligned 410 removed-flow endpoint
   - `POST /recovery/payment` is real evidence-aligned 410 disabled-flow endpoint
   - `GET /reports/reconciliation` is real read-only parity report endpoint
+  - Active report surfaces now real: monthly-summary, recovery, employee-bill-summary, van, elec-summary
+  - Active export surface: `/export/excel/reconciliation` (LIMITED GO CSV adapter)
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`

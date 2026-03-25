@@ -11,6 +11,7 @@ use App\Http\Requests\Billing\BillingLockRequest;
 use App\Http\Requests\Billing\BillingPrecheckRequest;
 use App\Http\Requests\Billing\ReconciliationReportRequest;
 use App\Http\Requests\Billing\RecoveryPaymentRequest;
+use App\Http\Requests\Billing\ReportMonthCycleRequest;
 use App\Services\Billing\DraftBillingFlowService;
 
 class BillingDraftController extends Controller
@@ -78,5 +79,60 @@ class BillingDraftController extends Controller
         $code = (int)($result['_http'] ?? 200);
         unset($result['_http']);
         return response()->json($result, $code);
+    }
+
+    public function monthlySummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->monthlySummary($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function recoveryReport(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->recoveryReport($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function employeeBillSummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->employeeBillSummary($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function vanReport(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->vanReport($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function elecSummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->elecSummary($request->validated() + ['unit_id' => request()->query('unit_id')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function exportExcelReconciliation(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->exportExcelReconciliation($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        if ($code !== 200) {
+            return response()->json($result, $code);
+        }
+
+        return response($result['content'], 200, [
+            'Content-Type' => $result['content_type'],
+            'Content-Disposition' => 'attachment; filename="'.$result['filename'].'"',
+        ]);
     }
 }

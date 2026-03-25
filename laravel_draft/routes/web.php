@@ -52,4 +52,10 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,VIEWER'])->group(function () {
     Route::get('/reports/reconciliation', [BillingDraftController::class, 'reconciliationReport']);
+    Route::get('/reports/monthly-summary', [BillingDraftController::class, 'monthlySummary']);
+    Route::get('/reports/recovery', [BillingDraftController::class, 'recoveryReport']);
+    Route::get('/reports/employee-bill-summary', [BillingDraftController::class, 'employeeBillSummary']);
+    Route::get('/reports/van', [BillingDraftController::class, 'vanReport']);
+    Route::get('/reports/elec-summary', [BillingDraftController::class, 'elecSummary']);
+    Route::get('/export/excel/reconciliation', [BillingDraftController::class, 'exportExcelReconciliation']);
 });

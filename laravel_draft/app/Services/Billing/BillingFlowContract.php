@@ -19,4 +19,16 @@ interface BillingFlowContract
     public function recoveryPayment(array $payload): array;
 
     public function reconciliationReport(array $payload): array;
+
+    public function monthlySummary(array $payload): array;
+
+    public function recoveryReport(array $payload): array;
+
+    public function employeeBillSummary(array $payload): array;
+
+    public function vanReport(array $payload): array;
+
+    public function elecSummary(array $payload): array;
+
+    public function exportExcelReconciliation(array $payload): array;
 }

@@ -519,4 +519,157 @@ class DraftBillingFlowService implements BillingFlowContract
             ],
         ];
     }
+
+    private function reportingRunId(string $monthCycle): ?int
+    {
+        $run = DB::selectOne(
+            "SELECT id, run_status FROM util_billing_run
+             WHERE month_cycle=? AND run_status IN ('LOCKED','APPROVED')
+             ORDER BY CASE run_status WHEN 'LOCKED' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END, id DESC
+             LIMIT 1",
+            [$monthCycle]
+        );
+        return $run ? (int)$run->id : null;
+    }
+
+    public function monthlySummary(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'month_cycle'=>$m,'rows'=>[],'error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'SELECT utility_type, ROUND(SUM(amount),2) as total_amount, ROUND(SUM(qty),4) as total_qty
+             FROM util_billing_line WHERE billing_run_id=? GROUP BY utility_type ORDER BY utility_type',
+            [$runId]
+        );
+
+        return ['month_cycle'=>$m,'billing_run_id'=>$runId,'rows'=>$rows];
+    }
+
+    public function recoveryReport(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $rows = DB::select(
+            'SELECT employee_id, ROUND(SUM(amount),2) as billed
+             FROM util_billing_line WHERE month_cycle=? GROUP BY employee_id ORDER BY employee_id',
+            [$m]
+        );
+
+        return ['month_cycle'=>$m,'rows'=>$rows];
+    }
+
+    public function employeeBillSummary(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'WITH bl AS (
+                SELECT employee_id,
+                       ROUND(COALESCE(SUM(CASE WHEN utility_type=\'ELEC\' THEN amount ELSE 0 END),0),2) AS electric_bill,
+                       ROUND(COALESCE(SUM(CASE WHEN utility_type IN (\'WATER\',\'WATER_GENERAL\',\'WATER_DRINKING\') THEN amount ELSE 0 END),0),2) AS water_bill,
+                       ROUND(COALESCE(SUM(CASE WHEN utility_type=\'SCHOOL_VAN\' THEN amount ELSE 0 END),0),2) AS school_van_bill,
+                       ROUND(COALESCE(SUM(amount),0),2) AS total_bill
+                FROM util_billing_line
+                WHERE billing_run_id=?
+                GROUP BY employee_id
+            )
+            SELECT bl.employee_id,
+                   COALESCE(e."Name", \'\') AS employee_name,
+                   COALESCE(e."Department", \'\') AS department,
+                   CASE WHEN fd.company_id IS NULL THEN 0 ELSE 1 END AS has_family,
+                   COALESCE(bl.electric_bill,0) AS electric_bill,
+                   COALESCE(bl.water_bill,0) AS water_bill,
+                   COALESCE(bl.school_van_bill,0) AS school_van_bill,
+                   COALESCE(bl.total_bill,0) AS total_bill
+            FROM bl
+            LEFT JOIN "Employees_Master" e ON e."CompanyID" = bl.employee_id
+            LEFT JOIN (SELECT DISTINCT company_id FROM family_details WHERE month_cycle=?) fd ON fd.company_id = bl.employee_id
+            ORDER BY bl.employee_id',
+            [$runId, $m]
+        );
+
+        return ['status'=>'ok','month_cycle'=>$m,'billing_run_id'=>$runId,'rows'=>$rows];
+    }
+
+    public function vanReport(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $rows = DB::select(
+            'SELECT employee_id, child_name, school_name, class_level, amount
+             FROM util_school_van_monthly_charge WHERE month_cycle=? ORDER BY employee_id, child_name',
+            [$m]
+        );
+
+        return ['month_cycle'=>$m,'rows'=>$rows];
+    }
+
+    public function elecSummary(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+        $unitId = trim((string)($payload['unit_id'] ?? ''));
+
+        $unitSql = 'SELECT month_cycle, unit_id, category, usage_units, rooms_count,
+                           unit_free_units, net_units, elec_rate, unit_amount, total_attendance
+                    FROM util_elec_unit_monthly_result WHERE month_cycle=?';
+        $params = [$m];
+        if ($unitId !== '') { $unitSql .= ' AND unit_id=?'; $params[] = $unitId; }
+        $unitSql .= ' ORDER BY unit_id';
+
+        $shareSql = 'SELECT s.month_cycle, s.unit_id, s.employee_id, e."Name" AS employee_name,
+                            s.attendance, s.share_units, s.share_amount, s.allocation_method,
+                            COALESCE(s.explain_usage_share_units,0) AS explain_usage_share_units,
+                            COALESCE(s.explain_free_share_units,0) AS explain_free_share_units,
+                            COALESCE(s.explain_billable_units,0) AS explain_billable_units
+                     FROM util_elec_employee_share_monthly s
+                     LEFT JOIN "Employees_Master" e ON e."CompanyID"=s.employee_id
+                     WHERE s.month_cycle=?';
+        $shareParams = [$m];
+        if ($unitId !== '') { $shareSql .= ' AND s.unit_id=?'; $shareParams[] = $unitId; }
+        $shareSql .= ' ORDER BY s.unit_id, s.employee_id';
+
+        return [
+            'month_cycle' => $m,
+            'unit_rows' => DB::select($unitSql, $params),
+            'share_rows' => DB::select($shareSql, $shareParams),
+        ];
+    }
+
+    public function exportExcelReconciliation(array $payload): array
+    {
+        // Active export surface is proven; in LIMITED GO provide deterministic CSV payload adapter.
+        $rep = $this->reconciliationReport($payload);
+        if (($rep['_http'] ?? 200) !== 200) {
+            return $rep;
+        }
+
+        $lines = ["employee_id,billed_amount,recovered_amount,outstanding_amount"];
+        foreach ($rep['by_employee'] as $r) {
+            $lines[] = implode(',', [
+                $r['employee_id'],
+                $r['billed_amount'],
+                $r['recovered_amount'],
+                $r['outstanding_amount'],
+            ]);
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $rep['month_cycle'],
+            'filename' => 'reconciliation_'.$rep['month_cycle'].'.csv',
+            'content_type' => 'text/csv',
+            'content' => implode("\n", $lines),
+            'parity_note' => 'Export endpoint active; CSV adapter used in LIMITED GO instead of XLSX binary writer.',
+        ];
+    }
 }

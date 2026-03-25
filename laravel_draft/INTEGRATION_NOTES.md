@@ -37,6 +37,12 @@ In `bootstrap/app.php` aliases:
   - `POST /billing/adjustments/approve` (**real 410 removed-flow parity behavior implemented**)
   - `POST /recovery/payment` (**real 410 disabled-flow parity behavior implemented**)
   - `GET /reports/reconciliation` (**real read-only reconciliation report implemented**)
+  - `GET /reports/monthly-summary` (**real read-only implemented**)
+  - `GET /reports/recovery` (**real read-only implemented**)
+  - `GET /reports/employee-bill-summary` (**real read-only implemented**)
+  - `GET /reports/van` (**real read-only implemented**)
+  - `GET /reports/elec-summary` (**real read-only implemented**)
+  - `GET /export/excel/reconciliation` (**active export implemented with CSV adapter**)
 - Controller: `BillingDraftController`
 - Validation:
   - precheck expects `month_cycle` in `MM-YYYY` format
