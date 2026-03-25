@@ -14,9 +14,15 @@ class BillingPrecheckRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'month' => ['required', 'string', 'max:20'],
-            'scope' => ['nullable', 'string', 'max:50'],
-            'dry_run' => ['nullable', 'boolean'],
+            // Flask evidence: api_billing_precheck expects month_cycle (MM-YYYY)
+            'month_cycle' => ['required', 'string', 'regex:/^\d{2}-\d{4}$/'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'month_cycle.regex' => 'month_cycle must be MM-YYYY',
         ];
     }
 }

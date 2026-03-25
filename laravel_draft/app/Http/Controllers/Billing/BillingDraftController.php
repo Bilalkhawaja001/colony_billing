@@ -17,7 +17,7 @@ class BillingDraftController extends Controller
 
     public function precheck(BillingPrecheckRequest $request)
     {
-        return response()->json($this->service->precheck($request->validated()), 501);
+        return response()->json($this->service->precheck($request->validated()));
     }
 
     public function finalize(BillingFinalizeRequest $request)

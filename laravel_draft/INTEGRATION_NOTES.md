@@ -27,16 +27,19 @@ In `bootstrap/app.php` aliases:
 - Replace config/session lock source with domain-backed month state resolver.
 - Keep exception list explicit and policy-approved before enabling real month/billing controllers.
 
-## Billing foundation shell boundaries (draft-only)
-- Routes added:
-  - `POST /api/billing/precheck`
-  - `POST /api/billing/finalize`
-  - `POST /billing/lock`
-  - `POST /billing/approve`
+## Billing foundation shell boundaries
+- Routes:
+  - `POST /api/billing/precheck` (**real read-only precheck implemented**)
+  - `POST /api/billing/finalize` (placeholder)
+  - `POST /billing/lock` (placeholder)
+  - `POST /billing/approve` (placeholder)
 - Controller: `BillingDraftController`
-- Validation placeholders: `Billing*Request`
+- Validation:
+  - precheck expects `month_cycle` in `MM-YYYY` format
 - Service boundary contract: `BillingFlowContract`
-- Current behavior: returns safe `501/blocked` placeholders; no financial/domain logic.
+- Current behavior:
+  - precheck reads source tables and returns parity-shaped response
+  - finalize/lock/approve return safe blocked placeholders (no domain writes)
 
 ## Explicitly not implemented
 - billing/month/reconciliation/adjustments/electric_v1 domain logic
