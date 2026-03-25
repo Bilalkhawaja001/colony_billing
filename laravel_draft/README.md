@@ -1,44 +1,53 @@
 # mbs_project Laravel Draft (LIMITED GO)
 
-Status: **Auth/RBAC runnable foundation** only.
+Status: **Auth/RBAC runnable foundation (hardened)** only.
 
-## Implemented in this batch
-- Real middleware registration via `bootstrap/app.php`
-- Session-based login/logout flow using `auth_users`
-- Forced password change gate behavior
-- Forgot/reset scaffold with OTP persistence (`auth_password_reset_otp`)
-- Profile change-password endpoint with legacy hash-compat verification
-- Role middleware for:
-  - SUPER_ADMIN
-  - BILLING_ADMIN
-  - DATA_ENTRY
-  - VIEWER
-- Minimal protected route groups and blocked-domain stubs
-- Auth-only migrations and models
+## Implemented
+- Real middleware registration in `bootstrap/app.php`
+- Session login/logout with Flask-compatible password verify (`pbkdf2_sha256$salt$hex`)
+- Forced password-change gate
+- OTP reset scaffold with lifecycle hardening:
+  - expiry check
+  - max attempts check
+  - single-use (`used_at`)
+  - old active OTPs invalidated on resend
+- Auth audit events (login success/fail, reset flow, password change, logout)
+- RBAC truth-table enforcement for auth shell routes via `shell.rbac`
+- Dev auth tooling commands:
+  - `php artisan mbs:auth:hash {password}`
+  - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
+- Feature tests for core auth shell behavior
 
-## Intentionally blocked
-- Billing, month lifecycle, reconciliation, adjustments, electric_v1
-- Reports/exports domain logic
+## Session keys written after login
+- `user_id`
+- `role`
+- `admin_user_id`
+- `actor_user_id`
+- `force_change_password`
 
-## Unproven/deferred parity notes
-- OTP delivery channel is not wired (stored only)
-- `APP_KEY` usage for OTP hash is draft assumption (verify against final Flask key policy)
-- No non-auth domain behavior implemented
+## Still intentionally blocked
+- billing, month lifecycle, reconciliation, adjustments, electric_v1
+- reports/exports domain logic
 
-## Local run steps
+## Remaining unproven/deferred parity
+- OTP delivery transport (SMS/email) not wired
+- OTP signing key policy may need strict Flask-aligned finalization
+- Login brute-force lockout not proven in Flask evidence (not enforced here)
+
+## Local verification steps
 1. Install PHP 8.2+ and Composer.
 2. In `laravel_draft/`:
    - `composer install`
-   - `copy .env.example .env` (or `cp .env.example .env`)
+   - `copy .env.example .env`
    - `php artisan key:generate`
-   - `New-Item -ItemType File database\database.sqlite -Force` (Windows)
+   - `New-Item -ItemType Directory -Force database | Out-Null`
+   - `New-Item -ItemType File database\database.sqlite -Force | Out-Null`
    - `php artisan migrate`
-   - (optional) seed one auth user manually in DB with `pbkdf2_sha256$salt$hex` password format
+3. Create test users:
+   - `php artisan mbs:auth:user-create admin admin@example.com Admin123! SUPER_ADMIN --force-change=0`
+   - `php artisan mbs:auth:user-create entry entry@example.com Entry123! DATA_ENTRY --force-change=1`
+4. Run app:
    - `php artisan serve`
-3. Open: `http://127.0.0.1:8000/login`
-
-## Audit references
-- `docs/laravel_migration/RBAC_PROOF_MATRIX.md`
-- `docs/laravel_migration/BILLING_FINALIZE_PROOF.md`
-- `docs/laravel_migration/P0_IMPLEMENTATION_GATE.md`
-- `docs/laravel_migration/FINAL_GO_NO_GO.md`
+   - open `http://127.0.0.1:8000/login`
+5. Run tests:
+   - `php artisan test --filter=AuthFoundationTest`

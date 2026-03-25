@@ -13,7 +13,7 @@ Route::post('/forgot-password', [AuthDraftController::class, 'forgotPassword']);
 Route::get('/reset-password', [AuthDraftController::class, 'showResetPassword']);
 Route::post('/reset-password', [AuthDraftController::class, 'resetPassword']);
 
-Route::middleware(['ensure.auth', 'force.password.change'])->group(function () {
+Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
     Route::get('/ui/profile', [AuthDraftController::class, 'showProfile']);
     Route::post('/api/profile/change-password', [AuthDraftController::class, 'changePassword']);
 
