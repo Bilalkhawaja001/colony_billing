@@ -32,8 +32,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/ui/month-cycle', fn () => response()->view('auth.blocked-domain', [], 423));
 });
 
-Route::middleware(['ensure.auth', 'force.password.change', 'month.guard.shell', 'role:SUPER_ADMIN,BILLING_ADMIN'])->group(function () {
-    // Intentionally blocked domain actions in LIMITED GO batch.
-    Route::post('/billing/lock', fn () => response()->json(['status' => 'error', 'error' => 'blocked in LIMITED GO auth-only batch'], 423));
-    Route::post('/month/open', fn () => response()->json(['status' => 'error', 'error' => 'blocked in LIMITED GO auth-only batch'], 423));
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {
+    // Guard-shell routes only. No billing/month domain logic implemented.
+    Route::post('/billing/lock', fn () => response()->json(['status' => 'ok', 'route' => '/billing/lock', 'mode' => 'guard-shell-pass']));
+    Route::post('/month/open', fn () => response()->json(['status' => 'ok', 'route' => '/month/open', 'mode' => 'guard-shell-pass']));
+    Route::post('/month/transition', fn () => response()->json(['status' => 'ok', 'route' => '/month/transition', 'mode' => 'guard-shell-exception-pass']));
 });

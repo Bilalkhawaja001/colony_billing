@@ -13,10 +13,11 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
   - old active OTPs invalidated on resend
 - Auth audit events (login success/fail, reset flow, password change, logout)
 - RBAC truth-table enforcement for auth shell routes via `shell.rbac`
+- Month-guard shell middleware (`month.guard.shell`) with config-driven lock state + exception policy
 - Dev auth tooling commands:
   - `php artisan mbs:auth:hash {password}`
   - `php artisan mbs:auth:user-create {username} {email} {password} {role}`
-- Feature tests for core auth shell behavior
+- Feature tests for auth and month-guard shell behavior
 
 ## Session keys written after login
 - `user_id`
@@ -28,6 +29,18 @@ Status: **Auth/RBAC runnable foundation (hardened)** only.
 ## Still intentionally blocked
 - billing, month lifecycle, reconciliation, adjustments, electric_v1
 - reports/exports domain logic
+
+## Month-guard shell behavior (non-billing)
+- **Locked month + protected write route** (`/month/open`, `/billing/lock`): blocked with `423 month locked`
+- **Unlocked month + protected write route**: allowed through shell route
+- **Exception route configured** (`/month/transition`): allowed even when locked
+- **Unauthorized role** (`DATA_ENTRY` on month write shell routes): denied by role middleware (`403`) before month-guard
+- **Unauthenticated**: redirected to `/login` before role/month-guard
+
+## Remaining blockers before billing implementation
+- month-lock exception governance sign-off for domain routes
+- no billing/finalize/reconciliation/adjustment controllers yet (intentionally blocked)
+- month-guard currently shell-only (session/config driven), not backed by real month-state domain service
 
 ## Remaining unproven/deferred parity
 - OTP delivery transport (SMS/email) not wired

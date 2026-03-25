@@ -1,18 +1,23 @@
 <?php
 
 return [
-    // Draft-only policy register from audit exception report.
-    'intentional_exceptions' => [
-        '/api/billing/finalize',
+    // Shell lock state source. Non-domain placeholder until real month service is wired.
+    'state' => [
+        'default_locked' => true,
+        'session_key' => 'month_guard_locked',
+        'header_override' => 'X-Month-Locked', // optional test/dev override: 1|0
+    ],
+
+    // Protected write endpoints for month-sensitive operations (shell only).
+    'protected_write_paths' => [
         '/month/open',
         '/month/transition',
         '/billing/lock',
     ],
 
-    // Shell-level protected write paths (no domain logic here).
-    'protected_write_paths' => [
-        '/month/open',
+    // Intentional exception routes that bypass lock block in shell mode.
+    'intentional_exceptions' => [
         '/month/transition',
-        '/billing/lock',
+        '/api/billing/finalize',
     ],
 ];
