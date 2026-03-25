@@ -358,12 +358,12 @@ class DraftBillingFlowService implements BillingFlowContract
                 DB::delete('DELETE FROM util_billing_line WHERE month_cycle=?', [$monthCycle]);
                 DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
 
-                DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                DB::insert('INSERT INTO util_billing_run(month_cycle, run_key, run_status) VALUES(?,?,?)', [$monthCycle, 'run_'.substr(bin2hex(random_bytes(8)),0,12), 'FAILED']);
                 $failRunId = $this->lastInsertId();
                 foreach ($dupHr as $r) {
                     DB::insert(
-                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
-                        [$failRunId, $monthCycle, 'CRIT', 'DUP_HR', 'Duplicate HR entry for company/month', json_encode(['month_cycle' => $monthCycle, 'company_id' => $r->company_id ?? null])]
+                        'INSERT INTO util_audit_log(entity_type, entity_id, action, actor_user_id, before_json, after_json, correlation_id) VALUES(?,?,?,?,?,?,?)',
+                        ['billing_run', (string)$failRunId, 'DUP_HR', (string)(session('actor_user_id') ?? session('user_id') ?? '0'), null, json_encode(['month_cycle' => $monthCycle, 'company_id' => $r->company_id ?? null]), null]
                     );
                 }
 
@@ -391,12 +391,12 @@ class DraftBillingFlowService implements BillingFlowContract
             DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
 
             if (!empty($out['stop'])) {
-                DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                DB::insert('INSERT INTO util_billing_run(month_cycle, run_key, run_status) VALUES(?,?,?)', [$monthCycle, 'run_'.substr(bin2hex(random_bytes(8)),0,12), 'FAILED']);
                 $failedRunId = $this->lastInsertId();
                 foreach (($out['logs'] ?? []) as $lg) {
                     DB::insert(
-                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
-                        [$failedRunId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
+                        'INSERT INTO util_audit_log(entity_type, entity_id, action, actor_user_id, before_json, after_json, correlation_id) VALUES(?,?,?,?,?,?,?)',
+                        ['billing_run', (string)$failedRunId, (string)$lg['code'], (string)(session('actor_user_id') ?? session('user_id') ?? '0'), null, json_encode(['severity'=>$lg['severity'],'message'=>$lg['message'],'ref_json'=>$lg['ref_json'] ?? new \stdClass()]), null]
                     );
                 }
                 DB::commit();
@@ -407,8 +407,8 @@ class DraftBillingFlowService implements BillingFlowContract
             $fp = $this->deterministicFingerprint($monthCycle, $billingRows);
 
             DB::insert(
-                'INSERT INTO util_billing_run(month_cycle, run_status, fingerprint) VALUES(?,?,?)',
-                [$monthCycle, 'APPROVED', $fp]
+                'INSERT INTO util_billing_run(month_cycle, run_key, run_status) VALUES(?,?,?)',
+                [$monthCycle, 'fp_'.$fp, 'APPROVED']
             );
             $newRunId = $this->lastInsertId();
 
@@ -421,28 +421,28 @@ class DraftBillingFlowService implements BillingFlowContract
 
                 if (abs($water) > 0.0001) {
                     DB::insert(
-                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
-                        [$newRunId, $monthCycle, $employeeId, 'WATER', 1, $water, $unitId]
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, rate, amount, source_ref) VALUES(?,?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'WATER', 1, 0, $water, $unitId]
                     );
                 }
                 if (abs($power) > 0.0001) {
                     DB::insert(
-                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
-                        [$newRunId, $monthCycle, $employeeId, 'ELEC', 1, $power, $unitId]
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, rate, amount, source_ref) VALUES(?,?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'ELEC', 1, 0, $power, $unitId]
                     );
                 }
                 if (abs($drink) > 0.0001) {
                     DB::insert(
-                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, amount, source_ref) VALUES(?,?,?,?,?,?,?)',
-                        [$newRunId, $monthCycle, $employeeId, 'WATER_DRINKING', 1, $drink, $unitId]
+                        'INSERT INTO util_billing_line(billing_run_id, month_cycle, employee_id, utility_type, qty, rate, amount, source_ref) VALUES(?,?,?,?,?,?,?,?)',
+                        [$newRunId, $monthCycle, $employeeId, 'WATER_DRINKING', 1, 0, $drink, $unitId]
                     );
                 }
             }
 
             foreach (($out['logs'] ?? []) as $lg) {
                 DB::insert(
-                    'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
-                    [$newRunId, $monthCycle, (string)$lg['severity'], (string)$lg['code'], (string)$lg['message'], json_encode($lg['ref_json'] ?? new \stdClass())]
+                    'INSERT INTO util_audit_log(entity_type, entity_id, action, actor_user_id, before_json, after_json, correlation_id) VALUES(?,?,?,?,?,?,?)',
+                    ['billing_run', (string)$newRunId, (string)$lg['code'], (string)(session('actor_user_id') ?? session('user_id') ?? '0'), null, json_encode(['severity'=>$lg['severity'],'message'=>$lg['message'],'ref_json'=>$lg['ref_json'] ?? new \stdClass()]), null]
                 );
             }
 
@@ -464,11 +464,11 @@ class DraftBillingFlowService implements BillingFlowContract
                 DB::beginTransaction();
                 try {
                     DB::delete('DELETE FROM util_billing_run WHERE month_cycle=?', [$monthCycle]);
-                    DB::insert('INSERT INTO util_billing_run(month_cycle, run_status) VALUES(?,?)', [$monthCycle, 'FAILED']);
+                    DB::insert('INSERT INTO util_billing_run(month_cycle, run_key, run_status) VALUES(?,?,?)', [$monthCycle, 'run_'.substr(bin2hex(random_bytes(8)),0,12), 'FAILED']);
                     $runId2 = $this->lastInsertId();
                     DB::insert(
-                        'INSERT INTO util_billing_audit_log(billing_run_id, month_cycle, severity, code, message, ref_json) VALUES(?,?,?,?,?,?)',
-                        [$runId2, $monthCycle, 'CRIT', 'DUP_HR', 'Duplicate HR entry for company/month', json_encode(['month_cycle' => $monthCycle])]
+                        'INSERT INTO util_audit_log(entity_type, entity_id, action, actor_user_id, before_json, after_json, correlation_id) VALUES(?,?,?,?,?,?,?)',
+                        ['billing_run', (string)$runId2, 'DUP_HR', (string)(session('actor_user_id') ?? session('user_id') ?? '0'), null, json_encode(['month_cycle' => $monthCycle]), null]
                     );
                     DB::commit();
                 } catch (\Throwable $e2) {
