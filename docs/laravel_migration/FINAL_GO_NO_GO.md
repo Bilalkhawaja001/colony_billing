@@ -1,13 +1,17 @@
 # FINAL_GO_NO_GO
 
-Status: **NO-GO** (for domain build)
+Status: **NO-GO**
 
-Risk update:
-- finalize txn/rollback: closed
-- scoped RBAC matrix: closed
-- month-lock exception register: documented
-- remaining risk: policy/governance acceptance of intentional month-lock exceptions
+## Runtime Validation Status (Current Batch)
+- `composer install` => failed (`composer` not found)
+- `php -v` => failed (`php` not found)
+- `artisan` + migrations + tests => not executable in current host environment
 
-Decision:
-- **LIMITED GO for month-guard shell only**
-- billing/month/reconciliation/adjustments/electric_v1 implementation remains blocked
+## Risk Update
+- Code-level LIMITED GO surfaces are implemented.
+- Runtime proof is blocked by missing PHP/Composer toolchain.
+- Export/full parity and month-guard domainization still open.
+
+## Decision
+- **NO-GO** for launch until runtime validation is executed on a host with PHP + Composer.
+- Keep working state at **LIMITED GO (code complete, runtime unvalidated)**.

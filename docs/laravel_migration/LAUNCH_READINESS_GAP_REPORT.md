@@ -1,30 +1,33 @@
 # LAUNCH_READINESS_GAP_REPORT
 
-## Launch-Ready (Current LIMITED GO)
+## Validation Run (Current Batch)
+Attempted runtime validation commands in `laravel_draft/`:
+1. `composer install`
+2. `php -v` (prereq check for remaining artisan/test steps)
+
+Result:
+- `composer` not found in host PATH (CommandNotFoundException)
+- `php` not found in host PATH (CommandNotFoundException)
+- Therefore `artisan key:generate`, `migrate`, and `test` could not execute.
+
+## Launch-Ready (Code Surface, Not Runtime-Proven)
 - Auth + RBAC + forced-password-change gates
-- Billing precheck/finalize/lock core boundaries
-- Approve parity (410 removed flow)
-- Adjustments create/approve parity (410 removed flow)
-- Recovery payment parity (410 disabled flow)
-- Reconciliation report (read-only)
-- Active report surfaces implemented:
-  - /reports/monthly-summary
-  - /reports/recovery
-  - /reports/employee-bill-summary
-  - /reports/van
-  - /reports/elec-summary
-- Active export surface implemented:
-  - /export/excel/reconciliation (LIMITED GO CSV adapter)
+- Month-guard shell
+- Billing precheck/finalize/lock boundaries
+- Approve + adjustments + recovery parity 410 behavior
+- Reconciliation + active reports (read-only)
+- Reconciliation export adapter (`/export/excel/reconciliation` via CSV)
 
 ## Launch-Blocking
-- Full XLSX/PDF binary export parity not yet implemented (csv adapter used for active excel route)
-- finalize computation internals still draft approximation (boundary and guards are real)
-- month guard still shell-driven (config/session), not full domain month-state service
+1. **Runtime toolchain missing** (PHP + Composer unavailable) -> cannot validate migrations/tests.
+2. Full XLSX/PDF binary export parity not implemented (CSV adapter in place for active excel route).
+3. Finalize computation internals still draft approximation (transaction/guards are real).
+4. Month guard still shell-driven (config/session), not domain month-state service.
 
 ## Post-Launch Queue
-- audit-log parity for lock/finalize and report accesses
-- deterministic output fixture parity checks against Flask for monthly/recovery/employee/van/elec reports
-- tighten schema/index assumptions on util_* tables for production DB engines
+- audit-log parity for lock/finalize/report access
+- fixture-based parity snapshots (Flask vs Laravel) for report outputs
+- schema/index hardening on util_* tables for target DB
 
 ## Separate Module
-- electric_v1 remains separate-module scope; not part of launch-critical core in this batch
+- electric_v1 remains separate-module scope (blocked in this track)
