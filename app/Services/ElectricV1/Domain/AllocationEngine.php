@@ -18,7 +18,7 @@ class AllocationEngine
         }
 
         if ($res !== 'ROOM') {
-            return ['allocations' => [], 'issues' => [['code' => 'E_ALLOW_INVALID_TYPE', 'message' => 'Unsupported residence type', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
+            return ['allocations' => [], 'issues' => [['code' => 'E_ALLOW_INVALID_TYPE', 'message' => 'Unsupported residence type for allocation: '.$residenceType, 'severity' => 'ERROR', 'unit_id' => $unitId]]];
         }
 
         $byEmp = [];
@@ -30,7 +30,7 @@ class AllocationEngine
         }
         $totalAtt = array_sum($byEmp);
         if ($grossUnits > 0 && $totalAtt <= 0) {
-            return ['allocations' => [], 'issues' => [['code' => 'E_UNIT_ZERO_ATT_WITH_CONS', 'message' => 'ROOM unit has consumption but zero attendance', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
+            return ['allocations' => [], 'issues' => [['code' => 'E_UNIT_ZERO_ATT_WITH_CONS', 'message' => 'ROOM unit has consumption but zero attendance; unit skipped', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
         }
         if ($totalAtt <= 0) return ['allocations' => [], 'issues' => []];
 

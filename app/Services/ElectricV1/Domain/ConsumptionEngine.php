@@ -15,16 +15,16 @@ class ConsumptionEngine
             return self::estimate($unitId, $history, []);
         }
         if ($status !== 'NORMAL') {
-            return ['result' => null, 'issues' => [['code' => 'E_READ_STATUS_INVALID', 'message' => 'Unsupported reading status', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
+            return ['result' => null, 'issues' => [['code' => 'E_READ_STATUS_INVALID', 'message' => 'Unsupported reading status: '.($status !== '' ? $status : 'EMPTY'), 'severity' => 'ERROR', 'unit_id' => $unitId]]];
         }
 
         $prev = is_numeric($cycleReading['previous_reading'] ?? null) ? (float)$cycleReading['previous_reading'] : null;
         $curr = is_numeric($cycleReading['current_reading'] ?? null) ? (float)$cycleReading['current_reading'] : null;
         if ($prev === null || $curr === null) {
-            return ['result' => null, 'issues' => [['code' => 'E_READ_NORMAL_INVALID_NUM', 'message' => 'NORMAL requires numeric readings', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
+            return ['result' => null, 'issues' => [['code' => 'E_READ_NORMAL_INVALID_NUM', 'message' => 'NORMAL reading requires numeric previous/current values', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
         }
         if ($curr < $prev) {
-            return ['result' => null, 'issues' => [['code' => 'E_READ_REVERSE', 'message' => 'CurrentReading is less than PreviousReading', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
+            return ['result' => null, 'issues' => [['code' => 'E_READ_REVERSE', 'message' => 'CurrentReading is less than PreviousReading; unit skipped', 'severity' => 'ERROR', 'unit_id' => $unitId]]];
         }
 
         return ['result' => ['unit_id' => $unitId, 'gross_units' => round($curr - $prev, 4), 'is_estimated' => false, 'estimated_from_valid_cycle_count' => 0], 'issues' => []];
@@ -47,13 +47,13 @@ class ConsumptionEngine
 
         if (count($valid) === 0) {
             $issues = $prefixIssues;
-            $issues[] = ['code' => 'E_READ_ESTIMATE_INSUFF', 'message' => 'No prior valid cycles available for estimation', 'severity' => 'ERROR', 'unit_id' => $unitId];
+            $issues[] = ['code' => 'E_READ_ESTIMATE_INSUFF', 'message' => 'No prior valid cycles available for estimation; unit skipped', 'severity' => 'ERROR', 'unit_id' => $unitId];
             return ['result' => null, 'issues' => $issues];
         }
 
         $est = round(array_sum($valid) / count($valid), 4);
         $issues = $prefixIssues;
-        $issues[] = ['code' => 'W_READ_ESTIMATED', 'message' => 'Estimated from previous valid cycles', 'severity' => 'WARNING', 'unit_id' => $unitId];
+        $issues[] = ['code' => 'W_READ_ESTIMATED', 'message' => 'Estimated from previous valid cycles (count='.count($valid).')', 'severity' => 'WARNING', 'unit_id' => $unitId];
 
         return ['result' => ['unit_id' => $unitId, 'gross_units' => $est, 'is_estimated' => true, 'estimate_source_cycle1' => $sources[0] ?? null, 'estimate_source_cycle2' => $sources[1] ?? null, 'estimate_source_cycle3' => $sources[2] ?? null, 'estimated_from_valid_cycle_count' => count($valid)], 'issues' => $issues];
     }
