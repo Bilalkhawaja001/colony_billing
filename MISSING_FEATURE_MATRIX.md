@@ -2,13 +2,13 @@
 
 | Module | Feature | Flask Reference | Laravel State | Severity | Status | Launch Impact |
 |---|---|---|---|---|---|---|
-| Billing | `/billing/run` with `run_key` idempotency | Present (`batchA app.py`) | Missing (replaced by precheck/finalize) | Critical | Mismatched | Blocking |
-| Billing | Approve run (`/billing/approve`) | Present | Returns 410 | Critical | Mismatched | Blocking |
+| Billing | `/billing/run` with `run_key` idempotency | Present (`batchA app.py`) | Implemented (`/billing/run`) with idempotent run-key semantics | Critical | Closed | Resolved |
+| Billing | Approve run (`/billing/approve`) | Present | Implemented and updates APPROVED status | Critical | Closed | Resolved |
 | Billing | Lock run | Present | Present with extra month-state checks | Medium | Intentional change | Verify |
 | Month | Open month (`/month/open`) writes cycle row | Present | Shell/pass response; write parity unclear | High | Partial | Blocking |
 | Month | Transition month (`to_state`) | Present | Shell/exception pass route | High | Partial | Blocking |
-| Rates | Upsert monthly rates | Present | Missing | Critical | Missing | Blocking |
-| Rates | Approve monthly rates | Present | Missing | Critical | Missing | Blocking |
+| Rates | Upsert monthly rates | Present | Implemented (`/rates/upsert`) | Critical | Closed | Resolved |
+| Rates | Approve monthly rates | Present | Implemented (`/rates/approve`) | Critical | Closed | Resolved |
 | Imports | Mark batch validated | Present | Missing | High | Missing | High |
 | Reports | Monthly summary JSON | Present | Present | Low | Partial parity | Non-blocking |
 | Reports | Recovery JSON | Present | Present | Medium | Needs verification | Medium |
@@ -24,7 +24,7 @@
 | UI | Production operator frontend parity | Flask source in scope API-first; production UI not captured | Admin shell pages only | High | Partial | High |
 
 ## Severity totals
-- Critical: 4
+- Critical: 0
 - High: 7
 - Medium: 8
 - Low: 1

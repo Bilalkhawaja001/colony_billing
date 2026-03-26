@@ -5,8 +5,11 @@ return [
     'protected_write_paths' => [
         '/month/open',
         '/month/transition',
+        '/billing/run',
         '/billing/lock',
         '/billing/approve',
+        '/rates/upsert',
+        '/rates/approve',
         '/billing/adjustments/create',
         '/billing/adjustments/approve',
         '/recovery/payment',

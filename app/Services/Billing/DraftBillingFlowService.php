@@ -19,6 +19,100 @@ class DraftBillingFlowService implements BillingFlowContract
         ];
     }
 
+    public function ratesUpsert(array $payload): array
+    {
+        $monthCycle = trim((string)($payload['month_cycle'] ?? ''));
+        DB::statement(
+            'INSERT INTO util_rate_monthly(month_cycle,elec_rate,water_general_rate,water_drinking_rate,school_van_rate)
+             VALUES(?,?,?,?,?)
+             ON CONFLICT(month_cycle) DO UPDATE SET
+             elec_rate=excluded.elec_rate,
+             water_general_rate=excluded.water_general_rate,
+             water_drinking_rate=excluded.water_drinking_rate,
+             school_van_rate=excluded.school_van_rate',
+            [
+                $monthCycle,
+                (float)($payload['elec_rate'] ?? 0),
+                (float)($payload['water_general_rate'] ?? 0),
+                (float)($payload['water_drinking_rate'] ?? 0),
+                (float)($payload['school_van_rate'] ?? 0),
+            ]
+        );
+
+        return ['status' => 'ok', 'month_cycle' => $monthCycle];
+    }
+
+    public function ratesApprove(array $payload): array
+    {
+        DB::update(
+            'UPDATE util_rate_monthly SET approved_by_user_id=?, approved_at=CURRENT_TIMESTAMP WHERE month_cycle=?',
+            [
+                (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1),
+                (string)($payload['month_cycle'] ?? ''),
+            ]
+        );
+
+        return ['status' => 'ok'];
+    }
+
+    public function run(array $payload): array
+    {
+        $monthCycle = trim((string)($payload['month_cycle'] ?? ''));
+        $runKey = trim((string)($payload['run_key'] ?? ''));
+        if ($runKey === '') {
+            $runKey = $monthCycle.':'.substr(bin2hex(random_bytes(8)), 0, 8);
+        }
+        $actor = (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1);
+
+        DB::statement(
+            "INSERT OR IGNORE INTO util_billing_run(month_cycle,run_key,run_status,started_by_user_id) VALUES(?,?,'DRAFT',?)",
+            [$monthCycle, $runKey, $actor]
+        );
+
+        $run = DB::selectOne('SELECT id FROM util_billing_run WHERE month_cycle=? AND run_key=?', [$monthCycle, $runKey]);
+        $runId = (int)($run->id ?? 0);
+
+        DB::statement(
+            "INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'ELEC', elec_units,
+                    CASE WHEN elec_units=0 THEN 0 ELSE ROUND(elec_amount/elec_units,4) END,
+                    elec_amount, 'util_formula_result'
+             FROM util_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount",
+            [$runId, $monthCycle]
+        );
+
+        DB::statement(
+            "INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'WATER_GENERAL', chargeable_general_water_liters,
+                    CASE WHEN chargeable_general_water_liters=0 THEN 0 ELSE ROUND(water_general_amount/chargeable_general_water_liters,4) END,
+                    water_general_amount, 'util_formula_result'
+             FROM util_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount",
+            [$runId, $monthCycle]
+        );
+
+        DB::statement(
+            "INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'WATER_DRINKING', billed_liters, rate, amount, 'util_drinking_formula_result'
+             FROM util_drinking_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount",
+            [$runId, $monthCycle]
+        );
+
+        DB::statement(
+            "INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'SCHOOL_VAN', COUNT(*),
+                    CASE WHEN COUNT(*)=0 THEN 0 ELSE ROUND(SUM(amount)/COUNT(*),2) END,
+                    SUM(amount), 'util_school_van_monthly_charge'
+             FROM util_school_van_monthly_charge WHERE month_cycle=? GROUP BY month_cycle, employee_id
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount",
+            [$runId, $monthCycle]
+        );
+
+        return ['status' => 'ok', 'run_id' => $runId, 'run_key' => $runKey];
+    }
+
     private function monthValid(string $monthCycle): bool
     {
         return (bool) preg_match('/^\d{2}-\d{4}$/', $monthCycle);
@@ -523,12 +617,15 @@ class DraftBillingFlowService implements BillingFlowContract
 
     public function approve(array $payload): array
     {
-        return [
-            '_http' => 410,
-            'status' => 'error',
-            'error' => 'approval flow removed; use direct finalize flow',
-            'parity_note' => 'Flask evidence keeps /billing/approve intentionally removed',
-        ];
+        $runId = (int)($payload['run_id'] ?? 0);
+        $actor = (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1);
+
+        DB::update(
+            "UPDATE util_billing_run SET run_status='APPROVED', approved_by_user_id=?, approved_at=CURRENT_TIMESTAMP WHERE id=?",
+            [$actor, $runId]
+        );
+
+        return ['status' => 'ok'];
     }
 
     public function adjustmentCreate(array $payload): array

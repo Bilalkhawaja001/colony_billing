@@ -43,7 +43,11 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/month/open', fn () => response()->json(['status' => 'ok', 'route' => '/month/open', 'mode' => 'guard-shell-pass']));
     Route::post('/month/transition', fn () => response()->json(['status' => 'ok', 'route' => '/month/transition', 'mode' => 'guard-shell-exception-pass']));
 
+    Route::post('/rates/upsert', [BillingDraftController::class, 'ratesUpsert']);
+    Route::post('/rates/approve', [BillingDraftController::class, 'ratesApprove']);
+
     // Billing core endpoints currently in migration.
+    Route::post('/billing/run', [BillingDraftController::class, 'run']);
     Route::post('/api/billing/precheck', [BillingDraftController::class, 'precheck']);
     Route::post('/api/billing/finalize', [BillingDraftController::class, 'finalize']);
     Route::post('/billing/lock', [BillingDraftController::class, 'lock']);

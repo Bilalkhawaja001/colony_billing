@@ -6,11 +6,11 @@
 |---|---|---|---|---|---|---|---|---|
 | `/month/open` | POST | `/month/open` | Yes | No (Flask open API) | No | JSON yes | **No** (Flask writes row; Laravel shell route) | Partial |
 | `/month/transition` | POST | `/month/transition` | Yes | No | No | JSON yes | **No** (Flask applies `to_state`; Laravel pass-mode route) | Partial |
-| `/rates/upsert` | POST | N/A | N/A | N/A | N/A | N/A | N/A | Missing |
-| `/rates/approve` | POST | N/A | N/A | N/A | N/A | N/A | N/A | Missing |
+| `/rates/upsert` | POST | `/rates/upsert` | Yes | No | No | JSON yes | Yes | Closed |
+| `/rates/approve` | POST | `/rates/approve` | Yes | No | No | JSON yes | Yes | Closed |
 | `/imports/mark-validated` | POST | N/A | N/A | N/A | N/A | N/A | N/A | Missing |
-| `/billing/run` | POST | `/api/billing/finalize` (approx) | No (path+contract differ) | No | No | JSON yes | **No** (different input/output and source flow) | Mismatched |
-| `/billing/approve` | POST | `/billing/approve` | Yes | No | No | JSON yes | **No** (Flask updates to APPROVED; Laravel 410) | Mismatched |
+| `/billing/run` | POST | `/billing/run` | Yes | No | No | JSON yes | Yes (formula-result pipeline + run_key idempotency) | Closed |
+| `/billing/approve` | POST | `/billing/approve` | Yes | No | No | JSON yes | Yes | Closed |
 | `/billing/lock` | POST | `/billing/lock` | Yes | No | No | JSON yes | Partial (Laravel has stricter guard/state checks) | Intentional change |
 | `/reports/monthly-summary` | GET | `/reports/monthly-summary` | Yes | No | No | JSON yes | Partial (run resolution differs) | Partial |
 | `/reports/recovery` | GET | `/reports/recovery` | Yes | No | No | JSON yes | Partial | Partial |

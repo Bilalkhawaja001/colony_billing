@@ -9,6 +9,9 @@ use App\Http\Requests\Billing\BillingApproveRequest;
 use App\Http\Requests\Billing\BillingFinalizeRequest;
 use App\Http\Requests\Billing\BillingLockRequest;
 use App\Http\Requests\Billing\BillingPrecheckRequest;
+use App\Http\Requests\Billing\BillingRunRequest;
+use App\Http\Requests\Billing\RatesApproveRequest;
+use App\Http\Requests\Billing\RatesUpsertRequest;
 use App\Http\Requests\Billing\ReconciliationReportRequest;
 use App\Http\Requests\Billing\RecoveryPaymentRequest;
 use App\Http\Requests\Billing\ReportMonthCycleRequest;
@@ -18,6 +21,21 @@ class BillingDraftController extends Controller
 {
     public function __construct(private readonly DraftBillingFlowService $service)
     {
+    }
+
+    public function ratesUpsert(RatesUpsertRequest $request)
+    {
+        return response()->json($this->service->ratesUpsert($request->validated()));
+    }
+
+    public function ratesApprove(RatesApproveRequest $request)
+    {
+        return response()->json($this->service->ratesApprove($request->validated()));
+    }
+
+    public function run(BillingRunRequest $request)
+    {
+        return response()->json($this->service->run($request->validated()));
     }
 
     public function precheck(BillingPrecheckRequest $request)

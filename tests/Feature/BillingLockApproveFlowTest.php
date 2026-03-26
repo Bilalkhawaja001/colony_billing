@@ -33,8 +33,10 @@ class BillingLockApproveFlowTest extends TestCase
             'month_guard_locked' => true, // approve is exception path
         ]);
 
-        $res = $this->postJson('/billing/approve', []);
-        $res->assertStatus(410)->assertJsonPath('error', 'approval flow removed; use direct finalize flow');
+        DB::shouldReceive('update')->once()->andReturn(1);
+
+        $res = $this->postJson('/billing/approve', ['run_id' => 77]);
+        $res->assertOk()->assertJsonPath('status', 'ok');
     }
 
     public function test_invalid_input_for_lock(): void
@@ -82,8 +84,10 @@ class BillingLockApproveFlowTest extends TestCase
         DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'APPROVAL']);
         DB::shouldReceive('update')->once()->andReturn(1);
 
+        DB::shouldReceive('update')->once()->andReturn(1);
+
         $this->postJson('/billing/lock', ['run_id' => 8])->assertStatus(200);
-        $this->postJson('/billing/approve', [])->assertStatus(410);
+        $this->postJson('/billing/approve', ['run_id' => 8])->assertStatus(200);
     }
 
     public function test_state_transition_result_keys_present(): void

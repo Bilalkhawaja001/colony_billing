@@ -22,16 +22,16 @@
 
 ### 4) Billing finalize/run
 - **Flask evidence:** `POST /billing/run` builds lines from formula result tables with `run_key` idempotency.
-- **Laravel state:** `POST /api/billing/finalize` uses draft engine over different source tables; no `run_key` contract.
-- **Gap:** Contract + dataflow mismatch.
-- **Parity:** Mismatched.
-- **Severity:** Critical
+- **Laravel state:** `POST /billing/run` implemented with formula-result pipeline and idempotent run-key semantics.
+- **Gap:** Closed for critical parity path.
+- **Parity:** Closed.
+- **Severity:** Critical (resolved)
 
 ### 5) Billing approve
 - **Flask evidence:** Active approve endpoint sets run APPROVED.
-- **Laravel state:** Hard 410 removed-flow.
-- **Parity:** Mismatched.
-- **Severity:** Critical
+- **Laravel state:** `/billing/approve` implemented as active status transition.
+- **Parity:** Closed.
+- **Severity:** Critical (resolved)
 
 ### 6) Billing lock
 - **Flask evidence:** Simple lock update.

@@ -4,6 +4,12 @@ namespace App\Services\Billing;
 
 interface BillingFlowContract
 {
+    public function ratesUpsert(array $payload): array;
+
+    public function ratesApprove(array $payload): array;
+
+    public function run(array $payload): array;
+
     public function precheck(array $payload): array;
 
     public function finalize(array $payload): array;

@@ -3,21 +3,14 @@
 ## Launch risk summary
 
 ### Critical (launch-blocking)
-1. **Billing run contract mismatch**
-   - Flask clients use `/billing/run` + `run_key`; Laravel moved to `/api/billing/finalize`.
-2. **Billing approval removed**
-   - `/billing/approve` is active in Flask reference, but 410 in Laravel.
-3. **Rates governance missing**
-   - `/rates/upsert` and `/rates/approve` not ported.
-4. **Compute/dataflow mismatch**
-   - Flask formula-result pipeline not matched by Laravel draft engine inputs.
+- **No open critical items after this batch.**
 
 ### High
-5. **Month state workflow partial parity** (`/month/open`, `/month/transition`).
-6. **Import validation endpoint missing** (`/imports/mark-validated`).
-7. **Missing monthly summary exports** (CSV/PDF).
-8. **Operator UI function depth insufficient** (pages exist, workflow depth low).
-9. **Auth parity not proven against production Flask auth code.**
+1. **Month state workflow partial parity** (`/month/open`, `/month/transition`).
+2. **Import validation endpoint missing** (`/imports/mark-validated`).
+3. **Missing monthly summary exports** (CSV/PDF).
+4. **Operator UI function depth insufficient** (pages exist, workflow depth low).
+5. **Auth parity not proven against production Flask auth code.**
 
 ### Medium
 10. Lock workflow changed with stricter guards (likely intentional, needs sign-off).

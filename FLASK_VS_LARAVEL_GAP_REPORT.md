@@ -20,7 +20,7 @@ Laravel is **not near parity** with Flask reference behavior yet. It has added a
 
 ## Gap register (strict)
 
-### 1) Billing run contract mismatch (`/billing/run` missing)
+### 1) [CLOSED] Billing run contract mismatch (`/billing/run` missing)
 - **Severity:** Critical
 - **Module:** Billing core
 - **Flask evidence:** `batchA_app_core/api/app.py` defines `POST /billing/run` with idempotent `run_key` handling and utility line upsert.
@@ -31,7 +31,7 @@ Laravel is **not near parity** with Flask reference behavior yet. It has added a
 - **Launch blocking:** Yes
 - **Status:** Mismatched
 
-### 2) Rates lifecycle APIs missing
+### 2) [CLOSED] Rates lifecycle APIs missing
 - **Severity:** Critical
 - **Module:** Rates governance
 - **Flask evidence:** `POST /rates/upsert`, `POST /rates/approve` in `batchA_app_core/api/app.py`.
@@ -53,7 +53,7 @@ Laravel is **not near parity** with Flask reference behavior yet. It has added a
 - **Launch blocking:** Likely
 - **Status:** Missing
 
-### 4) Billing approve semantics changed to HTTP 410
+### 4) [CLOSED] Billing approve semantics changed to HTTP 410
 - **Severity:** Critical
 - **Module:** Billing approval
 - **Flask evidence:** `POST /billing/approve` updates run status to APPROVED.
@@ -119,7 +119,7 @@ Laravel is **not near parity** with Flask reference behavior yet. It has added a
 - **Launch blocking:** Yes
 - **Status:** Partial
 
-### 10) Hidden helper/formula pipelines absent
+### 10) [CLOSED] Hidden helper/formula pipelines absent
 - **Severity:** High
 - **Module:** Billing compute
 - **Flask evidence:** billing run consumes `util_formula_result`, `util_drinking_formula_result`, `util_school_van_monthly_charge`.
@@ -176,8 +176,14 @@ Laravel is **not near parity** with Flask reference behavior yet. It has added a
 
 ---
 
-## Totals by severity
-- **Critical:** 4
+## Critical closure update (this batch)
+- Closed: Billing run contract mismatch (`/billing/run` restored)
+- Closed: Rates lifecycle missing (`/rates/upsert`, `/rates/approve` restored)
+- Closed: Billing approve mismatch (`/billing/approve` active)
+- Closed: Compute/dataflow mismatch for run path (formula-result pipeline restored in `/billing/run`)
+
+## Totals by severity (after this batch)
+- **Critical:** 0
 - **High:** 6
 - **Medium:** 4
 - **Low:** 0
