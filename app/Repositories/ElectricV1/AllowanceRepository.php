@@ -14,7 +14,7 @@ class AllowanceRepository extends BaseRepository
     public function upsertMany(array $rows): int
     {
         foreach ($rows as $r) {
-            DB::statement('INSERT INTO electric_v1_allowance(unit_id,free_electric,unit_name,residence_type,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(unit_id) DO UPDATE SET free_electric=excluded.free_electric, unit_name=excluded.unit_name, residence_type=excluded.residence_type, updated_at=CURRENT_TIMESTAMP', [
+            DB::insert('INSERT INTO electric_v1_allowance(unit_id,free_electric,unit_name,residence_type,updated_at,created_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)', [
                 $r['unit_id'], $r['free_electric'], $r['unit_name'] ?? null, $r['residence_type']
             ]);
         }

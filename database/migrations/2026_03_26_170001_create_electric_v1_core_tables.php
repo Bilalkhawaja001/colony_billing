@@ -9,12 +9,13 @@ return new class extends Migration {
     {
         Schema::create('electric_v1_allowance', function (Blueprint $t) {
             $t->id();
-            $t->string('unit_id')->unique();
+            $t->string('unit_id');
             $t->decimal('free_electric', 14, 4)->default(0);
             $t->string('unit_name')->nullable();
             $t->string('residence_type', 16);
             $t->timestamp('updated_at')->nullable();
             $t->timestamp('created_at')->nullable();
+            $t->index(['unit_id', 'updated_at'], 'ev1_allow_unit_updated_idx');
         });
 
         Schema::create('electric_v1_readings', function (Blueprint $t) {
@@ -27,7 +28,7 @@ return new class extends Migration {
             $t->string('reading_status', 16);
             $t->timestamp('updated_at')->nullable();
             $t->timestamp('created_at')->nullable();
-            $t->unique(['unit_id', 'cycle_start_date', 'cycle_end_date']);
+            $t->index(['unit_id', 'cycle_start_date', 'cycle_end_date', 'updated_at'], 'ev1_read_cycle_unit_updated_idx');
         });
 
         Schema::create('electric_v1_hr_attendance', function (Blueprint $t) {

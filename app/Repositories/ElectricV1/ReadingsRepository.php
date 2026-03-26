@@ -19,7 +19,7 @@ class ReadingsRepository extends BaseRepository
     public function upsertMany(array $rows): int
     {
         foreach ($rows as $r) {
-            DB::statement('INSERT INTO electric_v1_readings(cycle_start_date,cycle_end_date,unit_id,previous_reading,current_reading,reading_status,updated_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(unit_id,cycle_start_date,cycle_end_date) DO UPDATE SET previous_reading=excluded.previous_reading, current_reading=excluded.current_reading, reading_status=excluded.reading_status, updated_at=CURRENT_TIMESTAMP', [
+            DB::insert('INSERT INTO electric_v1_readings(cycle_start_date,cycle_end_date,unit_id,previous_reading,current_reading,reading_status,updated_at,created_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)', [
                 $r['cycle_start_date'],$r['cycle_end_date'],$r['unit_id'],$r['previous_reading'],$r['current_reading'],$r['reading_status']
             ]);
         }
