@@ -7,6 +7,8 @@ return [
         '/ui/reports' => ['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER'],
         '/ui/reconciliation' => ['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER'],
         '/ui/profile' => ['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY', 'VIEWER'],
+        '/ui/electric-v1-run' => ['SUPER_ADMIN', 'BILLING_ADMIN', 'DATA_ENTRY'],
+        '/ui/electric-v1-outputs' => ['SUPER_ADMIN', 'BILLING_ADMIN', 'VIEWER'],
         '/ui/admin/users' => ['SUPER_ADMIN'],
     ],
 ];

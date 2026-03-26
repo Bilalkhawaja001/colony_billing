@@ -45,6 +45,8 @@
             <a class="{{ request()->is('ui/month-cycle') ? 'active' : '' }}" href="/ui/month-cycle">Month Cycle</a>
             <a class="{{ request()->is('ui/reports') ? 'active' : '' }}" href="/ui/reports">Reports</a>
             <a class="{{ request()->is('ui/reconciliation') ? 'active' : '' }}" href="/ui/reconciliation">Reconciliation</a>
+            <a class="{{ request()->is('ui/electric-v1-run') ? 'active' : '' }}" href="/ui/electric-v1-run">Electric V1 Run</a>
+            <a class="{{ request()->is('ui/electric-v1-outputs') ? 'active' : '' }}" href="/ui/electric-v1-outputs">Electric V1 Outputs</a>
             @if(in_array(session('role'), ['SUPER_ADMIN']))
                 <a class="{{ request()->is('ui/admin/users') ? 'active' : '' }}" href="/ui/admin/users">User Management</a>
             @endif

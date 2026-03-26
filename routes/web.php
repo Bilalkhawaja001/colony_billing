@@ -68,3 +68,5 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/reports/elec-summary', [BillingDraftController::class, 'elecSummary']);
     Route::get('/export/excel/reconciliation', [BillingDraftController::class, 'exportExcelReconciliation']);
 });
+
+require __DIR__.'/electric_v1.php';

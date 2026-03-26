@@ -15,6 +15,12 @@ return [
         '/recovery/payment',
         '/api/billing/precheck',
         '/api/billing/finalize',
+        '/api/electric-v1/run',
+        '/api/electric-v1/input/allowance/upsert',
+        '/api/electric-v1/input/readings/upsert',
+        '/api/electric-v1/input/attendance/upsert',
+        '/api/electric-v1/input/occupancy/upsert',
+        '/api/electric-v1/input/adjustments/upsert',
     ],
 
     // Intentional exception routes that bypass lock block in shell mode.
