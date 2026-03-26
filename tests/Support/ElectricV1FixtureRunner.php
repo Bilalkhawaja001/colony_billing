@@ -6,6 +6,14 @@ use Tests\TestCase;
 
 class ElectricV1FixtureRunner
 {
+    private static function postUpsertIfAny(TestCase $t, string $url, $rows): void
+    {
+        if (!is_array($rows) || count($rows) === 0) {
+            return;
+        }
+        $t->postJson($url, ['rows' => $rows])->assertStatus(200);
+    }
+
     public static function runCase(TestCase $t, string $caseName): array
     {
         $base = base_path('tests/Fixtures/electric_v1/'.$caseName);
@@ -18,11 +26,11 @@ class ElectricV1FixtureRunner
             'run' => json_decode(file_get_contents($base.'/inputs/run.json'), true),
         ];
 
-        $t->postJson('/api/electric-v1/input/allowance/upsert', ['rows' => $inputs['allowance']])->assertStatus(200);
-        $t->postJson('/api/electric-v1/input/readings/upsert', ['rows' => $inputs['readings']])->assertStatus(200);
-        $t->postJson('/api/electric-v1/input/attendance/upsert', ['rows' => $inputs['attendance']])->assertStatus(200);
-        $t->postJson('/api/electric-v1/input/occupancy/upsert', ['rows' => $inputs['occupancy']])->assertStatus(200);
-        $t->postJson('/api/electric-v1/input/adjustments/upsert', ['rows' => $inputs['adjustments']])->assertStatus(200);
+        self::postUpsertIfAny($t, '/api/electric-v1/input/allowance/upsert', $inputs['allowance']);
+        self::postUpsertIfAny($t, '/api/electric-v1/input/readings/upsert', $inputs['readings']);
+        self::postUpsertIfAny($t, '/api/electric-v1/input/attendance/upsert', $inputs['attendance']);
+        self::postUpsertIfAny($t, '/api/electric-v1/input/occupancy/upsert', $inputs['occupancy']);
+        self::postUpsertIfAny($t, '/api/electric-v1/input/adjustments/upsert', $inputs['adjustments']);
 
         $runRes = $t->postJson('/api/electric-v1/run', $inputs['run'])->assertStatus(200)->json();
 
