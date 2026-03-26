@@ -39,7 +39,7 @@ return new class extends Migration {
             $t->decimal('attendance_days', 14, 4)->default(0);
             $t->timestamp('updated_at')->nullable();
             $t->timestamp('created_at')->nullable();
-            $t->unique(['company_id', 'cycle_start_date', 'cycle_end_date']);
+            $t->unique(['company_id', 'cycle_start_date', 'cycle_end_date'], 'ev1_hr_att_uq');
         });
 
         Schema::create('electric_v1_occupancy', function (Blueprint $t) {
