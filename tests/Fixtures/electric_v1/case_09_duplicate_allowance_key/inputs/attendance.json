@@ -1,1 +1,9 @@
-[{"cycle_start_date":"2026-03-01","cycle_end_date":"2026-03-31","company_id":"E1","attendance_days":20}]
+[
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "company_id": "E1",
+    "attendance_days": 20,
+    "updated_at": "2026-03-31T23:59:00"
+  }
+]

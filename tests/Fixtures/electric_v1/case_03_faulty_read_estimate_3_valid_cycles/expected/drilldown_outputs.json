@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "company_id": "E1",
+    "unit_id": "U1",
+    "residence_type": "ROOM",
+    "employee_attendance_in_unit": 20.0,
+    "gross_units": 25.0,
+    "free_allowance_units": 20.0,
+    "net_units_before_adj": 5.0,
+    "adjustment_units": 0.0,
+    "net_units_after_adj": 5.0,
+    "amount_before_rounding": 12.5,
+    "is_estimated": "Y",
+    "estimate_source_cycle1": "2026-02-01..2026-02-28",
+    "estimate_source_cycle2": "2026-01-01..2026-01-31",
+    "estimate_source_cycle3": "2025-12-01..2025-12-31",
+    "estimated_from_valid_cycle_count": 3
+  }
+]

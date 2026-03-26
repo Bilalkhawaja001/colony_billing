@@ -1,1 +1,20 @@
-[{"cycle_start_date":"2026-03-01","cycle_end_date":"2026-03-31","unit_id":"U1","previous_reading":100,"current_reading":140,"reading_status":"NORMAL"}]
+[
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "unit_id": "U1",
+    "previous_reading": 100,
+    "current_reading": 140,
+    "reading_status": "NORMAL",
+    "updated_at": "2026-03-31"
+  },
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "unit_id": "U2",
+    "previous_reading": 50,
+    "current_reading": 90,
+    "reading_status": "NORMAL",
+    "updated_at": "2026-03-31"
+  }
+]

@@ -1,1 +1,16 @@
-[{"unit_id":"U1","free_electric":20,"unit_name":"Unit 1","residence_type":"ROOM"}]
+[
+  {
+    "unit_id": "U1",
+    "free_electric": 20,
+    "unit_name": "Unit 1",
+    "residence_type": "ROOM",
+    "updated_at": "2026-03-01"
+  },
+  {
+    "unit_id": "U2",
+    "free_electric": 10,
+    "unit_name": "Unit 2",
+    "residence_type": "ROOM",
+    "updated_at": "2026-03-01"
+  }
+]

@@ -1,1 +1,8 @@
-{"status":"ok"}
+{
+  "status": "SUCCESS_WITH_EXCEPTIONS",
+  "processed_count": 1,
+  "skipped_count": 0,
+  "exception_count": 1,
+  "final_output_rows": 1,
+  "drilldown_rows": 1
+}

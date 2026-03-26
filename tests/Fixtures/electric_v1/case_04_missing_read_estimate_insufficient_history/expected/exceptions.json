@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "severity": "ERROR",
+    "exception_code": "E_READ_ESTIMATE_INSUFF",
+    "message": "No prior valid cycles available for estimation; unit skipped",
+    "company_id": "N/A",
+    "unit_id": "U1",
+    "room_id": "N/A",
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31"
+  },
+  {
+    "severity": "ERROR",
+    "exception_code": "E_READ_MISSING_ROW",
+    "message": "Reading row missing for unit",
+    "company_id": "N/A",
+    "unit_id": "U1",
+    "room_id": "N/A",
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31"
+  }
+]
