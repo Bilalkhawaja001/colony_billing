@@ -24,9 +24,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/profile', [AuthDraftController::class, 'showProfile']);
     Route::post('/api/profile/change-password', [AuthDraftController::class, 'changePassword']);
 
-    Route::view('/ui/dashboard', 'auth.protected-shell');
-    Route::view('/ui/reports', 'auth.protected-shell');
-    Route::view('/ui/reconciliation', 'auth.protected-shell');
+    Route::view('/ui/dashboard', 'auth.dashboard');
+    Route::view('/ui/reports', 'auth.reports');
+    Route::view('/ui/reconciliation', 'auth.reconciliation');
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
@@ -34,8 +34,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])-
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
-    Route::view('/ui/billing', 'auth.billing-foundation');
-    Route::view('/ui/month-cycle', 'auth.month-cycle-foundation');
+    Route::view('/ui/billing', 'auth.billing');
+    Route::view('/ui/month-cycle', 'auth.month-cycle');
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {
