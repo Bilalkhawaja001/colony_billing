@@ -38,7 +38,7 @@ class OrchestrationService
 
         $issues = array_merge(
             Validators::uniqueByKey($allowRows, fn($r) => trim((string)($r['unit_id'] ?? '')), 'E_ALLOW_DUP_KEY', 'Duplicate Allowance Unit_ID'),
-            Validators::uniqueByKey($readRows, fn($r) => trim((string)($r['unit_id'] ?? '')).'|'.($r['cycle_start_date'] ?? '').'|'.($r['cycle_end_date'] ?? ''), 'E_READ_DUP_KEY', 'Duplicate Reading key')
+            Validators::uniqueByKey($readRows, fn($r) => "('".trim((string)($r['unit_id'] ?? ''))."', '".($r['cycle_start_date'] ?? '')."', '".($r['cycle_end_date'] ?? '')."')", 'E_READ_DUP_KEY', 'Duplicate Reading key')
         );
 
         $allowByUnit=[]; foreach ($allowRows as $r) { $allowByUnit[(string)$r['unit_id']] = $r; }
