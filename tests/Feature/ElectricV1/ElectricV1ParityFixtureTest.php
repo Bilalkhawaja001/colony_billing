@@ -52,7 +52,11 @@ class ElectricV1ParityFixtureTest extends TestCase
             $expSummary = $r['expected']['run_summary'] ?? [];
             foreach (['status','processed_count','skipped_count','exception_count','final_output_rows','drilldown_rows'] as $k) {
                 if (array_key_exists($k, $expSummary)) {
-                    $this->assertSame($expSummary[$k], $summary[$k] ?? null, "Run summary mismatch {$case} field {$k}");
+                    $actualVal = $summary[$k] ?? null;
+                    if ($k === 'status' && $actualVal === null) {
+                        $actualVal = $summary['run_status'] ?? null;
+                    }
+                    $this->assertSame($expSummary[$k], $actualVal, "Run summary mismatch {$case} field {$k}");
                 }
             }
         }
