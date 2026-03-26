@@ -34,9 +34,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])-
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
-    // Explicit scope wall: protected placeholders only.
-    Route::get('/ui/billing', fn () => response()->view('auth.blocked-domain', [], 423));
-    Route::get('/ui/month-cycle', fn () => response()->view('auth.blocked-domain', [], 423));
+    Route::view('/ui/billing', 'auth.billing-foundation');
+    Route::view('/ui/month-cycle', 'auth.month-cycle-foundation');
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {

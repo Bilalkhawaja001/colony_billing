@@ -1,10 +1,13 @@
 @extends('layouts.app')
 @section('content')
 <div class="card">
-    <h3>Colony Billing</h3>
+    <h3>Dashboard</h3>
     <p><strong>Status:</strong> Authenticated session active.</p>
+    <p>Welcome to Colony Billing shell. Core billing domain logic is being migrated, but navigation and base pages are live.</p>
+</div>
 
-    <p><strong>Current User</strong></p>
+<div class="card">
+    <h4>Current Session</h4>
     <ul>
         <li>User ID: {{ session('user_id', 'N/A') }}</li>
         <li>Role: {{ session('role', 'N/A') }}</li>
@@ -15,21 +18,19 @@
 </div>
 
 <div class="card">
-    <h4>Quick Navigation</h4>
-    <p>
-        <a href="/ui/dashboard">Dashboard</a> |
-        <a href="/ui/billing">Billing</a> |
-        <a href="/ui/month-cycle">Month Cycle</a> |
-        <a href="/logout">Logout</a>
-    </p>
+    <h4>App Navigation</h4>
+    <ul>
+        <li><a href="/ui/dashboard">Dashboard Home</a></li>
+        <li><a href="/ui/billing">Billing</a> <small>- foundation page</small></li>
+        <li><a href="/ui/month-cycle">Month Cycle</a> <small>- foundation page</small></li>
+        <li><a href="/ui/reports">Reports Shell</a></li>
+        <li><a href="/ui/reconciliation">Reconciliation Shell</a></li>
+        <li><a href="/logout">Logout</a></li>
+    </ul>
 </div>
 
 <div class="card">
-    <h4>Scope Notes</h4>
-    <ul>
-        <li><strong>/ui/billing</strong> is currently guarded and may return blocked status (migration phase boundary).</li>
-        <li><strong>/ui/month-cycle</strong> is currently guarded and may return blocked status (migration phase boundary).</li>
-        <li>This dashboard is a minimal authenticated landing page so post-login does not appear blank/incomplete.</li>
-    </ul>
+    <h4>Roadmap Note</h4>
+    <p>Billing and month-cycle now have visible minimal pages for navigation + validation while backend workflows are completed.</p>
 </div>
 @endsection
