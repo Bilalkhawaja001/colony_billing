@@ -7,5 +7,32 @@
     "current_reading": 140,
     "reading_status": "FAULTY",
     "updated_at": "2026-03-31T23:59:00"
+  },
+  {
+    "cycle_start_date": "2026-02-01",
+    "cycle_end_date": "2026-02-28",
+    "unit_id": "U1",
+    "previous_reading": 95,
+    "current_reading": 125,
+    "reading_status": "NORMAL",
+    "updated_at": "2026-02-28T23:59:00"
+  },
+  {
+    "cycle_start_date": "2026-01-01",
+    "cycle_end_date": "2026-01-31",
+    "unit_id": "U1",
+    "previous_reading": 70,
+    "current_reading": 95,
+    "reading_status": "NORMAL",
+    "updated_at": "2026-01-31T23:59:00"
+  },
+  {
+    "cycle_start_date": "2025-12-01",
+    "cycle_end_date": "2025-12-31",
+    "unit_id": "U1",
+    "previous_reading": 50,
+    "current_reading": 70,
+    "reading_status": "NORMAL",
+    "updated_at": "2025-12-31T23:59:00"
   }
 ]
