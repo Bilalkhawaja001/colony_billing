@@ -4,6 +4,10 @@ namespace Tests\Support;
 
 class ElectricV1SnapshotNormalizer
 {
+    private const VOLATILE_KEYS = [
+        'id', 'run_id', 'logged_at', 'run_start', 'run_end', 'created_at', 'updated_at',
+    ];
+
     public static function normalize(array $bundle): array
     {
         $norm = $bundle;
@@ -18,6 +22,10 @@ class ElectricV1SnapshotNormalizer
 
     private static function normalizeRow(array $row): array
     {
+        foreach (self::VOLATILE_KEYS as $vk) {
+            unset($row[$vk]);
+        }
+
         foreach ($row as $k => $v) {
             if (is_numeric($v)) {
                 $row[$k] = (float) number_format((float)$v, 4, '.', '');

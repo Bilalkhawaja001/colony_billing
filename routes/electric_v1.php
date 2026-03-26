@@ -18,6 +18,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/electric-v1/exceptions', [ElectricV1Controller::class, 'exceptions']);
     Route::get('/api/electric-v1/runs', [ElectricV1Controller::class, 'runs']);
 
-    Route::view('/ui/electric-v1-run', 'electric_v1.run');
     Route::view('/ui/electric-v1-outputs', 'electric_v1.outputs');
+});
+
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
+    Route::view('/ui/electric-v1-run', 'electric_v1.run');
 });
