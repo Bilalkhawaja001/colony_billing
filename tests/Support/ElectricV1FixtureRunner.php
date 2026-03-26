@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class ElectricV1FixtureRunner
@@ -12,6 +13,24 @@ class ElectricV1FixtureRunner
             return;
         }
         $t->postJson($url, ['rows' => $rows])->assertStatus(200);
+    }
+
+    private static function resetElectricV1State(): void
+    {
+        foreach ([
+            'electric_v1_output_employee_unit_drilldown',
+            'electric_v1_output_employee_final',
+            'electric_v1_exception_log',
+            'electric_v1_run_history',
+            'electric_v1_readings',
+            'electric_v1_hr_attendance',
+            'electric_v1_occupancy',
+            'electric_v1_manual_adjustments',
+            'electric_v1_adjustments',
+            'electric_v1_allowance',
+        ] as $tbl) {
+            try { DB::table($tbl)->delete(); } catch (\Throwable $e) { /* table may not exist in some envs */ }
+        }
     }
 
     public static function runCase(TestCase $t, string $caseName): array
@@ -25,6 +44,8 @@ class ElectricV1FixtureRunner
             'adjustments' => json_decode(file_get_contents($base.'/inputs/adjustments.json'), true),
             'run' => json_decode(file_get_contents($base.'/inputs/run.json'), true),
         ];
+
+        self::resetElectricV1State();
 
         self::postUpsertIfAny($t, '/api/electric-v1/input/allowance/upsert', $inputs['allowance']);
         self::postUpsertIfAny($t, '/api/electric-v1/input/readings/upsert', $inputs['readings']);
