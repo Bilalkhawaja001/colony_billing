@@ -45,9 +45,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {
-    // Guard-shell routes only. No month domain logic implemented.
-    Route::post('/month/open', fn () => response()->json(['status' => 'ok', 'route' => '/month/open', 'mode' => 'guard-shell-pass']));
-    Route::post('/month/transition', fn () => response()->json(['status' => 'ok', 'route' => '/month/transition', 'mode' => 'guard-shell-exception-pass']));
+    Route::post('/month/open', [ImportsMonthlySetupController::class, 'monthOpen']);
+    Route::post('/month/transition', [ImportsMonthlySetupController::class, 'monthTransition']);
 
     Route::post('/rates/upsert', [BillingDraftController::class, 'ratesUpsert']);
     Route::post('/rates/approve', [BillingDraftController::class, 'ratesApprove']);
@@ -69,6 +68,11 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/billing/adjustments/create', [BillingDraftController::class, 'adjustmentCreate']);
     Route::post('/billing/adjustments/approve', [BillingDraftController::class, 'adjustmentApprove']);
     Route::post('/recovery/payment', [BillingDraftController::class, 'recoveryPayment']);
+
+    Route::post('/imports/meter-register/ingest-preview', [ImportsMonthlySetupController::class, 'ingestPreview']);
+    Route::post('/imports/mark-validated', [ImportsMonthlySetupController::class, 'markValidated']);
+    Route::post('/monthly-rates/initialize', [ImportsMonthlySetupController::class, 'monthlyRatesInitialize']);
+    Route::post('/monthly-rates/config/upsert', [ImportsMonthlySetupController::class, 'monthlyRatesConfigUpsert']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
