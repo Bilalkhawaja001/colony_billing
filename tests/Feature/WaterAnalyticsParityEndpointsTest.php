@@ -80,7 +80,7 @@ class WaterAnalyticsParityEndpointsTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('rows.0.water_zone', 'FAMILY_METER')
-            ->assertJsonPath('rows.0.billable_residential_liters', 900.0)
+            ->assertJsonPath('rows.0.billable_residential_liters', 900)
             ->assertJsonPath('allowed_reason_codes.0', 'Plants Irrigation');
 
         $this->postJson('/api/water/zone-adjustments', ['month_cycle' => '03-2026'])
