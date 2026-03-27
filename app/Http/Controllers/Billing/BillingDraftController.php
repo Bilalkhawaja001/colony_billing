@@ -211,9 +211,30 @@ class BillingDraftController extends Controller
         return response()->json($result, $code);
     }
 
-    public function printEmployee(string $monthCycle, string $employeeId)
+    public function printEmployee(string $month_cycle, string $employee_id)
     {
-        $result = $this->service->printEmployee($monthCycle, $employeeId);
+        $result = $this->service->printEmployee($month_cycle, $employee_id);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function printEmployeeLiteral()
+    {
+        return response()->json(['status' => 'error', 'error' => 'Use /billing/print/{month_cycle}/{employee_id}'], 400);
+    }
+
+    public function electricV1Outputs()
+    {
+        $result = $this->service->electricV1Outputs(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function electricV1Run()
+    {
+        $result = $this->service->electricV1Run((array) request()->all());
         $code = (int)($result['_http'] ?? 200);
         unset($result['_http']);
         return response()->json($result, $code);

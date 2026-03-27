@@ -10,6 +10,9 @@ class MonthlyRatesInitializeRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['month_cycle' => ['required', 'regex:/^\d{2}-\d{4}$/']];
+        return [
+            'month_cycle' => ['required', 'regex:/^\d{2}-\d{4}$/'],
+            'seed_from_previous' => ['nullable', 'boolean'],
+        ];
     }
 }

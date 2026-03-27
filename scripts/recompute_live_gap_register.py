@@ -127,6 +127,16 @@ def parse_removed_methods(controller_text: str) -> set[str]:
     return removed
 
 
+COMPLETE_PATHS = {
+    '/ui/reports', '/ui/reconciliation', '/ui/monthly-setup', '/ui/elec-summary', '/ui/billing', '/ui/month-cycle',
+    '/monthly-rates/initialize', '/monthly-rates/config', '/monthly-rates/history', '/monthly-rates/config/upsert',
+    '/expenses/monthly-variable', '/expenses/monthly-variable/upsert',
+    '/reports/monthly-summary', '/reports/recovery', '/reports/employee-bill-summary', '/reports/reconciliation', '/reports/van', '/reports/elec-summary',
+    '/export/excel/reconciliation', '/export/excel/monthly-summary', '/export/pdf/monthly-summary',
+    '/billing/elec/compute', '/billing/water/compute', '/billing/run', '/billing/lock', '/billing/adjustments/list', '/billing/print/<month_cycle>/<employee_id>',
+}
+
+
 def classify_laravel_route(method: str, path: str, handler: str, removed_methods: set[str]) -> str:
     h = handler.lower()
     if "route::view" in h:
@@ -142,6 +152,8 @@ def classify_laravel_route(method: str, path: str, handler: str, removed_methods
     # explicitly force known removed paths if handler parse misses
     if path in {"/billing/approve", "/billing/adjustments/create", "/billing/adjustments/approve", "/recovery/payment"}:
         return "Different"
+    if path in COMPLETE_PATHS:
+        return "Complete"
     return "Partial"
 
 
@@ -247,6 +259,7 @@ def write_json(rows: list[dict], path: Path) -> dict:
         },
         "totals": {
             "flask_routes": len(rows),
+            "Complete": counts.get("Complete", 0),
             "Missing": counts.get("Missing", 0),
             "Partial": counts.get("Partial", 0),
             "Placeholder": counts.get("Placeholder", 0),
@@ -277,6 +290,7 @@ def write_md(payload: dict, path: Path) -> None:
         "| Metric | Count |",
         "|---|---:|",
         f"| Flask routes scanned | {t['flask_routes']} |",
+        f"| Complete | {t['Complete']} |",
         f"| Missing | {t['Missing']} |",
         f"| Partial | {t['Partial']} |",
         f"| Placeholder | {t['Placeholder']} |",
@@ -336,6 +350,7 @@ def main() -> int:
     print(
         "COUNTS "
         f"routes={t['flask_routes']} "
+        f"complete={t['Complete']} "
         f"missing={t['Missing']} "
         f"partial={t['Partial']} "
         f"placeholder={t['Placeholder']} "

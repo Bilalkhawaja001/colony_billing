@@ -70,20 +70,52 @@ class ImportsMonthlyRatesParityTest extends TestCase
         DB::shouldReceive('statement')->once()->andReturn(true);
         $this->postJson('/monthly-rates/config/upsert', [
             'month_cycle' => '03-2026',
-            'rates' => [
-                ['utility_type' => 'ELEC', 'rate' => 26.5],
-            ],
-        ])->assertOk()->assertJsonPath('upserted', true);
+            'elec_rate' => 26.5,
+            'water_general_rate' => 10.0,
+            'water_drinking_rate' => 12.0,
+            'school_van_rate' => 8.0,
+        ])->assertOk()->assertJsonPath('status', 'ok')->assertJsonPath('month_cycle', '03-2026');
 
-        DB::shouldReceive('selectOne')->once()->andReturn((object) ['config_json' => '{"rates":[{"utility_type":"ELEC","rate":26.5}]}']);
+        DB::shouldReceive('selectOne')->once()->andReturn((object) [
+            'month_cycle' => '03-2026',
+            'elec_rate' => 26.5,
+            'water_general_rate' => 10.0,
+            'water_drinking_rate' => 12.0,
+            'school_van_rate' => 8.0,
+            'created_at' => null,
+            'updated_at' => null,
+        ]);
         $this->getJson('/monthly-rates/config?month_cycle=03-2026')
             ->assertOk()
-            ->assertJsonPath('month_cycle', '03-2026')
-            ->assertJsonStructure(['config' => ['rates']]);
+            ->assertJsonStructure(['row' => ['month_cycle', 'elec_rate', 'water_general_rate', 'water_drinking_rate', 'school_van_rate']]);
 
         DB::shouldReceive('select')->once()->andReturn([]);
         $this->getJson('/monthly-rates/history')
             ->assertOk()
+            ->assertJsonStructure(['rows']);
+    }
+
+    public function test_monthly_variable_upsert_and_list_follow_flask_shape(): void
+    {
+        $this->asBillingAdmin();
+
+        DB::shouldReceive('statement')->once()->andReturn(true);
+
+        $this->postJson('/expenses/monthly-variable/upsert', [
+            'month_cycle' => '03-2026',
+            'expense_type' => 'GENERATOR',
+            'amount' => 4550.5,
+            'notes' => 'diesel',
+        ])->assertOk()
+            ->assertJsonPath('status', 'ok')
+            ->assertJsonPath('month_cycle', '03-2026')
+            ->assertJsonPath('expense_type', 'GENERATOR')
+            ->assertJsonPath('amount', 4550.5);
+
+        DB::shouldReceive('select')->once()->andReturn([]);
+        $this->getJson('/expenses/monthly-variable?month_cycle=03-2026&expense_type=GENERATOR')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok')
             ->assertJsonStructure(['rows']);
     }
 

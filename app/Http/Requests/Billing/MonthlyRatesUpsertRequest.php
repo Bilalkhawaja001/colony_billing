@@ -12,9 +12,13 @@ class MonthlyRatesUpsertRequest extends FormRequest
     {
         return [
             'month_cycle' => ['required', 'regex:/^\d{2}-\d{4}$/'],
-            'rates' => ['required', 'array', 'min:1'],
-            'rates.*.utility_type' => ['required', 'string', 'max:50'],
-            'rates.*.rate' => ['required', 'numeric', 'min:0'],
+            'rates' => ['nullable', 'array', 'min:1'],
+            'rates.*.utility_type' => ['required_with:rates', 'string', 'max:50'],
+            'rates.*.rate' => ['required_with:rates', 'numeric', 'min:0'],
+            'elec_rate' => ['nullable', 'numeric', 'min:0'],
+            'water_general_rate' => ['nullable', 'numeric', 'min:0'],
+            'water_drinking_rate' => ['nullable', 'numeric', 'min:0'],
+            'school_van_rate' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

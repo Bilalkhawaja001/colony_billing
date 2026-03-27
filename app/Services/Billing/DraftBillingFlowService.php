@@ -1270,6 +1270,43 @@ class DraftBillingFlowService implements BillingFlowContract
         return $this->finalize($payload);
     }
 
+    public function electricV1Outputs(array $payload): array
+    {
+        $summary = $this->elecSummary($payload + ['unit_id' => (string)($payload['unit_id'] ?? '')]);
+        if (($summary['_http'] ?? 200) !== 200) {
+            return $summary;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => (string)$summary['month_cycle'],
+            'unit_rows' => $summary['unit_rows'],
+            'share_rows' => $summary['share_rows'],
+            'summary' => $summary['summary'] ?? ['unit_count' => 0, 'share_count' => 0],
+        ];
+    }
+
+    public function electricV1Run(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle is required'];
+        }
+
+        $result = $this->elecCompute(['month_cycle' => $m, 'unit_id' => (string)($payload['unit_id'] ?? '')]);
+        if (($result['_http'] ?? 200) !== 200) {
+            return $result;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'unit_rows' => $result['unit_rows'] ?? [],
+            'share_rows' => $result['share_rows'] ?? [],
+            'run_status' => 'computed',
+        ];
+    }
+
     public function fingerprint(array $payload): array
     {
         $m = trim((string)($payload['month_cycle'] ?? ''));

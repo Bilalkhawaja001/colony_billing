@@ -71,6 +71,11 @@ class MasterDataDraftController extends Controller
         return response()->json(['status' => 'ok', 'unit_id' => $unitId, 'policy' => 'soft-delete']);
     }
 
+    public function unitsDeleteCompat(string $unit_id)
+    {
+        return $this->unitsDelete($unit_id);
+    }
+
     public function rooms(Request $request)
     {
         $monthCycle = $request->query('month_cycle');
@@ -130,6 +135,11 @@ class MasterDataDraftController extends Controller
     {
         DB::table('util_unit_room_snapshot')->where('id', $id)->delete();
         return response()->json(['status' => 'ok', 'id' => $id]);
+    }
+
+    public function roomsDeleteCompat(int $row_id)
+    {
+        return $this->roomsDelete($row_id);
     }
 
     public function occupancyContext(Request $request)
@@ -276,6 +286,11 @@ class MasterDataDraftController extends Controller
     {
         DB::table('util_occupancy_monthly')->where('id', $id)->delete();
         return response()->json(['status' => 'ok', 'id' => $id]);
+    }
+
+    public function occupancyDeleteCompat(int $row_id)
+    {
+        return $this->occupancyDelete($row_id);
     }
 
     public function occupancyAutofill(Request $request)

@@ -27,6 +27,11 @@ class EmployeesMeterParityController extends Controller
         return $this->jsonFromService($this->service->employeeGet($companyId));
     }
 
+    public function employeeGetCompat(string $company_id)
+    {
+        return $this->jsonFromService($this->service->employeeGet($company_id));
+    }
+
     public function employeesDepartments()
     {
         return response()->json($this->service->employeesDepartments());
@@ -52,14 +57,29 @@ class EmployeesMeterParityController extends Controller
         return $this->jsonFromService($this->service->employeePatch($companyId, $request->all()));
     }
 
+    public function employeePatchCompat(Request $request, string $company_id)
+    {
+        return $this->jsonFromService($this->service->employeePatch($company_id, $request->all()));
+    }
+
     public function employeeDelete(string $companyId)
     {
         return $this->jsonFromService($this->service->employeeDelete($companyId));
     }
 
+    public function employeeDeleteCompat(string $company_id)
+    {
+        return $this->jsonFromService($this->service->employeeDelete($company_id));
+    }
+
     public function meterReadingLatest(string $unitId)
     {
         return $this->jsonFromService($this->service->meterReadingLatest($unitId));
+    }
+
+    public function meterReadingLatestCompat(string $unit_id)
+    {
+        return $this->jsonFromService($this->service->meterReadingLatest($unit_id));
     }
 
     public function meterReadingUpsert(Request $request)

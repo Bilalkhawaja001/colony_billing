@@ -49,6 +49,14 @@ class FamilyRegistryResultsController extends Controller
         return response()->json($result, $code);
     }
 
+    public function registryEmployeeGetLiteral()
+    {
+        $result = $this->service->registryEmployeeGet('');
+        $code = (int) ($result['_http'] ?? 404);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
     public function registryEmployeesImportPreview(Request $request)
     {
         $result = $this->service->registryEmployeesImportPreview((string) $request->input('csv_text', ''));
