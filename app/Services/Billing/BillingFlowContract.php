@@ -40,6 +40,14 @@ interface BillingFlowContract
 
     public function waterCompute(array $payload): array;
 
+    public function waterOccupancySnapshot(array $payload): array;
+
+    public function waterZoneAdjustmentsGet(array $payload): array;
+
+    public function waterZoneAdjustmentsUpsert(array $payload): array;
+
+    public function waterAllocationPreview(array $payload): array;
+
     public function run(array $payload): array;
 
     public function fingerprint(array $payload): array;
@@ -49,4 +57,8 @@ interface BillingFlowContract
     public function printEmployee(string $monthCycle, string $employeeId): array;
 
     public function exportExcelReconciliation(array $payload): array;
+
+    public function exportExcelMonthlySummary(array $payload): array;
+
+    public function exportPdfMonthlySummary(array $payload): array;
 }

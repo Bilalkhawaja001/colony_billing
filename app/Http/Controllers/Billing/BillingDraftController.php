@@ -190,6 +190,23 @@ class BillingDraftController extends Controller
     public function exportExcelReconciliation(ReportMonthCycleRequest $request)
     {
         $result = $this->service->exportExcelReconciliation($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    public function exportExcelMonthlySummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->exportExcelMonthlySummary($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    public function exportPdfMonthlySummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->exportPdfMonthlySummary($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    private function downloadResponse(array $result)
+    {
         $code = (int)($result['_http'] ?? 200);
         unset($result['_http']);
         if ($code !== 200) {
