@@ -19,6 +19,10 @@ class UiMissingPagesRenderTest extends TestCase
     public static function pageProvider(): array
     {
         return [
+            'billing' => ['/ui/billing', 'Billing'],
+            'month-cycle' => ['/ui/month-cycle', 'Month Cycle'],
+            'imports' => ['/ui/imports', 'Imports'],
+            'elec-summary' => ['/ui/elec-summary', 'Electric Summary'],
             'rates' => ['/ui/rates', 'Rates'],
             'water-meters' => ['/ui/water-meters', 'Water Meters'],
             'van' => ['/ui/van', 'VAN'],
