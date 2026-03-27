@@ -873,6 +873,127 @@ class DraftBillingFlowService implements BillingFlowContract
         ];
     }
 
+    public function elecCompute(array $payload): array
+    {
+        $result = $this->elecSummary($payload);
+        if (($result['_http'] ?? 200) !== 200) {
+            return $result;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => (string)$result['month_cycle'],
+            'unit_rows' => $result['unit_rows'],
+            'share_rows' => $result['share_rows'],
+            'parity_note' => 'Parity endpoint active: /billing/elec/compute mapped to draft electric compute dataset.',
+        ];
+    }
+
+    public function waterCompute(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'SELECT employee_id, ROUND(SUM(amount),2) AS water_amount
+             FROM util_billing_line
+             WHERE billing_run_id=? AND utility_type IN (\'WATER\',\'WATER_GENERAL\',\'WATER_DRINKING\')
+             GROUP BY employee_id
+             ORDER BY employee_id',
+            [$runId]
+        );
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'rows' => $rows,
+        ];
+    }
+
+    public function run(array $payload): array
+    {
+        return $this->finalize($payload);
+    }
+
+    public function fingerprint(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $run = DB::selectOne(
+            "SELECT id, run_key, run_status FROM util_billing_run
+             WHERE month_cycle=? AND run_status IN ('LOCKED','APPROVED')
+             ORDER BY CASE run_status WHEN 'LOCKED' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END, id DESC
+             LIMIT 1",
+            [$m]
+        );
+
+        if (!$run) {
+            return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => (int)$run->id,
+            'run_status' => (string)$run->run_status,
+            'fingerprint' => (string)($run->run_key ?? ''),
+        ];
+    }
+
+    public function adjustmentsList(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'rows' => [],
+            'parity_note' => 'List endpoint active for parity; create/approve adjustment flows remain intentionally removed (410).',
+        ];
+    }
+
+    public function printEmployee(string $monthCycle, string $employeeId): array
+    {
+        $m = trim($monthCycle);
+        $e = trim($employeeId);
+
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+        if ($e === '') return ['_http'=>400,'status'=>'error','error'=>'employee_id is required'];
+
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'SELECT utility_type, ROUND(COALESCE(qty,0),4) AS qty, ROUND(COALESCE(amount,0),2) AS amount, COALESCE(source_ref, \'\') AS source_ref
+             FROM util_billing_line
+             WHERE billing_run_id=? AND employee_id=?
+             ORDER BY utility_type',
+            [$runId, $e]
+        );
+
+        $totalRow = DB::selectOne(
+            'SELECT ROUND(COALESCE(SUM(amount),0),2) AS total_amount
+             FROM util_billing_line
+             WHERE billing_run_id=? AND employee_id=?',
+            [$runId, $e]
+        );
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'employee_id' => $e,
+            'rows' => $rows,
+            'total_amount' => round((float)($totalRow->total_amount ?? 0), 2),
+        ];
+    }
+
     public function exportExcelReconciliation(array $payload): array
     {
         $rep = $this->reconciliationReport($payload);

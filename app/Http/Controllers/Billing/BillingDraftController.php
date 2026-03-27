@@ -139,6 +139,54 @@ class BillingDraftController extends Controller
         return response()->json($result, $code);
     }
 
+    public function elecCompute(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->elecCompute($request->validated() + ['unit_id' => request()->query('unit_id')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterCompute(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->waterCompute($request->validated() + ['unit_id' => request()->query('unit_id')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function run(BillingFinalizeRequest $request)
+    {
+        $result = $this->service->run($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function fingerprint(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->fingerprint($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function adjustmentsList(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->adjustmentsList($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function printEmployee(string $monthCycle, string $employeeId)
+    {
+        $result = $this->service->printEmployee($monthCycle, $employeeId);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
     public function exportExcelReconciliation(ReportMonthCycleRequest $request)
     {
         $result = $this->service->exportExcelReconciliation($request->validated());

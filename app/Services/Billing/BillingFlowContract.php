@@ -36,5 +36,17 @@ interface BillingFlowContract
 
     public function elecSummary(array $payload): array;
 
+    public function elecCompute(array $payload): array;
+
+    public function waterCompute(array $payload): array;
+
+    public function run(array $payload): array;
+
+    public function fingerprint(array $payload): array;
+
+    public function adjustmentsList(array $payload): array;
+
+    public function printEmployee(string $monthCycle, string $employeeId): array;
+
     public function exportExcelReconciliation(array $payload): array;
 }
