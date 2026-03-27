@@ -36,7 +36,7 @@ class InfraEndpointsParityTest extends TestCase
     {
         $this->asRole('BILLING_ADMIN');
 
-        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
+        DB::shouldReceive('selectOne')->zeroOrMoreTimes()->andReturn((object) ['state' => 'OPEN']);
         DB::shouldReceive('statement')->once()->andReturn(true);
         $this->postJson('/rates/upsert', [
             'month_cycle' => '03-2026',
@@ -45,7 +45,7 @@ class InfraEndpointsParityTest extends TestCase
             ],
         ])->assertOk()->assertJsonPath('upserted', true);
 
-        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
+        DB::shouldReceive('selectOne')->zeroOrMoreTimes()->andReturn((object) ['state' => 'OPEN']);
         DB::shouldReceive('statement')->once()->andReturn(true);
         $this->postJson('/rates/approve', ['month_cycle' => '03-2026'])
             ->assertOk()
@@ -93,7 +93,9 @@ class InfraEndpointsParityTest extends TestCase
     {
         $this->asRole('VIEWER');
 
-        DB::shouldReceive('selectOne')->once()->andReturn((object) [
+        $query = \Mockery::mock();
+        $query->shouldReceive('where')->once()->with('company_id', 'EMP-1')->andReturnSelf();
+        $query->shouldReceive('first')->once()->andReturn((object) [
             'company_id' => 'EMP-1',
             'name' => 'Ali',
             'active' => 'Yes',
@@ -104,6 +106,7 @@ class InfraEndpointsParityTest extends TestCase
             'block_floor' => 'B1',
             'room_no' => '01',
         ]);
+        DB::shouldReceive('table')->once()->with('employees_registry')->andReturn($query);
 
         $this->getJson('/registry/employees/EMP-1')
             ->assertOk()
