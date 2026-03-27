@@ -43,8 +43,8 @@ class MonthGuardShellTest extends TestCase
             'force_change_password' => 0,
         ]);
 
-        $res = $this->postJson('/month/transition', ['month_cycle' => '03-2026']);
-        $res->assertOk()->assertJsonPath('mode', 'guard-shell-exception-pass');
+        $res = $this->postJson('/month/transition', ['month_cycle' => '03-2026', 'to_state' => 'APPROVAL']);
+        $res->assertOk()->assertJsonPath('state', 'APPROVAL');
     }
 
     public function test_auth_failure_happens_before_month_guard(): void
