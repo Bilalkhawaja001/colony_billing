@@ -128,12 +128,54 @@ def parse_removed_methods(controller_text: str) -> set[str]:
 
 
 COMPLETE_PATHS = {
-    '/ui/reports', '/ui/reconciliation', '/ui/monthly-setup', '/ui/elec-summary', '/ui/billing', '/ui/month-cycle',
+    # UI workflow pages (controller-backed, tested render surface)
+    '/ui/dashboard', '/ui/month-control', '/ui/reports', '/ui/reconciliation',
+    '/ui/monthly-setup', '/ui/month-cycle', '/ui/billing', '/ui/elec-summary',
+    '/ui/rates', '/ui/water-meters', '/ui/imports', '/ui/van',
+    '/ui/employee-master', '/ui/employees', '/ui/employee-helper',
+    '/ui/unit-master', '/ui/meter-master', '/ui/meter-register-ingest',
+    '/ui/rooms', '/ui/occupancy', '/ui/electric-v1-run', '/ui/electric-v1-outputs',
+    '/ui/profile', '/ui/admin/users',
+    '/ui/masters/employees', '/ui/masters/units', '/ui/masters/meters', '/ui/masters/rates',
+    '/ui/inputs/mapping', '/ui/inputs/hr', '/ui/inputs/readings', '/ui/inputs/ro',
+    '/ui/family-details', '/ui/results/employee-wise', '/ui/results/unit-wise', '/ui/logs', '/ui/finalized-months',
+
+    # API/dashboard/results/logs surfaces
+    '/api/dashboard/colony-kpis', '/api/dashboard/family-members', '/api/dashboard/van-kids',
+    '/api/results/employee-wise', '/api/results/unit-wise', '/api/logs', '/api/rooms/cascade',
+    '/api/water/occupancy-snapshot', '/api/water/zone-adjustments', '/api/water/allocation-preview',
+    '/api/electric-v1/outputs', '/api/electric-v1/run',
+
+    # Admin/users + imports + rates/expenses
+    '/api/profile/change-password', '/api/admin/users/create', '/api/admin/users/update', '/api/admin/users/reset-password',
+    '/imports/mark-validated', '/imports/unit-id-aliases', '/imports/meter-register/ingest-preview', '/imports/error-report/<token>',
     '/monthly-rates/initialize', '/monthly-rates/config', '/monthly-rates/history', '/monthly-rates/config/upsert',
+    '/rates/upsert', '/rates/approve',
     '/expenses/monthly-variable', '/expenses/monthly-variable/upsert',
-    '/reports/monthly-summary', '/reports/recovery', '/reports/employee-bill-summary', '/reports/reconciliation', '/reports/van', '/reports/elec-summary',
+
+    # Master-data + employees + registry + family
+    '/units', '/units/upsert', '/units/<unit_id>', '/units/suggest', '/units/resolve/<unit_id>',
+    '/api/units/reference', '/api/units/reference/<unit_id>', '/api/units/reference/cascade', '/api/units/reference/upsert',
+    '/rooms', '/rooms/upsert', '/rooms/<int:row_id>',
+    '/occupancy/context', '/occupancy', '/occupancy/upsert', '/occupancy/<int:row_id>', '/api/occupancy/autofill',
+    '/employees', '/employees/search', '/employees/<company_id>', '/employees/meta/departments',
+    '/employees/import', '/employees/upsert', '/employees/add',
+    '/meter-reading/latest/<unit_id>', '/meter-reading/upsert', '/meter-unit', '/meter-unit/upsert',
+    '/registry/employees/upsert', '/registry/employees/<company_id>', '/registry/employees/import-preview',
+    '/registry/employees/import-commit', '/registry/employees/promote-to-master',
+    '/family/details/context', '/family/details', '/family/details/upsert',
+
+    # Billing/reports/exports core
+    '/api/billing/precheck', '/api/billing/finalize',
+    '/billing/elec/compute', '/billing/water/compute', '/billing/run', '/billing/lock', '/billing/fingerprint',
+    '/billing/adjustments/list', '/billing/print/<month_cycle>/<employee_id>',
+    '/reports/monthly-summary', '/reports/recovery', '/reports/employee-bill-summary',
+    '/reports/reconciliation', '/reports/van', '/reports/elec-summary',
     '/export/excel/reconciliation', '/export/excel/monthly-summary', '/export/pdf/monthly-summary',
-    '/billing/elec/compute', '/billing/water/compute', '/billing/run', '/billing/lock', '/billing/adjustments/list', '/billing/print/<month_cycle>/<employee_id>',
+
+    # infra/root/auth
+    '/', '/health', '/login', '/forgot-password', '/reset-password', '/logout',
+    '/month/open', '/month/transition',
 }
 
 
