@@ -155,6 +155,38 @@ class BillingDraftController extends Controller
         return response()->json($result, $code);
     }
 
+    public function waterOccupancySnapshot()
+    {
+        $result = $this->service->waterOccupancySnapshot(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterZoneAdjustmentsGet()
+    {
+        $result = $this->service->waterZoneAdjustmentsGet(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterZoneAdjustmentsUpsert()
+    {
+        $result = $this->service->waterZoneAdjustmentsUpsert((array) request()->all());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterAllocationPreview()
+    {
+        $result = $this->service->waterAllocationPreview(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
     public function run(BillingFinalizeRequest $request)
     {
         $result = $this->service->run($request->validated());
