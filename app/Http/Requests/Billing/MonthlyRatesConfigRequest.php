@@ -13,7 +13,7 @@ class MonthlyRatesConfigRequest extends FormRequest
         return ['month_cycle' => ['required', 'regex:/^\d{2}-\d{4}$/']];
     }
 
-    protected function validationData(): array
+    public function validationData(): array
     {
         return $this->query();
     }

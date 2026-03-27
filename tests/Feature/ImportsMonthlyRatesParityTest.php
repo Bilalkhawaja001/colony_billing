@@ -66,6 +66,7 @@ class ImportsMonthlyRatesParityTest extends TestCase
     {
         $this->asBillingAdmin();
 
+        DB::shouldReceive('selectOne')->once()->andReturn((object) ['state' => 'OPEN']);
         DB::shouldReceive('statement')->once()->andReturn(true);
         $this->postJson('/monthly-rates/config/upsert', [
             'month_cycle' => '03-2026',

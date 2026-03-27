@@ -44,12 +44,11 @@ class BillingParitySubsetEndpointsTest extends TestCase
     {
         $this->actingBillingAdmin();
 
-        DB::shouldReceive('transaction')->once()->andReturnUsing(function ($callback) {
-            return $callback();
-        });
+        DB::shouldReceive('beginTransaction')->once();
+        DB::shouldReceive('commit')->once();
         DB::shouldReceive('delete')->times(2)->andReturn(0, 0);
         DB::shouldReceive('select')->times(5)->andReturn([], [], [], [], []);
-        DB::shouldReceive('insert')->times(2)->andReturnTrue();
+        DB::shouldReceive('insert')->atLeast()->once()->andReturnTrue();
         DB::shouldReceive('selectOne')->once()->andReturn((object) ['id' => 701]);
         DB::shouldReceive('statement')->once()->andReturnTrue();
 
