@@ -1,15 +1,18 @@
 @extends('layouts.app')
+@section('page_title','Water Meters')
+@section('page_subtitle','Water occupancy snapshot, zone adjustments and allocation preview in one workspace.')
 @section('content')
-<div class="card">
-  <h3>Water Module Workspace</h3>
-  <form id="waterForm">
-    <input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}">
-    <input name="zone" placeholder="Zone" value="A">
-    <input name="liters" placeholder="Liters" value="100">
-    <button type="button" id="waterLoad">Load Snapshot/Adjustments</button>
-    <button type="button" id="waterUpsert">Upsert Adjustment</button>
+<div class="grid">
+<div class="col-12 card">
+  <h3 class="section-title">Water Controls</h3>
+  <form id="waterForm" class="form-grid">
+    <div class="field col-3"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}"></div>
+    <div class="field col-3"><label class="label">Zone</label><input name="zone" placeholder="Zone" value="A"></div>
+    <div class="field col-3"><label class="label">Liters</label><input name="liters" placeholder="Liters" value="100"></div>
+    <div class="col-3" style="display:flex;align-items:flex-end;gap:8px"><button class="btn" type="button" id="waterLoad">Load Snapshot</button><button class="btn btn-primary" type="button" id="waterUpsert">Upsert Adjustment</button></div>
   </form>
-  <pre id="waterResult">Ready.</pre>
+</div>
+<div class="col-12 card"><h3 class="section-title">Result</h3><pre id="waterResult">Ready.</pre></div>
 </div>
 <script>
 const csrf=@json(csrf_token());
@@ -24,9 +27,6 @@ document.getElementById('waterLoad').onclick=async()=>{
  const c=await getJson('/api/water/allocation-preview?month_cycle='+m);
  show({snapshot:a,adjustments:b,allocation:c});
 };
-document.getElementById('waterUpsert').onclick=async()=>{
- const p=f();
- show(await postJson('/api/water/zone-adjustments',p));
-};
+document.getElementById('waterUpsert').onclick=async()=>{show(await postJson('/api/water/zone-adjustments',f()));};
 </script>
 @endsection

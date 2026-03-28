@@ -1,14 +1,17 @@
 @extends('layouts.app')
+@section('page_title','Electric Summary')
+@section('page_subtitle','Compute and inspect electric summary outputs with unit-level reloadable report context.')
 @section('content')
-<div class="card">
-  <h3>Electric Summary Workspace</h3>
-  <form id="elecForm">
-    <input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}">
-    <input name="unit_id" placeholder="Unit ID" value="{{ $unitId }}">
-    <button type="button" id="elecLoad">Load Summary</button>
-    <button type="button" id="elecCompute">Compute Electric</button>
+<div class="grid">
+<div class="col-12 card">
+  <h3 class="section-title">Electric Summary Controls</h3>
+  <form id="elecForm" class="form-grid">
+    <div class="field col-4"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}"></div>
+    <div class="field col-4"><label class="label">Unit ID</label><input name="unit_id" placeholder="Unit ID" value="{{ $unitId }}"></div>
+    <div class="col-4" style="display:flex;align-items:flex-end;gap:8px"><button class="btn" type="button" id="elecLoad">Load Summary</button><button class="btn btn-primary" type="button" id="elecCompute">Compute Electric</button></div>
   </form>
-  <pre id="elecResult">Ready.</pre>
+</div>
+<div class="col-12 card"><h3 class="section-title">Execution Result</h3><pre id="elecResult">Ready.</pre></div>
 </div>
 <script>
 const csrf=@json(csrf_token());

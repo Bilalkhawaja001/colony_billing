@@ -1,62 +1,50 @@
 @extends('layouts.app')
-
-@section('title', 'Month Cycle Governance')
-
+@section('page_title','Month Cycle Governance')
+@section('page_subtitle','Control month lifecycle states with clear operator guardrails and visibility.')
 @section('content')
-<div class="container py-4">
-    <h3 class="mb-3">Month Cycle Governance</h3>
-    <p class="text-muted">Operational month state controls (OPEN/INGEST/VALIDATION/APPROVAL/LOCKED).</p>
-
-    <div class="row g-3">
-        <div class="col-md-6">
-            <div class="card"><div class="card-body">
-                <h5>Open Month</h5>
-                <form id="monthOpenForm" class="row g-2">
-                    <div class="col-8"><input class="form-control" name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
-                    <div class="col-4"><button class="btn btn-primary w-100" type="submit">Open</button></div>
-                </form>
-            </div></div>
-        </div>
-        <div class="col-md-6">
-            <div class="card"><div class="card-body">
-                <h5>Transition Month</h5>
-                <form id="monthTransitionForm" class="row g-2">
-                    <div class="col-5"><input class="form-control" name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
-                    <div class="col-4">
-                        <select class="form-select" name="to_state">
-                            <option>OPEN</option><option>INGEST</option><option>VALIDATION</option><option>APPROVAL</option><option>LOCKED</option>
-                        </select>
-                    </div>
-                    <div class="col-3"><button class="btn btn-warning w-100" type="submit">Apply</button></div>
-                </form>
-            </div></div>
-        </div>
+<div class="grid">
+    <div class="col-6 card">
+        <h3 class="section-title">Open Month</h3>
+        <form id="monthOpenForm" class="form-grid">
+            <div class="field col-8"><label class="label">Month Cycle</label><input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
+            <div class="col-4" style="display:flex;align-items:flex-end"><button class="btn btn-primary" type="submit">Open</button></div>
+        </form>
+    </div>
+    <div class="col-6 card">
+        <h3 class="section-title">Transition State</h3>
+        <form id="monthTransitionForm" class="form-grid">
+            <div class="field col-5"><label class="label">Month Cycle</label><input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
+            <div class="field col-4"><label class="label">To State</label>
+                <select name="to_state"><option>OPEN</option><option>INGEST</option><option>VALIDATION</option><option>APPROVAL</option><option>LOCKED</option></select>
+            </div>
+            <div class="col-3" style="display:flex;align-items:flex-end"><button class="btn btn-warn" type="submit">Apply</button></div>
+        </form>
     </div>
 
-    <div class="card mt-3">
-        <div class="card-body">
-            <h5>Month States</h5>
-            <table class="table table-sm">
-                <thead><tr><th>Month</th><th>State</th><th>Locked By</th><th>Locked At</th></tr></thead>
-                <tbody>
-                @forelse($rows as $r)
-                    <tr>
-                        <td>{{ $r->month_cycle ?? '' }}</td>
-                        <td>{{ $r->state ?? '' }}</td>
-                        <td>{{ $r->locked_by_user_id ?? '' }}</td>
-                        <td>{{ $r->locked_at ?? '' }}</td>
-                    </tr>
-                @empty
-                    <tr><td colspan="4" class="text-muted">No month rows yet.</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+    <div class="col-12 card">
+        <h3 class="section-title">Month State Register</h3>
+        <table>
+            <thead><tr><th>Month</th><th>State</th><th>Locked By</th><th>Locked At</th></tr></thead>
+            <tbody>
+            @forelse($rows as $r)
+                <tr>
+                    <td>{{ $r->month_cycle ?? '' }}</td>
+                    <td><span class="badge">{{ $r->state ?? '' }}</span></td>
+                    <td>{{ $r->locked_by_user_id ?? '—' }}</td>
+                    <td>{{ $r->locked_at ?? '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="4"><div class="empty">No month rows yet.</div></td></tr>
+            @endforelse
+            </tbody>
+        </table>
     </div>
 
-    <pre id="monthCycleResult" class="mt-3 p-2 bg-light border rounded">Ready.</pre>
+    <div class="col-12 card soft">
+        <h3 class="section-title">Execution Result</h3>
+        <pre id="monthCycleResult">Ready.</pre>
+    </div>
 </div>
-
 <script>
 const csrf = @json(csrf_token());
 async function postJson(url, payload){

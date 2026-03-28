@@ -1,20 +1,29 @@
 @extends('layouts.app')
+@section('page_title','Finalized Months')
+@section('page_subtitle','Finalize month outputs and review lock/finalization state history for audit trace.')
 @section('content')
-<div class="card">
-  <h3>Finalized Months Workspace</h3>
-  <form id="finalizeForm">
-    <input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}">
-    <button type="button" id="finalizeBtn">Finalize</button>
+<div class="grid">
+<div class="col-12 card">
+  <h3 class="section-title">Finalize Month</h3>
+  <form id="finalizeForm" class="form-grid">
+    <div class="field col-4"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}"></div>
+    <div class="col-8" style="display:flex;align-items:flex-end"><button class="btn btn-primary" type="button" id="finalizeBtn">Finalize</button></div>
   </form>
-  <table width="100%" border="1" cellspacing="0" cellpadding="4">
-    <tr><th>Month</th><th>State</th><th>Locked At</th><th>Finalized At</th></tr>
+</div>
+<div class="col-12 card">
+  <h3 class="section-title">Finalization Register</h3>
+  <table>
+    <thead><tr><th>Month</th><th>State</th><th>Locked At</th><th>Finalized At</th></tr></thead>
+    <tbody>
     @forelse($rows as $r)
-      <tr><td>{{ $r->month_cycle ?? '' }}</td><td>{{ $r->state ?? '' }}</td><td>{{ $r->locked_at ?? '' }}</td><td>{{ $r->finalized_at ?? '' }}</td></tr>
+      <tr><td>{{ $r->month_cycle ?? '' }}</td><td><span class="badge">{{ $r->state ?? '' }}</span></td><td>{{ $r->locked_at ?? '—' }}</td><td>{{ $r->finalized_at ?? '—' }}</td></tr>
     @empty
-      <tr><td colspan="4">No rows</td></tr>
+      <tr><td colspan="4"><div class="empty">No finalized month rows available.</div></td></tr>
     @endforelse
+    </tbody>
   </table>
-  <pre id="finalizeResult">Ready.</pre>
+</div>
+<div class="col-12 card"><h3 class="section-title">API Result</h3><pre id="finalizeResult">Ready.</pre></div>
 </div>
 <script>
 const csrf=@json(csrf_token());

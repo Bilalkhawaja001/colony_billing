@@ -1,15 +1,20 @@
 @extends('layouts.app')
+@section('page_title','Occupancy')
+@section('page_subtitle','Capture month-aware occupancy records feeding water and shared utility calculations.')
 @section('content')
-<div class="card">
-  <h3>Occupancy Workspace</h3>
-  <form id="occUpsertForm">
-    <input name="month_cycle" placeholder="MM-YYYY">
-    <input name="unit_id" placeholder="Unit ID">
-    <input name="employee_id" placeholder="Employee ID">
-    <input name="persons" placeholder="Persons">
-    <button type="submit">Upsert Occupancy</button>
+<div class="grid">
+<div class="col-8 card">
+  <h3 class="section-title">Upsert Occupancy</h3>
+  <form id="occUpsertForm" class="form-grid">
+    <div class="field col-3"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY"></div>
+    <div class="field col-3"><label class="label">Unit ID</label><input name="unit_id" placeholder="Unit ID"></div>
+    <div class="field col-3"><label class="label">Employee ID</label><input name="employee_id" placeholder="Employee ID"></div>
+    <div class="field col-3"><label class="label">Persons</label><input name="persons" placeholder="Persons"></div>
+    <div class="col-12"><button class="btn btn-primary" type="submit">Save Occupancy</button></div>
   </form>
-  <pre id="occResult">Ready.</pre>
+</div>
+<div class="col-4 card soft"><h3 class="section-title">Context</h3><div class="muted">Month + unit + employee mapping must stay clean for downstream summary accuracy.</div></div>
+<div class="col-12 card"><h3 class="section-title">API Result</h3><pre id="occResult">Ready.</pre></div>
 </div>
 <script>
 const csrf=@json(csrf_token());

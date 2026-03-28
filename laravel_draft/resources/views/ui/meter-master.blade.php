@@ -1,22 +1,28 @@
 @extends('layouts.app')
+@section('page_title','Meter Master')
+@section('page_subtitle','Manage meter readings and meter-to-unit mapping from one compact workspace.')
 @section('content')
-<div class="card">
-  <h3>Meter Workspace</h3>
-  <form id="meterReadingForm">
-    <input name="month_cycle" placeholder="MM-YYYY">
-    <input name="unit_id" placeholder="Unit ID">
-    <input name="meter_id" placeholder="Meter ID">
-    <input name="usage" placeholder="Usage">
-    <input name="amount" placeholder="Amount">
-    <button type="submit">Upsert Reading</button>
-  </form>
-  <br>
-  <form id="meterUnitForm">
-    <input name="unit_id" placeholder="Unit ID">
-    <input name="meter_id" placeholder="Meter ID">
-    <button type="submit">Map Meter-Unit</button>
-  </form>
-  <pre id="meterResult">Ready.</pre>
+<div class="grid">
+  <div class="col-7 card">
+    <h3 class="section-title">Upsert Meter Reading</h3>
+    <form id="meterReadingForm" class="form-grid">
+      <div class="field col-4"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY"></div>
+      <div class="field col-4"><label class="label">Unit ID</label><input name="unit_id" placeholder="Unit ID"></div>
+      <div class="field col-4"><label class="label">Meter ID</label><input name="meter_id" placeholder="Meter ID"></div>
+      <div class="field col-6"><label class="label">Usage</label><input name="usage" placeholder="Usage"></div>
+      <div class="field col-6"><label class="label">Amount</label><input name="amount" placeholder="Amount"></div>
+      <div class="col-12"><button class="btn btn-primary" type="submit">Save Reading</button></div>
+    </form>
+  </div>
+  <div class="col-5 card">
+    <h3 class="section-title">Map Meter ↔ Unit</h3>
+    <form id="meterUnitForm" class="form-grid">
+      <div class="field col-6"><label class="label">Unit ID</label><input name="unit_id" placeholder="Unit ID"></div>
+      <div class="field col-6"><label class="label">Meter ID</label><input name="meter_id" placeholder="Meter ID"></div>
+      <div class="col-12"><button class="btn btn-success" type="submit">Save Mapping</button></div>
+    </form>
+  </div>
+  <div class="col-12 card"><h3 class="section-title">API Result</h3><pre id="meterResult">Ready.</pre></div>
 </div>
 <script>
 const csrf=@json(csrf_token());

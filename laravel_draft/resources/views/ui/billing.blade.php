@@ -1,27 +1,40 @@
 @extends('layouts.app')
+@section('page_title','Billing Workspace')
+@section('page_subtitle','Run billing cycles, lock approved runs, and open downstream report exports from one control surface.')
 @section('content')
-<div class="card">
-  <h3>Billing Workspace</h3>
-  <p>Run + lock + summary/export operator actions.</p>
-
-  <form id="billingRunForm">
-    <input name="month_cycle" placeholder="MM-YYYY or YYYY-MM" value="{{ $monthCycle }}">
-    <input name="run_key" placeholder="run key" value="UI-RUN-1">
-    <button type="submit">Run Billing</button>
-  </form>
-  <br>
-  <form id="billingLockForm">
-    <input name="run_id" placeholder="run id">
-    <button type="submit">Lock Run</button>
-  </form>
-
-  <div style="margin-top:10px;">
-    <a href="#" id="summaryLink">Monthly Summary</a> |
-    <a href="#" id="excelLink">Export Excel</a> |
-    <a href="#" id="pdfLink">Export PDF</a>
+<div class="grid">
+  <div class="col-7 card">
+    <h3 class="section-title">Run Billing</h3>
+    <form id="billingRunForm" class="form-grid">
+      <div class="field col-6"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY or YYYY-MM" value="{{ $monthCycle }}"></div>
+      <div class="field col-6"><label class="label">Run Key</label><input name="run_key" placeholder="run key" value="UI-RUN-1"></div>
+      <div class="col-12"><button class="btn btn-primary" type="submit">Run Billing</button></div>
+    </form>
   </div>
 
-  <pre id="billingResult">Ready.</pre>
+  <div class="col-5 card">
+    <h3 class="section-title">Lock Run</h3>
+    <form id="billingLockForm" class="form-grid">
+      <div class="field col-12"><label class="label">Run ID</label><input name="run_id" placeholder="run id"></div>
+      <div class="col-12"><button class="btn btn-warn" type="submit">Lock Approved Run</button></div>
+    </form>
+    <div class="muted" style="margin-top:10px">Use only after validation and approval checks.</div>
+  </div>
+
+  <div class="col-12 card soft">
+    <h3 class="section-title">Report + Export Shortcuts</h3>
+    <div class="toolbar">
+      <a class="btn" href="#" id="summaryLink">Monthly Summary JSON</a>
+      <a class="btn" href="#" id="excelLink">Export Excel</a>
+      <a class="btn" href="#" id="pdfLink">Export PDF</a>
+      <a class="btn" href="/ui/reconciliation?month_cycle={{ urlencode((string)$monthCycle) }}">Open Reconciliation</a>
+    </div>
+  </div>
+
+  <div class="col-12 card">
+    <h3 class="section-title">Execution Result</h3>
+    <pre id="billingResult">Ready.</pre>
+  </div>
 </div>
 <script>
 const csrf=@json(csrf_token());
