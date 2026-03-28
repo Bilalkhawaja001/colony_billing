@@ -12,6 +12,15 @@ return [
         '/recovery/payment',
         '/api/billing/precheck',
         '/api/billing/finalize',
+        '/billing/run',
+        '/billing/elec/compute',
+        '/billing/water/compute',
+        '/imports/meter-register/ingest-preview',
+        '/imports/mark-validated',
+        '/monthly-rates/initialize',
+        '/monthly-rates/config/upsert',
+        '/rates/upsert',
+        '/rates/approve',
     ],
 
     // Intentional exception routes that bypass lock block in shell mode.

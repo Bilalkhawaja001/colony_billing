@@ -1,0 +1,13 @@
+[
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "company_id": "E1",
+    "name": "E1",
+    "total_net_billable_units": 20.0,
+    "flat_rate": 2.5,
+    "final_amount_before_rounding": 50.0,
+    "final_amount_rounded": 50.0,
+    "has_estimated_units": "N"
+  }
+]

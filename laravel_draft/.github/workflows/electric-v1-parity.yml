@@ -1,0 +1,30 @@
+name: electric-v1-parity
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  parity:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: sqlite3, pdo_sqlite
+      - name: Install deps
+        run: composer install --no-interaction --prefer-dist
+      - name: Prepare env
+        run: |
+          copy .env.example .env
+          if (!(Test-Path database\database.sqlite)) { New-Item -ItemType File database\database.sqlite | Out-Null }
+          php artisan key:generate
+      - name: Migrate fresh
+        run: php artisan migrate:fresh
+      - name: ElectricV1 tests
+        run: php artisan test --filter=ElectricV1
+      - name: ElectricV1 parity fixtures
+        run: php artisan test tests/Feature/ElectricV1/ElectricV1ParityFixtureTest.php

@@ -13,7 +13,9 @@ class BillingApproveRequest extends FormRequest
 
     public function rules(): array
     {
-        // Flask evidence: approval flow removed; payload ignored.
-        return [];
+        return [
+            'run_id' => ['nullable', 'integer', 'min:1'],
+            'actor_user_id' => ['nullable', 'integer', 'min:1'],
+        ];
     }
 }

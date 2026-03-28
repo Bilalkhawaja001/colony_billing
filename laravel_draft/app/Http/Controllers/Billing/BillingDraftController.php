@@ -7,8 +7,11 @@ use App\Http\Requests\Billing\BillingAdjustmentApproveRequest;
 use App\Http\Requests\Billing\BillingAdjustmentCreateRequest;
 use App\Http\Requests\Billing\BillingApproveRequest;
 use App\Http\Requests\Billing\BillingFinalizeRequest;
+use App\Http\Requests\Billing\BillingRunRequest;
 use App\Http\Requests\Billing\BillingLockRequest;
 use App\Http\Requests\Billing\BillingPrecheckRequest;
+use App\Http\Requests\Billing\RatesApproveRequest;
+use App\Http\Requests\Billing\RatesUpsertRequest;
 use App\Http\Requests\Billing\ReconciliationReportRequest;
 use App\Http\Requests\Billing\RecoveryPaymentRequest;
 use App\Http\Requests\Billing\ReportMonthCycleRequest;
@@ -18,6 +21,16 @@ class BillingDraftController extends Controller
 {
     public function __construct(private readonly DraftBillingFlowService $service)
     {
+    }
+
+    public function ratesUpsert(RatesUpsertRequest $request)
+    {
+        return response()->json($this->service->ratesUpsert($request->validated()));
+    }
+
+    public function ratesApprove(RatesApproveRequest $request)
+    {
+        return response()->json($this->service->ratesApprove($request->validated()));
     }
 
     public function precheck(BillingPrecheckRequest $request)
@@ -121,9 +134,127 @@ class BillingDraftController extends Controller
         return response()->json($result, $code);
     }
 
+    public function elecCompute(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->elecCompute($request->validated() + ['unit_id' => request()->query('unit_id')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterCompute(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->waterCompute($request->validated() + ['unit_id' => request()->query('unit_id')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterOccupancySnapshot()
+    {
+        $result = $this->service->waterOccupancySnapshot(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterZoneAdjustmentsGet()
+    {
+        $result = $this->service->waterZoneAdjustmentsGet(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterZoneAdjustmentsUpsert()
+    {
+        $result = $this->service->waterZoneAdjustmentsUpsert((array) request()->all());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function waterAllocationPreview()
+    {
+        $result = $this->service->waterAllocationPreview(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function run(BillingRunRequest $request)
+    {
+        $result = $this->service->run($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function fingerprint(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->fingerprint($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function adjustmentsList(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->adjustmentsList($request->validated());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function printEmployee(string $month_cycle, string $employee_id)
+    {
+        $result = $this->service->printEmployee($month_cycle, $employee_id);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function printEmployeeLiteral()
+    {
+        return response()->json(['status' => 'error', 'error' => 'Use /billing/print/{month_cycle}/{employee_id}'], 400);
+    }
+
+    public function electricV1Outputs()
+    {
+        $result = $this->service->electricV1Outputs(['month_cycle' => (string) request()->query('month_cycle', '')]);
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
+    public function electricV1Run()
+    {
+        $result = $this->service->electricV1Run((array) request()->all());
+        $code = (int)($result['_http'] ?? 200);
+        unset($result['_http']);
+        return response()->json($result, $code);
+    }
+
     public function exportExcelReconciliation(ReportMonthCycleRequest $request)
     {
         $result = $this->service->exportExcelReconciliation($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    public function exportExcelMonthlySummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->exportExcelMonthlySummary($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    public function exportPdfMonthlySummary(ReportMonthCycleRequest $request)
+    {
+        $result = $this->service->exportPdfMonthlySummary($request->validated());
+        return $this->downloadResponse($result);
+    }
+
+    private function downloadResponse(array $result)
+    {
         $code = (int)($result['_http'] ?? 200);
         unset($result['_http']);
         if ($code !== 200) {

@@ -1,0 +1,26 @@
+[
+  {
+    "company_id": "E1",
+    "unit_id": "U1",
+    "room_id": "R1",
+    "from_date": "2026-03-01",
+    "to_date": "2026-03-20",
+    "updated_at": "2026-03-31"
+  },
+  {
+    "company_id": "E1",
+    "unit_id": "U2",
+    "room_id": "R2",
+    "from_date": "2026-03-21",
+    "to_date": "2026-03-31",
+    "updated_at": "2026-03-31"
+  },
+  {
+    "company_id": "E2",
+    "unit_id": "U1",
+    "room_id": "R1",
+    "from_date": "2026-03-01",
+    "to_date": "2026-03-31",
+    "updated_at": "2026-03-31"
+  }
+]

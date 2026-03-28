@@ -1,0 +1,12 @@
+[
+  {
+    "severity": "ERROR",
+    "exception_code": "E_HOUSE_RESP_NOT_SINGLE",
+    "message": "HOUSE unit must resolve to exactly one responsible employee",
+    "company_id": "N/A",
+    "unit_id": "U1",
+    "room_id": "N/A",
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31"
+  }
+]

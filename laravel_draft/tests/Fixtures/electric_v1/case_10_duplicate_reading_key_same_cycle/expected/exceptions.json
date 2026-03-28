@@ -1,0 +1,12 @@
+[
+  {
+    "severity": "ERROR",
+    "exception_code": "E_READ_DUP_KEY",
+    "message": "Duplicate Reading key: ('U1', '2026-03-01', '2026-03-31')",
+    "company_id": "N/A",
+    "unit_id": "N/A",
+    "room_id": "N/A",
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31"
+  }
+]

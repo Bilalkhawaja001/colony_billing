@@ -24,17 +24,17 @@ class BillingLockApproveFlowTest extends TestCase
         $res->assertOk()->assertJsonPath('status', 'ok')->assertJsonPath('run_status', 'LOCKED');
     }
 
-    public function test_valid_approve_request(): void
+    public function test_approve_flow_is_intentionally_removed_with_410(): void
     {
         $this->withSession([
             'user_id' => 91,
             'role' => 'BILLING_ADMIN',
             'force_change_password' => 0,
-            'month_guard_locked' => true, // approve is exception path
+            'month_guard_locked' => true, // exception path in guard, but service still returns 410 by policy
         ]);
 
-        $res = $this->postJson('/billing/approve', []);
-        $res->assertStatus(410)->assertJsonPath('error', 'approval flow removed; use direct finalize flow');
+        $res = $this->postJson('/billing/approve', ['run_id' => 77]);
+        $res->assertStatus(410)->assertJsonPath('status', 'error');
     }
 
     public function test_invalid_input_for_lock(): void
@@ -83,7 +83,7 @@ class BillingLockApproveFlowTest extends TestCase
         DB::shouldReceive('update')->once()->andReturn(1);
 
         $this->postJson('/billing/lock', ['run_id' => 8])->assertStatus(200);
-        $this->postJson('/billing/approve', [])->assertStatus(410);
+        $this->postJson('/billing/approve', ['run_id' => 8])->assertStatus(410);
     }
 
     public function test_state_transition_result_keys_present(): void

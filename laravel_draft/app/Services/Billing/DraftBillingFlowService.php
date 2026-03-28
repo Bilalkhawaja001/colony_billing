@@ -19,9 +19,74 @@ class DraftBillingFlowService implements BillingFlowContract
         ];
     }
 
+    public function ratesUpsert(array $payload): array
+    {
+        $monthCycle = $this->normalizeMonthCycle((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($monthCycle)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle must be MM-YYYY'];
+        }
+
+        DB::statement(
+            'INSERT INTO util_rate_monthly(month_cycle,elec_rate,water_general_rate,water_drinking_rate,school_van_rate)
+             VALUES(?,?,?,?,?)
+             ON CONFLICT(month_cycle) DO UPDATE SET
+             elec_rate=excluded.elec_rate,
+             water_general_rate=excluded.water_general_rate,
+             water_drinking_rate=excluded.water_drinking_rate,
+             school_van_rate=excluded.school_van_rate',
+            [
+                $monthCycle,
+                (float)($payload['elec_rate'] ?? 0),
+                (float)($payload['water_general_rate'] ?? 0),
+                (float)($payload['water_drinking_rate'] ?? 0),
+                (float)($payload['school_van_rate'] ?? 0),
+            ]
+        );
+
+        return ['status' => 'ok', 'month_cycle' => $monthCycle];
+    }
+
+    public function ratesApprove(array $payload): array
+    {
+        $monthCycle = $this->normalizeMonthCycle((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($monthCycle)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle must be MM-YYYY'];
+        }
+
+        $updated = DB::update(
+            'UPDATE util_rate_monthly SET approved_by_user_id=?, approved_at=CURRENT_TIMESTAMP WHERE month_cycle=?',
+            [
+                (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1),
+                $monthCycle,
+            ]
+        );
+
+        if ($updated < 1) {
+            return ['_http' => 404, 'status' => 'error', 'error' => 'rates not found for month_cycle'];
+        }
+
+        return ['status' => 'ok', 'month_cycle' => $monthCycle];
+    }
+
+    private function normalizeMonthCycle(string $monthCycle): string
+    {
+        $monthCycle = trim($monthCycle);
+        if (preg_match('/^\d{4}-\d{2}$/', $monthCycle) === 1) {
+            return substr($monthCycle, 5, 2).'-'.substr($monthCycle, 0, 4);
+        }
+
+        return $monthCycle;
+    }
+
     private function monthValid(string $monthCycle): bool
     {
         return (bool) preg_match('/^\d{2}-\d{4}$/', $monthCycle);
+    }
+
+    private function monthState(string $monthCycle): ?string
+    {
+        $row = DB::selectOne('SELECT state FROM util_month_cycle WHERE month_cycle=?', [$monthCycle]);
+        return $row ? strtoupper((string)$row->state) : null;
     }
 
     private function loadInputs(string $monthCycle): array
@@ -341,7 +406,7 @@ class DraftBillingFlowService implements BillingFlowContract
      */
     public function finalize(array $payload): array
     {
-        $monthCycle = trim((string)($payload['month_cycle'] ?? ''));
+        $monthCycle = $this->normalizeMonthCycle((string)($payload['month_cycle'] ?? ''));
         if (!$this->monthValid($monthCycle)) {
             return [
                 '_http' => 400,
@@ -526,8 +591,8 @@ class DraftBillingFlowService implements BillingFlowContract
         return [
             '_http' => 410,
             'status' => 'error',
-            'error' => 'approval flow removed; use direct finalize flow',
-            'parity_note' => 'Flask evidence keeps /billing/approve intentionally removed',
+            'error' => 'billing approve flow removed; use finalize/lock workflow',
+            'parity_note' => 'Flask evidence has immediate 410 for /billing/approve',
         ];
     }
 
@@ -668,7 +733,7 @@ class DraftBillingFlowService implements BillingFlowContract
         $m = trim((string)($payload['month_cycle'] ?? ''));
         if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
         $runId = $this->reportingRunId($m);
-        if (!$runId) return ['_http'=>404,'month_cycle'=>$m,'rows'=>[],'error'=>'No APPROVED/LOCKED billing run found'];
+        if (!$runId) return ['_http'=>404,'status'=>'error','month_cycle'=>$m,'rows'=>[],'error'=>'No APPROVED/LOCKED billing run found'];
 
         $rows = DB::select(
             'SELECT utility_type, ROUND(SUM(amount),2) as total_amount, ROUND(SUM(qty),4) as total_qty
@@ -676,7 +741,21 @@ class DraftBillingFlowService implements BillingFlowContract
             [$runId]
         );
 
-        return ['month_cycle'=>$m,'billing_run_id'=>$runId,'rows'=>$rows];
+        $grandTotal = 0.0;
+        foreach ($rows as $r) {
+            $grandTotal += (float)($r->total_amount ?? 0);
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'rows' => $rows,
+            'summary' => [
+                'utility_count' => count($rows),
+                'grand_total_amount' => round($grandTotal, 2),
+            ],
+        ];
     }
 
     public function recoveryReport(array $payload): array
@@ -684,13 +763,34 @@ class DraftBillingFlowService implements BillingFlowContract
         $m = trim((string)($payload['month_cycle'] ?? ''));
         if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
 
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','month_cycle'=>$m,'rows'=>[],'error'=>'No APPROVED/LOCKED billing run found'];
+
         $rows = DB::select(
-            'SELECT employee_id, ROUND(SUM(amount),2) as billed
-             FROM util_billing_line WHERE month_cycle=? GROUP BY employee_id ORDER BY employee_id',
-            [$m]
+            'SELECT employee_id,
+                    ROUND(COALESCE(SUM(amount),0),2) as billed_amount,
+                    0.00 as recovered_amount,
+                    ROUND(COALESCE(SUM(amount),0),2) as outstanding_amount
+             FROM util_billing_line WHERE billing_run_id=? GROUP BY employee_id ORDER BY employee_id',
+            [$runId]
         );
 
-        return ['month_cycle'=>$m,'rows'=>$rows];
+        $billedTotal = 0.0;
+        foreach ($rows as $r) {
+            $billedTotal += (float)($r->billed_amount ?? 0);
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'rows' => $rows,
+            'summary' => [
+                'billed_total' => round($billedTotal, 2),
+                'recovered_total' => 0.0,
+                'outstanding_total' => round($billedTotal, 2),
+            ],
+        ];
     }
 
     public function employeeBillSummary(array $payload): array
@@ -713,21 +813,35 @@ class DraftBillingFlowService implements BillingFlowContract
                 GROUP BY employee_id
             )
             SELECT bl.employee_id,
-                   COALESCE(e."Name", \'\') AS employee_name,
-                   COALESCE(e."Department", \'\') AS department,
+                   COALESCE(e.name, \'\') AS employee_name,
+                   COALESCE(e.department, \'\') AS department,
                    CASE WHEN fd.company_id IS NULL THEN 0 ELSE 1 END AS has_family,
                    COALESCE(bl.electric_bill,0) AS electric_bill,
                    COALESCE(bl.water_bill,0) AS water_bill,
                    COALESCE(bl.school_van_bill,0) AS school_van_bill,
                    COALESCE(bl.total_bill,0) AS total_bill
             FROM bl
-            LEFT JOIN "Employees_Master" e ON e."CompanyID" = bl.employee_id
+            LEFT JOIN employees_master e ON e.company_id = bl.employee_id
             LEFT JOIN (SELECT DISTINCT company_id FROM family_details WHERE month_cycle=?) fd ON fd.company_id = bl.employee_id
             ORDER BY bl.employee_id',
             [$runId, $m]
         );
 
-        return ['status'=>'ok','month_cycle'=>$m,'billing_run_id'=>$runId,'rows'=>$rows];
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $total += (float)($row->total_bill ?? 0);
+        }
+
+        return [
+            'status'=>'ok',
+            'month_cycle'=>$m,
+            'billing_run_id'=>$runId,
+            'rows'=>$rows,
+            'summary' => [
+                'employee_count' => count($rows),
+                'total_bill_amount' => round($total, 2),
+            ],
+        ];
     }
 
     public function vanReport(array $payload): array
@@ -757,22 +871,540 @@ class DraftBillingFlowService implements BillingFlowContract
         if ($unitId !== '') { $unitSql .= ' AND unit_id=?'; $params[] = $unitId; }
         $unitSql .= ' ORDER BY unit_id';
 
-        $shareSql = 'SELECT s.month_cycle, s.unit_id, s.employee_id, e."Name" AS employee_name,
+        $shareSql = 'SELECT s.month_cycle, s.unit_id, s.employee_id, e.name AS employee_name,
                             s.attendance, s.share_units, s.share_amount, s.allocation_method,
                             COALESCE(s.explain_usage_share_units,0) AS explain_usage_share_units,
                             COALESCE(s.explain_free_share_units,0) AS explain_free_share_units,
                             COALESCE(s.explain_billable_units,0) AS explain_billable_units
                      FROM util_elec_employee_share_monthly s
-                     LEFT JOIN "Employees_Master" e ON e."CompanyID"=s.employee_id
+                     LEFT JOIN employees_master e ON e.company_id=s.employee_id
                      WHERE s.month_cycle=?';
         $shareParams = [$m];
         if ($unitId !== '') { $shareSql .= ' AND s.unit_id=?'; $shareParams[] = $unitId; }
         $shareSql .= ' ORDER BY s.unit_id, s.employee_id';
 
+        $unitRows = DB::select($unitSql, $params);
+        $shareRows = DB::select($shareSql, $shareParams);
+
         return [
+            'status' => 'ok',
             'month_cycle' => $m,
-            'unit_rows' => DB::select($unitSql, $params),
-            'share_rows' => DB::select($shareSql, $shareParams),
+            'unit_rows' => $unitRows,
+            'share_rows' => $shareRows,
+            'summary' => [
+                'unit_count' => count($unitRows),
+                'share_count' => count($shareRows),
+            ],
+        ];
+    }
+
+    public function elecCompute(array $payload): array
+    {
+        $result = $this->elecSummary($payload);
+        if (($result['_http'] ?? 200) !== 200) {
+            return $result;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => (string)$result['month_cycle'],
+            'unit_rows' => $result['unit_rows'],
+            'share_rows' => $result['share_rows'],
+            'parity_note' => 'Parity endpoint active: /billing/elec/compute mapped to draft electric compute dataset.',
+        ];
+    }
+
+    public function waterCompute(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'SELECT employee_id, ROUND(SUM(amount),2) AS water_amount
+             FROM util_billing_line
+             WHERE billing_run_id=? AND utility_type IN (\'WATER\',\'WATER_GENERAL\',\'WATER_DRINKING\')
+             GROUP BY employee_id
+             ORDER BY employee_id',
+            [$runId]
+        );
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'rows' => $rows,
+        ];
+    }
+
+    private const WATER_ZONE_CODES = ['FAMILY_METER', 'BACHELOR_METER', 'ADMIN_METER', 'TANKER_ZONE'];
+    private const WATER_COMMON_USE_REASON_CODES = [
+        'Plants Irrigation', 'Garden Irrigation', 'Parks Irrigation', 'Cleaning/Washing',
+        'Overflow', 'Line Damage/Leakage', 'Fire Drill / Emergency', 'Other',
+    ];
+
+    private function waterZoneForUnit(string $unitId, string $colonyType): string
+    {
+        $u = strtoupper(trim($unitId));
+        $ct = strtolower(trim($colonyType));
+
+        if (str_starts_with($u, 'CS-') || str_starts_with($u, 'PCER-') || str_starts_with($u, 'PSSR-') || str_contains($ct, 'admin block')) {
+            return 'ADMIN_METER';
+        }
+        if (str_contains($ct, 'bachelor colony') || str_starts_with($u, 'WBC-') || str_starts_with($u, 'SBC-') || str_starts_with($u, 'NBC-')) {
+            return 'BACHELOR_METER';
+        }
+        if (
+            str_contains($ct, 'family colony') || str_contains($ct, 'weaving hostel/guest house') || str_contains($ct, 'spinning hostel/guest house')
+            || str_starts_with($u, 'WH-') || str_starts_with($u, 'WHK-') || str_starts_with($u, 'SH-1-')
+            || str_starts_with($u, 'WA-') || str_starts_with($u, 'WB-') || str_starts_with($u, 'WC-') || str_starts_with($u, 'WE-')
+        ) {
+            return 'FAMILY_METER';
+        }
+
+        return 'TANKER_ZONE';
+    }
+
+    private function dependentCountByUnit(string $monthCycle): array
+    {
+        $fdRows = DB::select('SELECT company_id, unit_id, COALESCE(spouse_count,0) AS spouse_count, COALESCE(children_count,0) AS children_count FROM family_details WHERE month_cycle=?', [$monthCycle]);
+        $childRows = DB::select('SELECT company_id, COUNT(1) AS child_row_count FROM family_child_details WHERE month_cycle=? GROUP BY company_id', [$monthCycle]);
+
+        $childMap = [];
+        foreach ($childRows as $r) {
+            $childMap[trim((string)($r->company_id ?? ''))] = (int)($r->child_row_count ?? 0);
+        }
+
+        $depByUnit = [];
+        foreach ($fdRows as $r) {
+            $unitId = trim((string)($r->unit_id ?? ''));
+            if ($unitId === '') {
+                continue;
+            }
+            $companyId = trim((string)($r->company_id ?? ''));
+            $spouse = (int)($r->spouse_count ?? 0);
+            $childrenFd = (int)($r->children_count ?? 0);
+            $childrenChildRows = (int)($childMap[$companyId] ?? 0);
+            $children = max($childrenFd, $childrenChildRows);
+            $depByUnit[$unitId] = (int)($depByUnit[$unitId] ?? 0) + max($spouse + $children, 0);
+        }
+
+        return $depByUnit;
+    }
+
+    private function waterOccupancyRows(string $monthCycle): array
+    {
+        $empRows = DB::select('SELECT "Unit_ID" AS unit_id, COUNT(DISTINCT "CompanyID") AS emp_count FROM "Employees_Master" WHERE UPPER(COALESCE(NULLIF(TRIM("Active"),\'\'),\'YES\'))=\'YES\' AND COALESCE("Unit_ID",\'\')<>\'\' GROUP BY "Unit_ID"');
+        $depMap = $this->dependentCountByUnit($monthCycle);
+
+        $metaRows = [];
+        foreach (['util_unit', 'util_units_reference'] as $tbl) {
+            try {
+                $metaRows = array_merge($metaRows, DB::select('SELECT unit_id, colony_type, MAX(COALESCE(free_water,0)) AS free_water_liters FROM '.$tbl.' GROUP BY unit_id, colony_type'));
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $metaMap = [];
+        foreach ($metaRows as $r) {
+            $unitId = trim((string)($r->unit_id ?? ''));
+            if ($unitId === '') continue;
+            $existing = $metaMap[$unitId] ?? ['free_water_allowance_liters' => 0.0, 'colony_type' => ''];
+            $existing['free_water_allowance_liters'] = max((float)$existing['free_water_allowance_liters'], (float)($r->free_water_liters ?? 0));
+            $ct = trim((string)($r->colony_type ?? ''));
+            if ($ct !== '' && ($existing['colony_type'] ?? '') === '') {
+                $existing['colony_type'] = $ct;
+            }
+            $metaMap[$unitId] = $existing;
+        }
+
+        $rows = [];
+        foreach ($empRows as $r) {
+            $unitId = trim((string)($r->unit_id ?? ''));
+            $emp = (int)($r->emp_count ?? 0);
+            $dep = (int)($depMap[$unitId] ?? 0);
+            $total = $emp + $dep;
+            $ct = (string)(($metaMap[$unitId]['colony_type'] ?? '') ?: '');
+            $zone = $this->waterZoneForUnit($unitId, $ct);
+            $basePersons = $zone === 'FAMILY_METER' ? $total : $emp;
+
+            $rows[] = [
+                'unit_id' => $unitId,
+                'colony_type' => $ct,
+                'water_zone' => $zone,
+                'emp_count' => $emp,
+                'dependent_count' => $dep,
+                'total_persons' => $total,
+                'free_water_allowance_liters' => round(max($basePersons, 0) * 3000.0, 2),
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => strcmp((string)$a['unit_id'], (string)$b['unit_id']));
+        return $rows;
+    }
+
+    private function waterZoneInputsForMonth(string $monthCycle): array
+    {
+        $rows = DB::select('SELECT month_cycle, water_zone, raw_liters, common_use_liters, reason_code, notes, source_ref FROM util_water_zone_monthly_input WHERE month_cycle=?', [$monthCycle]);
+
+        $out = [];
+        foreach (self::WATER_ZONE_CODES as $z) {
+            $out[$z] = [
+                'month_cycle' => $monthCycle,
+                'water_zone' => $z,
+                'raw_liters' => 0.0,
+                'common_use_liters' => 0.0,
+                'reason_code' => null,
+                'notes' => '',
+                'billable_residential_liters' => 0.0,
+                'source_ref' => null,
+            ];
+        }
+
+        foreach ($rows as $r) {
+            $z = strtoupper(trim((string)($r->water_zone ?? '')));
+            if (!isset($out[$z])) continue;
+            $raw = (float)($r->raw_liters ?? 0);
+            $common = (float)($r->common_use_liters ?? 0);
+            $out[$z] = [
+                'month_cycle' => $monthCycle,
+                'water_zone' => $z,
+                'raw_liters' => round($raw, 2),
+                'common_use_liters' => round($common, 2),
+                'reason_code' => $r->reason_code ?? null,
+                'notes' => (string)($r->notes ?? ''),
+                'billable_residential_liters' => round(max($raw - $common, 0.0), 2),
+                'source_ref' => $r->source_ref ?? null,
+            ];
+        }
+
+        return $out;
+    }
+
+    public function waterOccupancySnapshot(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $rows = $this->waterOccupancyRows($m);
+        $zoneSummary = [];
+        foreach ($rows as $x) {
+            $z = (string)$x['water_zone'];
+            $zoneSummary[$z] ??= ['units' => 0, 'total_persons' => 0];
+            $zoneSummary[$z]['units']++;
+            $zoneSummary[$z]['total_persons'] += (int)$x['total_persons'];
+        }
+
+        return ['status' => 'ok', 'month_cycle' => $m, 'zone_summary' => $zoneSummary, 'rows' => $rows];
+    }
+
+    public function waterZoneAdjustmentsGet(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $byZone = $this->waterZoneInputsForMonth($m);
+        $rows = [];
+        foreach (self::WATER_ZONE_CODES as $z) { $rows[] = $byZone[$z]; }
+
+        return ['status' => 'ok', 'month_cycle' => $m, 'allowed_reason_codes' => self::WATER_COMMON_USE_REASON_CODES, 'rows' => $rows];
+    }
+
+    public function waterZoneAdjustmentsUpsert(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $rows = is_array($payload['rows'] ?? null) ? $payload['rows'] : [];
+        if (count($rows) === 0) return ['_http'=>400,'status'=>'error','error'=>'rows[] is required'];
+
+        foreach (array_values($rows) as $i => $r) {
+            $z = strtoupper(trim((string)($r['water_zone'] ?? '')));
+            if (!in_array($z, self::WATER_ZONE_CODES, true)) return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].water_zone invalid"];
+
+            if (!is_numeric((string)($r['raw_liters'] ?? 0)) || !is_numeric((string)($r['common_use_liters'] ?? 0))) {
+                return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}] raw_liters/common_use_liters must be numeric"];
+            }
+
+            $raw = (float)($r['raw_liters'] ?? 0);
+            $common = (float)($r['common_use_liters'] ?? 0);
+            if ($raw < 0) return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].raw_liters must be >= 0"];
+            if ($common < 0) return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].common_use_liters must be >= 0"];
+            if ($common > $raw) return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].common_use_liters cannot exceed raw_liters"];
+
+            $reason = trim((string)($r['reason_code'] ?? ''));
+            $reason = $reason === '' ? null : $reason;
+            $notes = trim((string)($r['notes'] ?? ''));
+            if ($reason !== null && !in_array($reason, self::WATER_COMMON_USE_REASON_CODES, true)) {
+                return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].reason_code invalid"];
+            }
+            if ($reason === 'Other' && $notes === '') {
+                return ['_http'=>400,'status'=>'error','error'=>"rows[{$i}].notes required when reason_code=Other"];
+            }
+
+            DB::statement(
+                'INSERT INTO util_water_zone_monthly_input(month_cycle, water_zone, raw_liters, common_use_liters, reason_code, notes, source_ref)
+                 VALUES(?,?,?,?,?,?,?)
+                 ON CONFLICT(month_cycle, water_zone) DO UPDATE SET
+                   raw_liters=excluded.raw_liters,
+                   common_use_liters=excluded.common_use_liters,
+                   reason_code=excluded.reason_code,
+                   notes=excluded.notes,
+                   source_ref=excluded.source_ref,
+                   updated_at=CURRENT_TIMESTAMP',
+                [$m, $z, round($raw, 2), round($common, 2), $reason, $notes, trim((string)($r['source_ref'] ?? '')) ?: null]
+            );
+        }
+
+        $byZone = $this->waterZoneInputsForMonth($m);
+        $outRows = [];
+        foreach (self::WATER_ZONE_CODES as $z) { $outRows[] = $byZone[$z]; }
+
+        return ['status' => 'ok', 'month_cycle' => $m, 'rows' => $outRows];
+    }
+
+    public function waterAllocationPreview(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $zoneInputs = $this->waterZoneInputsForMonth($m);
+        $billableZoneLiters = [];
+        foreach (self::WATER_ZONE_CODES as $z) {
+            $billableZoneLiters[$z] = (float)($zoneInputs[$z]['billable_residential_liters'] ?? 0);
+        }
+
+        $rows = $this->waterOccupancyRows($m);
+        $zoneBasis = ['FAMILY_METER'=>0.0,'BACHELOR_METER'=>0.0,'ADMIN_METER'=>0.0,'TANKER_ZONE'=>0.0];
+        foreach ($rows as $x) {
+            $z = (string)$x['water_zone'];
+            $basis = (float)($z === 'FAMILY_METER' ? ($x['total_persons'] ?? 0) : ($x['emp_count'] ?? 0));
+            $zoneBasis[$z] += max($basis, 0.0);
+        }
+
+        $out = [];
+        $netAlloc = 0.0;
+        foreach ($rows as $x) {
+            $z = (string)$x['water_zone'];
+            $basisPersons = (float)($z === 'FAMILY_METER' ? ($x['total_persons'] ?? 0) : ($x['emp_count'] ?? 0));
+            $denom = (float)($zoneBasis[$z] ?? 0);
+            $gross = $denom == 0.0 ? 0.0 : ((float)$billableZoneLiters[$z] * $basisPersons / $denom);
+            $freeAllow = (float)($x['free_water_allowance_liters'] ?? 0);
+            $unitNet = max($gross - $freeAllow, 0.0);
+            $netAlloc += $unitNet;
+            $empCount = (int)($x['emp_count'] ?? 0);
+            $perEmp = $empCount <= 0 ? 0.0 : ($unitNet / $empCount);
+
+            $out[] = [
+                'unit_id' => $x['unit_id'],
+                'colony_type' => $x['colony_type'],
+                'water_zone' => $z,
+                'emp_count' => $empCount,
+                'dependent_count' => (int)$x['dependent_count'],
+                'total_persons' => (int)$x['total_persons'],
+                'basis_persons' => round($basisPersons, 4),
+                'unit_gross_water_liters' => round($gross, 2),
+                'unit_free_water_allowance_liters' => round($freeAllow, 2),
+                'unit_net_water_liters' => round($unitNet, 2),
+                'per_employee_water_share_liters' => round($perEmp, 2),
+            ];
+        }
+
+        $zoneInputRows = [];
+        foreach (self::WATER_ZONE_CODES as $z) { $zoneInputRows[] = $zoneInputs[$z]; }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'inputs' => [
+                'zone_inputs' => $zoneInputRows,
+                'allocation_basis' => 'zone-wise basis_persons (family=employees+dependents, non-family=employees)',
+                'measurement_unit' => 'liters',
+                'meter_reading_unit' => 'cubic_meter',
+                'meter_to_liters_factor' => 1000,
+                'billable_residential_formula' => 'max(raw_liters - common_use_liters, 0)',
+                'free_allowance_rule' => 'applied once per unit (liters locked)',
+            ],
+            'zone_basis_persons' => $zoneBasis,
+            'summary' => ['units' => count($out), 'net_allocated' => round($netAlloc, 2)],
+            'rows' => $out,
+        ];
+    }
+
+    public function run(array $payload): array
+    {
+        $monthCycle = $this->normalizeMonthCycle((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($monthCycle)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle must be MM-YYYY'];
+        }
+
+        $monthState = $this->monthState($monthCycle);
+        if ($monthState === null) {
+            return ['_http' => 409, 'status' => 'error', 'error' => 'month_cycle not found; initialize/open month before billing run'];
+        }
+        if ($monthState === 'LOCKED') {
+            return ['_http' => 409, 'status' => 'error', 'error' => "month_cycle {$monthCycle} is LOCKED; billing run is blocked"];
+        }
+
+        $runKey = trim((string)($payload['run_key'] ?? ''));
+        if ($runKey === '') {
+            $runKey = $monthCycle.':'.substr(bin2hex(random_bytes(8)), 0, 8);
+        }
+        $actor = (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1);
+
+        DB::statement("INSERT OR IGNORE INTO util_billing_run(month_cycle,run_key,run_status,started_by_user_id) VALUES(?,?,'DRAFT',?)", [$monthCycle, $runKey, $actor]);
+        $run = DB::selectOne('SELECT id FROM util_billing_run WHERE month_cycle=? AND run_key=?', [$monthCycle, $runKey]);
+        $runId = (int)($run->id ?? 0);
+        if ($runId <= 0) {
+            return ['_http' => 500, 'status' => 'error', 'error' => 'billing run id resolution failed'];
+        }
+
+        DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'ELEC', elec_units,
+                    CASE WHEN elec_units=0 THEN 0 ELSE ROUND(elec_amount/elec_units,4) END,
+                    elec_amount, 'util_formula_result'
+             FROM util_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+
+        // Flask-authoritative sequence: ELEC insert occurs, then run lines are cleared before rebuilding persisted summary set.
+        DB::statement('DELETE FROM util_billing_line WHERE billing_run_id=?', [$runId]);
+
+        DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'WATER_GENERAL', chargeable_general_water_liters,
+                    CASE WHEN chargeable_general_water_liters=0 THEN 0 ELSE ROUND(water_general_amount/chargeable_general_water_liters,4) END,
+                    water_general_amount, 'util_formula_result'
+             FROM util_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+
+        DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'WATER_DRINKING', billed_liters, rate, amount, 'util_drinking_formula_result'
+             FROM util_drinking_formula_result WHERE month_cycle=?
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+
+        DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
+             SELECT ?, month_cycle, employee_id, 'SCHOOL_VAN', COUNT(*),
+                    CASE WHEN COUNT(*)=0 THEN 0 ELSE ROUND(SUM(amount)/COUNT(*),2) END,
+                    SUM(amount), 'util_school_van_monthly_charge'
+             FROM util_school_van_monthly_charge WHERE month_cycle=? GROUP BY month_cycle, employee_id
+             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+
+        // Flask parity: generated run becomes APPROVED so reporting path can open without removed approve workflow.
+        DB::update("UPDATE util_billing_run SET run_status='APPROVED' WHERE id=?", [$runId]);
+
+        return ['status' => 'ok', 'run_id' => $runId, 'run_key' => $runKey, 'run_status' => 'APPROVED'];
+    }
+
+    public function electricV1Outputs(array $payload): array
+    {
+        $summary = $this->elecSummary($payload + ['unit_id' => (string)($payload['unit_id'] ?? '')]);
+        if (($summary['_http'] ?? 200) !== 200) {
+            return $summary;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => (string)$summary['month_cycle'],
+            'unit_rows' => $summary['unit_rows'],
+            'share_rows' => $summary['share_rows'],
+            'summary' => $summary['summary'] ?? ['unit_count' => 0, 'share_count' => 0],
+        ];
+    }
+
+    public function electricV1Run(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'month_cycle is required'];
+        }
+
+        $result = $this->elecCompute(['month_cycle' => $m, 'unit_id' => (string)($payload['unit_id'] ?? '')]);
+        if (($result['_http'] ?? 200) !== 200) {
+            return $result;
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'unit_rows' => $result['unit_rows'] ?? [],
+            'share_rows' => $result['share_rows'] ?? [],
+            'run_status' => 'computed',
+        ];
+    }
+
+    public function fingerprint(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        $run = DB::selectOne(
+            "SELECT id, run_key, run_status FROM util_billing_run
+             WHERE month_cycle=? AND run_status IN ('LOCKED','APPROVED')
+             ORDER BY CASE run_status WHEN 'LOCKED' THEN 1 WHEN 'APPROVED' THEN 2 ELSE 3 END, id DESC
+             LIMIT 1",
+            [$m]
+        );
+
+        if (!$run) {
+            return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => (int)$run->id,
+            'run_status' => (string)$run->run_status,
+            'fingerprint' => (string)($run->run_key ?? ''),
+        ];
+    }
+
+    public function adjustmentsList(array $payload): array
+    {
+        $m = trim((string)($payload['month_cycle'] ?? ''));
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'rows' => [],
+            'parity_note' => 'List endpoint active for parity; create/approve adjustment flows remain intentionally removed (410).',
+        ];
+    }
+
+    public function printEmployee(string $monthCycle, string $employeeId): array
+    {
+        $m = trim($monthCycle);
+        $e = trim($employeeId);
+
+        if (!$this->monthValid($m)) return ['_http'=>400,'status'=>'error','error'=>'month_cycle is required'];
+        if ($e === '') return ['_http'=>400,'status'=>'error','error'=>'employee_id is required'];
+
+        $runId = $this->reportingRunId($m);
+        if (!$runId) return ['_http'=>404,'status'=>'error','error'=>'No APPROVED/LOCKED billing run found'];
+
+        $rows = DB::select(
+            'SELECT utility_type, ROUND(COALESCE(qty,0),4) AS qty, ROUND(COALESCE(amount,0),2) AS amount, COALESCE(source_ref, \'\') AS source_ref
+             FROM util_billing_line
+             WHERE billing_run_id=? AND employee_id=?
+             ORDER BY utility_type',
+            [$runId, $e]
+        );
+
+        $totalRow = DB::selectOne(
+            'SELECT ROUND(COALESCE(SUM(amount),0),2) AS total_amount
+             FROM util_billing_line
+             WHERE billing_run_id=? AND employee_id=?',
+            [$runId, $e]
+        );
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $m,
+            'billing_run_id' => $runId,
+            'employee_id' => $e,
+            'rows' => $rows,
+            'total_amount' => round((float)($totalRow->total_amount ?? 0), 2),
         ];
     }
 
@@ -799,20 +1431,97 @@ class DraftBillingFlowService implements BillingFlowContract
             ]);
         }
 
-        $tmp = tempnam(sys_get_temp_dir(), 'mbs_recon_');
+        return [
+            'status' => 'ok',
+            'month_cycle' => $rep['month_cycle'],
+            'filename' => 'reconciliation_'.$rep['month_cycle'].'.xlsx',
+            'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content' => $this->xlsxBytes($writer, 'mbs_recon_'),
+            'parity_note' => 'XLSX export enabled for active reconciliation export surface.',
+        ];
+    }
+
+    public function exportExcelMonthlySummary(array $payload): array
+    {
+        $rep = $this->monthlySummary($payload);
+        if (($rep['_http'] ?? 200) !== 200) {
+            return $rep;
+        }
+
+        if (!class_exists('\XLSXWriter')) {
+            return ['_http' => 500, 'status' => 'error', 'error' => 'XLSX writer package not available'];
+        }
+
+        $writer = new \XLSXWriter();
+        $writer->setAuthor('mbs_project');
+        $writer->writeSheetRow('monthly_summary', ['utility_type', 'total_amount', 'total_qty']);
+        foreach ($rep['rows'] as $row) {
+            $writer->writeSheetRow('monthly_summary', [
+                (string)($row->utility_type ?? ''),
+                (float)($row->total_amount ?? 0),
+                (float)($row->total_qty ?? 0),
+            ]);
+        }
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $rep['month_cycle'],
+            'filename' => 'monthly_summary_'.$rep['month_cycle'].'.xlsx',
+            'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'content' => $this->xlsxBytes($writer, 'mbs_mon_'),
+        ];
+    }
+
+    public function exportPdfMonthlySummary(array $payload): array
+    {
+        $rep = $this->monthlySummary($payload);
+        if (($rep['_http'] ?? 200) !== 200) {
+            return $rep;
+        }
+
+        $lines = [
+            'Monthly Summary - '.$rep['month_cycle'],
+            'Billing Run ID: '.(string)$rep['billing_run_id'],
+            '',
+            'Utility | Amount | Qty',
+        ];
+        foreach ($rep['rows'] as $row) {
+            $lines[] = sprintf(
+                '%s | %.2f | %.4f',
+                (string)($row->utility_type ?? ''),
+                (float)($row->total_amount ?? 0),
+                (float)($row->total_qty ?? 0)
+            );
+        }
+
+        $pdfBody = implode("\n", $lines);
+        $content = "%PDF-1.4\n".
+            "1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n".
+            "2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n".
+            "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources <<>> >>endobj\n".
+            "4 0 obj<< /Length ".strlen($pdfBody)." >>stream\n".$pdfBody."\nendstream endobj\n".
+            "xref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000117 00000 n \n0000000224 00000 n \n".
+            "trailer<< /Root 1 0 R /Size 5 >>\nstartxref\n".(224 + strlen($pdfBody))."\n%%EOF";
+
+        return [
+            'status' => 'ok',
+            'month_cycle' => $rep['month_cycle'],
+            'filename' => 'monthly_summary_'.$rep['month_cycle'].'.pdf',
+            'content_type' => 'application/pdf',
+            'content' => $content,
+        ];
+    }
+
+    private function xlsxBytes(\XLSXWriter $writer, string $prefix): string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), $prefix);
         $xlsx = $tmp.'.xlsx';
         @unlink($tmp);
         $writer->writeToFile($xlsx);
         $bytes = file_get_contents($xlsx) ?: '';
         @unlink($xlsx);
 
-        return [
-            'status' => 'ok',
-            'month_cycle' => $rep['month_cycle'],
-            'filename' => 'reconciliation_'.$rep['month_cycle'].'.xlsx',
-            'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'content' => $bytes,
-            'parity_note' => 'XLSX export enabled for active reconciliation export surface.',
-        ];
+        return $bytes;
     }
 }
+
