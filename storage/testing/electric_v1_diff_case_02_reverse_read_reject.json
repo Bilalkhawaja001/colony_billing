@@ -1,0 +1,36 @@
+{
+    "expected": {
+        "final_outputs": [],
+        "drilldown_outputs": [],
+        "exceptions": [
+            {
+                "company_id": "N\/A",
+                "cycle_end_date": "2026-03-31",
+                "cycle_start_date": "2026-03-01",
+                "exception_code": "E_READ_REVERSE",
+                "message": "CurrentReading is less than PreviousReading; unit skipped",
+                "room_id": "N\/A",
+                "severity": "ERROR",
+                "unit_id": "U1"
+            }
+        ],
+        "run_history": []
+    },
+    "actual": {
+        "final_outputs": [],
+        "drilldown_outputs": [],
+        "exceptions": [
+            {
+                "company_id": "N\/A",
+                "cycle_end_date": "2026-03-31",
+                "cycle_start_date": "2026-03-01",
+                "exception_code": "E_READ_REVERSE",
+                "message": "CurrentReading is less than PreviousReading",
+                "room_id": "N\/A",
+                "severity": "ERROR",
+                "unit_id": "U1"
+            }
+        ],
+        "run_history": []
+    }
+}
