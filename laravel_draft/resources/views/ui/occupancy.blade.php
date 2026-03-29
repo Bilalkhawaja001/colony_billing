@@ -2,7 +2,10 @@
 @section('page_title','Housing & Occupancy · Occupancy')
 @section('page_subtitle','Month occupancy with CSV bulk upload, context autofill, listing filters and row delete controls.')
 @section('content')
+<style>.local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}</style>
 <div class="grid">
+<div class="col-12 card soft"><div class="toolbar local-sticky"><span class="badge">Occupancy Control</span><button class="btn" type="button" id="loadOccBtn">Reload</button></div></div>
+
 <div class="col-8 card">
   <h3 class="section-title">Single Upsert</h3>
   <form id="occUpsertForm" class="form-grid">
@@ -26,19 +29,22 @@
 
 <div class="col-12 card">
   <h3 class="section-title">Occupancy Listing</h3>
-  <div class="toolbar" style="margin-bottom:10px"><input id="occMonth" placeholder="month_cycle filter"><input id="occUnit" placeholder="unit_id filter"><button class="btn" type="button" id="loadOccBtn">Reload</button></div>
-  <table>
-    <thead><tr><th>ID</th><th>Month</th><th>Unit</th><th>Room</th><th>Employee</th><th>Days</th><th>Action</th></tr></thead>
-    <tbody id="occRows"><tr><td colspan="7"><div class="empty">No rows loaded.</div></td></tr></tbody>
-  </table>
+  <div class="toolbar" style="margin-bottom:10px"><input id="occMonth" placeholder="month_cycle filter"><input id="occUnit" placeholder="unit_id filter"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Month</th><th>Unit</th><th>Room</th><th>Employee</th><th>Days</th><th>Action</th></tr></thead>
+      <tbody id="occRows"><tr><td colspan="7"><div class="empty">No rows loaded.</div></td></tr></tbody>
+    </table>
+  </div>
 </div>
-<div class="col-12 card"><h3 class="section-title">Result / Errors</h3><pre id="occResult">Ready.</pre></div>
+<div class="col-12 card"><h3 class="section-title">Operation Status</h3><div id="occStatus" class="banner">Ready.</div><details style="margin-top:8px"><summary class="muted">Technical response</summary><pre id="occResult" style="margin-top:8px">{}</pre></details></div>
 </div>
 <script>
 const csrf=@json(csrf_token());
 const out=document.getElementById('occResult');
 const rowsEl=document.getElementById('occRows');
-function show(v){out.textContent=JSON.stringify(v,null,2)}
+function setStatus(ok,text){const el=document.getElementById('occStatus'); el.className=ok?'banner':'alert'; el.textContent=text;}
+function show(v){out.textContent=JSON.stringify(v,null,2); const ok=(v?.status>=200&&v?.status<300)||v?.status==='done'; setStatus(ok, ok?'Completed successfully.':'Action failed.');}
 function parseCsv(t){const l=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(l.length<2)return []; const h=l[0].split(',').map(s=>s.trim()); return l.slice(1).map(x=>{const c=x.split(',').map(s=>s.trim()); return Object.fromEntries(h.map((k,i)=>[k,c[i]??'']));});}
 function download(name,c){const b=new Blob([c],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);} 
 async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf}}; if(payload!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload);} const r=await fetch(url,o); const j=await r.json().catch(()=>({raw:'non-json'})); const v={status:r.status,body:j}; show(v); return v;}

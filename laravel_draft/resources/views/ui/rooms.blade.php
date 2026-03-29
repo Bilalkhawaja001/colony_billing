@@ -2,7 +2,10 @@
 @section('page_title','Housing & Occupancy · Rooms')
 @section('page_subtitle','Room snapshot operations with CSV bulk upload, template download, list/filter and row delete controls.')
 @section('content')
+<style>.local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}</style>
 <div class="grid">
+<div class="col-12 card soft"><div class="toolbar local-sticky"><span class="badge">Rooms Control</span><button class="btn" type="button" id="loadRoomsBtn">Reload</button></div></div>
+
 <div class="col-7 card">
   <h3 class="section-title">Single Upsert</h3>
   <form id="roomUpsertForm" class="form-grid">
@@ -29,21 +32,23 @@
   <div class="toolbar" style="margin-bottom:10px">
     <input id="roomsMonth" placeholder="month_cycle filter">
     <input id="roomsUnit" placeholder="unit_id filter">
-    <button class="btn" type="button" id="loadRoomsBtn">Reload</button>
   </div>
-  <table>
-    <thead><tr><th>ID</th><th>Month</th><th>Unit</th><th>Category</th><th>Room</th><th>Block</th><th>Action</th></tr></thead>
-    <tbody id="roomsRows"><tr><td colspan="7"><div class="empty">No rows loaded.</div></td></tr></tbody>
-  </table>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Month</th><th>Unit</th><th>Category</th><th>Room</th><th>Block</th><th>Action</th></tr></thead>
+      <tbody id="roomsRows"><tr><td colspan="7"><div class="empty">No rows loaded.</div></td></tr></tbody>
+    </table>
+  </div>
 </div>
 
-<div class="col-12 card"><h3 class="section-title">Result / Errors</h3><pre id="roomResult">Ready.</pre></div>
+<div class="col-12 card"><h3 class="section-title">Operation Status</h3><div id="roomStatus" class="banner">Ready.</div><details style="margin-top:8px"><summary class="muted">Technical response</summary><pre id="roomResult" style="margin-top:8px">{}</pre></details></div>
 </div>
 <script>
 const csrf=@json(csrf_token());
 const out=document.getElementById('roomResult');
 const rowsEl=document.getElementById('roomsRows');
-function show(v){out.textContent=JSON.stringify(v,null,2)}
+function setStatus(ok,text){const el=document.getElementById('roomStatus'); el.className=ok?'banner':'alert'; el.textContent=text;}
+function show(v){out.textContent=JSON.stringify(v,null,2); const ok=(v?.status>=200&&v?.status<300)||v?.status==='done'; setStatus(ok, ok?'Completed successfully.':'Action failed.');}
 function download(name,c){const b=new Blob([c],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);} 
 function parseCsv(t){const l=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(l.length<2)return []; const h=l[0].split(',').map(s=>s.trim()); return l.slice(1).map(x=>{const c=x.split(',').map(s=>s.trim()); return Object.fromEntries(h.map((k,i)=>[k,c[i]??'']));});}
 async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf}}; if(payload!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload);} const r=await fetch(url,o);const j=await r.json().catch(()=>({raw:'non-json'}));const v={status:r.status,body:j};show(v);return v;}

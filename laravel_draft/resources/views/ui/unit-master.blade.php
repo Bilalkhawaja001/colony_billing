@@ -2,7 +2,10 @@
 @section('page_title','Unit Directory')
 @section('page_subtitle','Unit CRUD-lite operations with CSV bulk upsert and template download support.')
 @section('content')
+<style>.local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}</style>
 <div class="grid">
+<div class="col-12 card soft"><div class="toolbar local-sticky"><span class="badge">Directory Control</span><button class="btn" type="button" id="loadUnitsBtn">Reload Units</button></div></div>
+
 <div class="col-7 card">
   <h3 class="section-title">Single Upsert</h3>
   <form id="unitUpsertForm" class="form-grid">
@@ -23,19 +26,21 @@
 
 <div class="col-12 card">
   <h3 class="section-title">Unit Listing</h3>
-  <div class="toolbar" style="margin-bottom:10px"><button class="btn" type="button" id="loadUnitsBtn">Reload Units</button></div>
-  <table>
-    <thead><tr><th>Unit ID</th><th>Name</th></tr></thead>
-    <tbody id="unitRows"><tr><td colspan="2"><div class="empty">No rows loaded.</div></td></tr></tbody>
-  </table>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Unit ID</th><th>Name</th></tr></thead>
+      <tbody id="unitRows"><tr><td colspan="2"><div class="empty">No rows loaded.</div></td></tr></tbody>
+    </table>
+  </div>
 </div>
-<div class="col-12 card"><h3 class="section-title">API Result</h3><pre id="unitResult">Ready.</pre></div>
+<div class="col-12 card"><h3 class="section-title">Operation Status</h3><div id="unitStatus" class="banner">Ready.</div><details style="margin-top:8px"><summary class="muted">Technical response</summary><pre id="unitResult" style="margin-top:8px">{}</pre></details></div>
 </div>
 <script>
 const csrf=@json(csrf_token());
 const out=document.getElementById('unitResult');
 const rowsEl=document.getElementById('unitRows');
-function show(v){out.textContent=JSON.stringify(v,null,2)}
+function setStatus(ok,text){const el=document.getElementById('unitStatus'); el.className=ok?'banner':'alert'; el.textContent=text;}
+function show(v){out.textContent=JSON.stringify(v,null,2); const ok=(v?.status>=200&&v?.status<300)||v?.status==='done'; setStatus(ok, ok?'Completed successfully.':'Action failed.');}
 function parseCsv(t){const lines=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(lines.length<2)return []; const h=lines[0].split(',').map(s=>s.trim()); return lines.slice(1).map(l=>{const c=l.split(',').map(s=>s.trim()); return Object.fromEntries(h.map((k,i)=>[k,c[i]??'']));});}
 function download(name,c){const b=new Blob([c],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);} 
 async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf}};if(payload){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload);} const r=await fetch(url,o);const j=await r.json().catch(()=>({raw:'non-json'}));const v={status:r.status,body:j};show(v);return v;}
