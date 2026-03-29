@@ -42,6 +42,10 @@
         .banner{padding:10px 12px;border-radius:10px;background:#eef4ff;border:1px solid #cfddff;color:#1e3a8a;font-size:13px;margin-bottom:12px}
         .alert{padding:10px 12px;border:1px solid #fecaca;background:#fef2f2;color:#991b1b;border-radius:10px;font-size:13px}
         .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .sticky-actions{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,#ffffff 80%,rgba(255,255,255,.85) 100%);padding:8px;border:1px solid var(--line);border-radius:10px}
+        .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px}
+        .table-wrap table{min-width:760px}
+        .stack{display:flex;flex-direction:column;gap:10px}
         .form-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px}
         .field{display:flex;flex-direction:column;gap:5px}
         .label{font-size:12px;color:#334155;font-weight:600}
@@ -60,7 +64,7 @@
         tr:hover td{background:#fbfdff}
         .empty{padding:20px;border:1px dashed var(--line-strong);border-radius:10px;background:#fcfdff;color:var(--muted);font-size:13px;text-align:center}
         .split{display:flex;gap:10px;flex-wrap:wrap}
-        @media (max-width:1200px){.sidebar{display:none}.col-3,.col-4,.col-5,.col-6,.col-7,.col-8,.col-12{grid-column:span 12}.container{padding:16px}}
+        @media (max-width:1200px){.sidebar{display:none}.col-3,.col-4,.col-5,.col-6,.col-7,.col-8,.col-12{grid-column:span 12}.container{padding:16px}.sticky-actions{position:static;padding:6px}}
     </style>
 </head>
 <body>

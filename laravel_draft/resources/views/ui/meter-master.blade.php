@@ -57,10 +57,12 @@
       <input id="meterListQ" placeholder="filter by meter/unit/type">
       <button class="btn" type="button" id="loadMeterMappings">Reload Mappings</button>
     </div>
-    <table>
-      <thead><tr><th>Meter ID</th><th>Unit ID</th><th>Meter Type</th><th>Active</th></tr></thead>
-      <tbody id="meterRows"><tr><td colspan="4"><div class="empty">No mapping rows loaded.</div></td></tr></tbody>
-    </table>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Meter ID</th><th>Unit ID</th><th>Meter Type</th><th>Active</th></tr></thead>
+        <tbody id="meterRows"><tr><td colspan="4"><div class="empty">No mapping rows loaded.</div></td></tr></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="col-12 card">

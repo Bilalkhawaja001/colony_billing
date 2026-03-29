@@ -3,7 +3,7 @@
 @section('page_subtitle','Flask-parity Employee Master: Basic Info + Residence + Assets with Quick Add/Edit, Bulk Upload, Manage/List, Fetch by ID and Draft Registry.')
 @section('content')
 <div class="card">
-  <div class="toolbar" style="margin-bottom:12px">
+  <div class="toolbar sticky-actions" style="margin-bottom:12px">
     <button id="mode_quick" class="btn btn-primary" type="button" onclick="setMode('quick')">Quick Add/Edit</button>
     <button id="mode_bulk" class="btn" type="button" onclick="setMode('bulk')">Bulk Upload</button>
     <button id="mode_manage" class="btn" type="button" onclick="setMode('manage')">Manage/List</button>
@@ -89,7 +89,7 @@
       <div class="field col-3"><label class="label">Designation</label><input id="mf_desg" oninput="applyFilters()"></div>
       <div class="field col-3"><label class="label">Active</label><select id="mf_active" onchange="applyFilters()"><option value="">All</option><option>Yes</option><option>No</option></select></div>
     </div>
-    <div id="emp_list" style="margin-top:10px"></div>
+    <div id="emp_list" class="table-wrap" style="margin-top:10px"></div>
     <div class="toolbar" style="margin-top:8px">
       <span id="emp_page_info" class="muted"></span>
       <button class="btn" type="button" onclick="prevEmpPage()">Prev</button>

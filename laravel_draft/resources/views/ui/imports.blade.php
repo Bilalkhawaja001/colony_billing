@@ -3,7 +3,7 @@
 @section('page_subtitle','Ingest preview, validation-token control, and error-loop handling for meter import readiness.')
 @section('content')
 <div class="grid">
-  <div class="col-7 card">
+  <div class="col-7 card stack">
     <h3 class="section-title">Ingest Preview</h3>
     <form id="ingestPreviewForm" class="form-grid">
       <div class="field col-6"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}"></div>
