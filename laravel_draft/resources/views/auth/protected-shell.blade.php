@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title', 'Dashboard')
 @section('content')
 <div class="banner">Operational dashboard for colony electricity billing, governance, and reporting.</div>
@@ -10,11 +10,12 @@
     <div class="card col-6">
         <h4>Quick Access</h4>
         <div class="actions">
-            <a class="btn btn-primary" href="/ui/billing">Billing Workspace</a>
-            <a class="btn" href="/ui/month-cycle">Month Cycle</a>
-            <a class="btn" href="/ui/reports">Reports</a>
-            <a class="btn" href="/ui/reconciliation">Reconciliation</a>
+            <a class="btn btn-primary" href="/billing-run-lock">Billing Workspace</a>
+            <a class="btn" href="/month-lifecycle">Month Cycle</a>
+            <a class="btn" href="/reporting">Reports</a>
+            <a class="btn" href="/reporting">Reconciliation</a>
         </div>
     </div>
 </div>
 @endsection
+

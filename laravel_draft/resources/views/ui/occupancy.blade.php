@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Occupancy')
+@section('page_title','Housing & Occupancy · Occupancy')
 @section('page_subtitle','Month occupancy with CSV bulk upload, context autofill, listing filters and row delete controls.')
 @section('content')
 <div class="grid">

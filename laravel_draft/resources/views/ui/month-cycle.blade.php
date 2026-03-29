@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Month Cycle Governance')
+@section('page_title','Month Lifecycle')
 @section('page_subtitle','Control month lifecycle states with clear operator guardrails and visibility.')
 @section('content')
 <div class="grid">

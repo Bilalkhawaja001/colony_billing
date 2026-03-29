@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Dashboard')
 @section('page_subtitle','Operational control center for month-cycle billing, reporting and reconciliation health.')
 @section('content')
@@ -26,7 +26,7 @@
 
     <div class="col-8 card">
         <h3 class="section-title">Month Control + Quick Actions</h3>
-        <form method="get" action="/ui/dashboard" class="form-grid" style="margin-bottom:12px;">
+        <form method="get" action="/dashboard" class="form-grid" style="margin-bottom:12px;">
             <div class="field col-4">
                 <label class="label">Month Cycle</label>
                 <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
@@ -34,16 +34,16 @@
             <div class="field col-8" style="justify-content:flex-end;display:flex;align-items:flex-end;">
                 <div class="split">
                     <button class="btn btn-primary" type="submit">Reload Dashboard</button>
-                    <a class="btn" href="/ui/month-cycle?month_cycle={{ urlencode((string)$monthCycle) }}">Open Month Cycle</a>
-                    <a class="btn" href="/ui/billing?month_cycle={{ urlencode((string)$monthCycle) }}">Open Billing</a>
+                    <a class="btn" href="/month-lifecycle?month_cycle={{ urlencode((string)$monthCycle) }}">Open Month Cycle</a>
+                    <a class="btn" href="/billing-run-lock?month_cycle={{ urlencode((string)$monthCycle) }}">Open Billing</a>
                 </div>
             </div>
         </form>
         <div class="split">
-            <a class="btn" href="/ui/reports?month_cycle={{ urlencode((string)$monthCycle) }}">Reports</a>
-            <a class="btn" href="/ui/reconciliation?month_cycle={{ urlencode((string)$monthCycle) }}">Reconciliation</a>
-            <a class="btn" href="/ui/imports?month_cycle={{ urlencode((string)$monthCycle) }}">Imports</a>
-            <a class="btn" href="/ui/rates?month_cycle={{ urlencode((string)$monthCycle) }}">Rates</a>
+            <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Reports</a>
+            <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Reconciliation</a>
+            <a class="btn" href="/imports-validation?month_cycle={{ urlencode((string)$monthCycle) }}">Imports</a>
+            <a class="btn" href="/rates?month_cycle={{ urlencode((string)$monthCycle) }}">Rates</a>
         </div>
     </div>
 

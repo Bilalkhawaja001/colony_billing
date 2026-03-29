@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Inputs RO')
 @section('page_subtitle','RO + water allocation operator console with preview and adjustment write actions.')
 @section('content')
@@ -20,7 +20,7 @@
     <div class="col-12"><button class="btn btn-primary" type="submit">Upsert Adjustment</button></div>
   </form>
 </div>
-<div class="col-12 card soft"><a class="btn" href="/ui/water-meters">Open Full Water Meters Workspace</a></div>
+<div class="col-12 card soft"><a class="btn" href="/meters-readings">Open Full Water Meters Workspace</a></div>
 <div class="col-12 card"><h3 class="section-title">Result</h3><pre id="roResult">Ready.</pre></div>
 </div>
 <script>

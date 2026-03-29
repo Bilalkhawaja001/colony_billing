@@ -1,5 +1,5 @@
-@extends('layouts.app')
-@section('page_title','Billing Workspace')
+﻿@extends('layouts.app')
+@section('page_title','Billing Run & Lock')
 @section('page_subtitle','Run billing cycles, lock approved runs, and open downstream report exports from one control surface.')
 @section('content')
 <div class="grid">
@@ -27,7 +27,7 @@
       <a class="btn" href="#" id="summaryLink">Monthly Summary JSON</a>
       <a class="btn" href="#" id="excelLink">Export Excel</a>
       <a class="btn" href="#" id="pdfLink">Export PDF</a>
-      <a class="btn" href="/ui/reconciliation?month_cycle={{ urlencode((string)$monthCycle) }}">Open Reconciliation</a>
+      <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Open Reconciliation</a>
     </div>
   </div>
 

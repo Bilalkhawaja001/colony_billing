@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title', 'Dashboard')
 @section('content')
 <div class="banner">Operational dashboard for colony electricity billing, governance, and reporting.</div>
@@ -12,10 +12,10 @@
     <div class="card col-6">
         <h4>Core Workspaces</h4>
         <div class="actions">
-            <a class="btn btn-primary" href="/ui/billing">Open Billing Workspace</a>
-            <a class="btn" href="/ui/month-cycle">Open Month Cycle</a>
-            <a class="btn" href="/ui/reports">Open Reports</a>
-            <a class="btn" href="/ui/reconciliation">Open Reconciliation</a>
+            <a class="btn btn-primary" href="/billing-run-lock">Open Billing Workspace</a>
+            <a class="btn" href="/month-lifecycle">Open Month Cycle</a>
+            <a class="btn" href="/reporting">Open Reports</a>
+            <a class="btn" href="/reporting">Open Reconciliation</a>
         </div>
     </div>
 
@@ -30,3 +30,4 @@
     </div>
 </div>
 @endsection
+

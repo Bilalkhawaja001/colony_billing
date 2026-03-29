@@ -1,10 +1,10 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Reconciliation')
 @section('page_subtitle','Track billed, recovered and outstanding positions with export-ready reconciliation controls.')
 @section('content')
 <div class="grid">
     <div class="col-12 card">
-        <form method="get" action="/ui/reconciliation" class="form-grid" style="margin-bottom:10px">
+        <form method="get" action="/reporting" class="form-grid" style="margin-bottom:10px">
             <div class="field col-4"><label class="label">Month Cycle</label><input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
             <div class="col-8" style="display:flex;align-items:flex-end"><button class="btn btn-primary" type="submit">Reload</button></div>
         </form>

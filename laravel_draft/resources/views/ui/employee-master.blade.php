@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Employees_Master (Canonical Columns)')
+@section('page_title','People & Residency')
 @section('page_subtitle','Flask-parity Employee Master: Basic Info + Residence + Assets with Quick Add/Edit, Bulk Upload, Manage/List, Fetch by ID and Draft Registry.')
 @section('content')
 <div class="card">

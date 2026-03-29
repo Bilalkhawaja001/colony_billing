@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Imports Workspace')
+@section('page_title','Imports & Validation')
 @section('page_subtitle','Ingest preview, validation-token control, and error-loop handling for meter import readiness.')
 @section('content')
 <div class="grid">

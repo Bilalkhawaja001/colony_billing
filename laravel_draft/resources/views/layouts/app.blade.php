@@ -72,38 +72,24 @@
         <nav class="nav">
             <div class="nav-section">
                 <div class="nav-head">Core</div>
-                <a class="{{ request()->is('ui/dashboard') ? 'active' : '' }}" href="/ui/dashboard">Dashboard</a>
-                <a class="{{ request()->is('ui/billing') ? 'active' : '' }}" href="/ui/billing">Billing Workspace</a>
-                <a class="{{ request()->is('ui/month-cycle') ? 'active' : '' }}" href="/ui/month-cycle">Month Cycle</a>
-                <a class="{{ request()->is('ui/imports') ? 'active' : '' }}" href="/ui/imports">Imports</a>
-                <a class="{{ request()->is('ui/rates') ? 'active' : '' }}" href="/ui/rates">Rates</a>
+                <a class="{{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">Dashboard</a>
+                <a class="{{ request()->is('month-lifecycle') ? 'active' : '' }}" href="/month-lifecycle">Month Lifecycle</a>
+                <a class="{{ request()->is('imports-validation') ? 'active' : '' }}" href="/imports-validation">Imports & Validation</a>
+                <a class="{{ request()->is('billing-run-lock') ? 'active' : '' }}" href="/billing-run-lock">Billing Run & Lock</a>
+                <a class="{{ request()->is('reporting') ? 'active' : '' }}" href="/reporting">Reporting Center</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Operations</div>
-                <a class="{{ request()->is('ui/reports') ? 'active' : '' }}" href="/ui/reports">Reports</a>
-                <a class="{{ request()->is('ui/reconciliation') ? 'active' : '' }}" href="/ui/reconciliation">Reconciliation</a>
-                <a class="{{ request()->is('ui/elec-summary') ? 'active' : '' }}" href="/ui/elec-summary">Elec Summary</a>
-                <a class="{{ request()->is('ui/water-meters') ? 'active' : '' }}" href="/ui/water-meters">Water Meters</a>
-                <a class="{{ request()->is('ui/van') ? 'active' : '' }}" href="/ui/van">Van</a>
-                <a class="{{ request()->is('ui/finalized-months') ? 'active' : '' }}" href="/ui/finalized-months">Finalized Months</a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-head">Masters & Inputs</div>
-                <a class="{{ request()->is('ui/unit-master') ? 'active' : '' }}" href="/ui/unit-master">Unit Master</a>
-                <a class="{{ request()->is('ui/rooms') ? 'active' : '' }}" href="/ui/rooms">Rooms</a>
-                <a class="{{ request()->is('ui/occupancy') ? 'active' : '' }}" href="/ui/occupancy">Occupancy</a>
-                <a class="{{ request()->is('ui/employee-master') ? 'active' : '' }}" href="/ui/employee-master">Employee Master</a>
-                <a class="{{ request()->is('ui/employee-helper') ? 'active' : '' }}" href="/ui/employee-helper">Employee Helper</a>
-                <a class="{{ request()->is('ui/meter-master') ? 'active' : '' }}" href="/ui/meter-master">Meter Master</a>
-                <a class="{{ request()->is('ui/meter-register-ingest') ? 'active' : '' }}" href="/ui/meter-register-ingest">Meter Register Ingest</a>
-                <a class="{{ request()->is('ui/inputs/mapping') ? 'active' : '' }}" href="/ui/inputs/mapping">Inputs Mapping</a>
-                <a class="{{ request()->is('ui/inputs/hr') ? 'active' : '' }}" href="/ui/inputs/hr">Inputs HR</a>
-                <a class="{{ request()->is('ui/inputs/readings') ? 'active' : '' }}" href="/ui/inputs/readings">Inputs Readings</a>
-                <a class="{{ request()->is('ui/inputs/ro') ? 'active' : '' }}" href="/ui/inputs/ro">Inputs RO</a>
+                <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency">People & Residency</a>
+                <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings">Meters & Readings</a>
+                <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory">Unit Directory</a>
+                <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy">Housing & Occupancy</a>
+                <a class="{{ request()->is('electric-v1-lab') || request()->is('electric-v1-lab/*') ? 'active' : '' }}" href="/electric-v1-lab">Electric V1 Lab</a>
+                <a class="{{ request()->is('rates') ? 'active' : '' }}" href="/rates">Rates</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Profile</div>
-                <a href="/ui/profile">My Profile</a>
+                <a href="/profile">My Profile</a>
                 @if(in_array(session('role'), ['SUPER_ADMIN']))
                     <a class="{{ request()->is('ui/admin/users') ? 'active' : '' }}" href="/ui/admin/users">User Management</a>
                 @endif

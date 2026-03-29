@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Inputs Readings')
 @section('page_subtitle','Operator reading console: latest lookup + quick upsert + meter master jump.')
 @section('content')
@@ -20,7 +20,7 @@
     <div class="col-12"><button class="btn btn-primary" type="submit">Upsert Reading</button></div>
   </form>
 </div>
-<div class="col-12 card soft"><a class="btn" href="/ui/meter-master">Open Full Meter Master Workspace</a></div>
+<div class="col-12 card soft"><a class="btn" href="/meters-readings">Open Full Meter Master Workspace</a></div>
 <div class="col-12 card"><h3 class="section-title">Result</h3><pre id="readingsResult">Ready.</pre></div>
 </div>
 <script>

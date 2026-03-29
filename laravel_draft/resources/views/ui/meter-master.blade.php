@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Meter Master')
+@section('page_title','Meters & Readings')
 @section('page_subtitle','Meter readings + meter-unit mapping with CSV bulk tools and operator feedback.')
 @section('content')
 <div class="grid">

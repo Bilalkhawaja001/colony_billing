@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Employees Workspace')
 @section('page_subtitle','Employee API hub for search, detail and update flows.')
 @section('content')
@@ -9,6 +9,6 @@
     <div class="col-4 card soft"><code>/employees/search</code></div>
     <div class="col-4 card soft"><code>/employees/{company_id}</code></div>
   </div>
-  <div class="toolbar" style="margin-top:12px"><a class="btn btn-primary" href="/ui/employee-master">Open Employee Master</a></div>
+  <div class="toolbar" style="margin-top:12px"><a class="btn btn-primary" href="/people-residency">Open Employee Master</a></div>
 </div>
 @endsection

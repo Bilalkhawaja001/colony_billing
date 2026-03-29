@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Inputs HR')
 @section('page_subtitle','HR source ingestion controls with CSV upload/template download and employee listing feedback.')
 @section('content')
@@ -15,8 +15,8 @@
   <div class="col-6 card">
     <h3 class="section-title">Quick Links</h3>
     <div class="toolbar">
-      <a class="btn" href="/ui/employee-master">Open Employee Master</a>
-      <a class="btn" href="/ui/employee-helper">Open Employee Helper</a>
+      <a class="btn" href="/people-residency">Open Employee Master</a>
+      <a class="btn" href="/people-residency">Open Employee Helper</a>
       <button class="btn" type="button" id="loadEmpRows">Reload Employees</button>
     </div>
   </div>

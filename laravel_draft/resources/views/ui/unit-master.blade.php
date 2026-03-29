@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title','Unit Master')
+@section('page_title','Unit Directory')
 @section('page_subtitle','Unit CRUD-lite operations with CSV bulk upsert and template download support.')
 @section('content')
 <div class="grid">

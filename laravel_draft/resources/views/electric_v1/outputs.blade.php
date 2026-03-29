@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('page_title', 'Electric V1 Outputs')
+@section('page_title', 'Electric V1 Lab · Outputs')
 @section('content')
 <div class="card">
     <h3>ElectricBillingV1 Outputs</h3>

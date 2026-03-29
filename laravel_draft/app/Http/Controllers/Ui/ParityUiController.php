@@ -23,7 +23,7 @@ class ParityUiController extends Controller
     public function home()
     {
         return session()->has('user_id')
-            ? redirect('/ui/dashboard')
+            ? redirect('/dashboard')
             : redirect('/login');
     }
 

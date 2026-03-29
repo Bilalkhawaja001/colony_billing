@@ -1,10 +1,10 @@
-@extends('layouts.app')
-@section('page_title','Reports')
+﻿@extends('layouts.app')
+@section('page_title','Reporting Center')
 @section('page_subtitle','Consolidated reporting center for monthly summary, recovery and employee bill analysis.')
 @section('content')
 <div class="grid">
     <div class="col-12 card">
-        <form method="get" action="/ui/reports" class="form-grid" style="margin-bottom:10px">
+        <form method="get" action="/reporting" class="form-grid" style="margin-bottom:10px">
             <div class="field col-4"><label class="label">Month Cycle</label><input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY"></div>
             <div class="col-8" style="display:flex;align-items:flex-end"><button class="btn btn-primary" type="submit">Reload</button></div>
         </form>
