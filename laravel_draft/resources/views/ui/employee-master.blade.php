@@ -97,7 +97,11 @@
     </div>
   </div>
 
-  <pre id="out" style="margin-top:10px">Ready.</pre>
+  <div id="actionStatus" class="banner" style="margin-top:10px">Ready.</div>
+  <details style="margin-top:8px">
+    <summary class="muted">Technical response</summary>
+    <pre id="out" style="margin-top:8px">{}</pre>
+  </details>
 </div>
 
 <script>
@@ -106,7 +110,13 @@ let BULK_CSV_TEXT='';
 let EMP_ROWS=[]; let EMP_FILTERED=[]; let EMP_PAGE=1; const PAGE_SIZE=25;
 
 function v(id){ return (document.getElementById(id)?.value||'').trim(); }
-function show(o){ document.getElementById('out').textContent = JSON.stringify(o,null,2); }
+function show(o){
+  document.getElementById('out').textContent = JSON.stringify(o,null,2);
+  const ok=(o?.status>=200 && o?.status<300) || o?.status==='ok' || o?.body?.status==='ok';
+  const el=document.getElementById('actionStatus');
+  el.className=ok?'banner':'alert';
+  el.textContent=ok?'Action completed successfully.':'Action failed. Check technical response.';
+}
 async function req(url, method='GET', payload=null){
   const opts={method,headers:{'X-CSRF-TOKEN':csrf}};
   if(payload!==null){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(payload);}

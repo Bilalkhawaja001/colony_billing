@@ -63,7 +63,14 @@
     </table>
   </div>
 
-  <div class="col-12 card"><h3 class="section-title">Result / Errors</h3><pre id="meterResult">Ready.</pre></div>
+  <div class="col-12 card">
+    <h3 class="section-title">Operation Status</h3>
+    <div id="meterStatus" class="banner">Ready.</div>
+    <details style="margin-top:10px">
+      <summary class="muted">Technical response</summary>
+      <pre id="meterResult" style="margin-top:8px">{}</pre>
+    </details>
+  </div>
 </div>
 
 <script>
@@ -71,7 +78,16 @@ const csrf=@json(csrf_token());
 const result=document.getElementById('meterResult');
 const meterRows=document.getElementById('meterRows');
 
-function show(v){result.textContent=JSON.stringify(v,null,2)}
+function setStatus(ok,text){
+  const el=document.getElementById('meterStatus');
+  el.className=ok?'banner':'alert';
+  el.textContent=text;
+}
+function show(v){
+  result.textContent=JSON.stringify(v,null,2);
+  const ok=(v?.status>=200 && v?.status<300) || v?.status==='done';
+  setStatus(ok, ok ? 'Completed successfully.' : 'Action failed. Review technical response.');
+}
 function parseCsv(text){
   const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   if(lines.length<2) return {header:[],rows:[]};

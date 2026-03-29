@@ -20,16 +20,30 @@
     <div class="muted" style="margin-top:10px">Error report endpoint: <code>/imports/error-report/{token}</code></div>
   </div>
   <div class="col-12 card">
-    <h3 class="section-title">Import Operation Log</h3>
-    <pre id="importsResult">Ready.</pre>
+    <h3 class="section-title">Import Status</h3>
+    <div id="importsStatus" class="banner">Ready.</div>
+    <details style="margin-top:10px">
+      <summary class="muted">Technical response</summary>
+      <pre id="importsResult" style="margin-top:8px">{}</pre>
+    </details>
   </div>
 </div>
 <script>
 const csrf=@json(csrf_token());
+function setStatus(ok,text){
+  const el=document.getElementById('importsStatus');
+  el.className=ok?'banner':'alert';
+  el.textContent=text;
+}
 async function postJson(url,payload){
  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify(payload)});
  const j=await r.json().catch(()=>({raw:'non-json'}));
  document.getElementById('importsResult').textContent=JSON.stringify({status:r.status,body:j},null,2);
+ if(r.ok){
+   setStatus(true, `Done: ${url} (${r.status})`);
+ } else {
+   setStatus(false, `Failed: ${url} (${r.status})`);
+ }
 }
 document.getElementById('ingestPreviewForm').addEventListener('submit',e=>{e.preventDefault();postJson('/imports/meter-register/ingest-preview',Object.fromEntries(new FormData(e.target)));});
 document.getElementById('markValidatedForm').addEventListener('submit',e=>{e.preventDefault();postJson('/imports/mark-validated',Object.fromEntries(new FormData(e.target)));});

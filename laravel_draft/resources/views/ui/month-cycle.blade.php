@@ -41,16 +41,26 @@
     </div>
 
     <div class="col-12 card soft">
-        <h3 class="section-title">Execution Result</h3>
-        <pre id="monthCycleResult">Ready.</pre>
+        <h3 class="section-title">Execution Status</h3>
+        <div id="monthStatus" class="banner">Ready.</div>
+        <details style="margin-top:10px">
+            <summary class="muted">Technical response</summary>
+            <pre id="monthCycleResult" style="margin-top:8px">{}</pre>
+        </details>
     </div>
 </div>
 <script>
 const csrf = @json(csrf_token());
+function setStatus(ok,text){
+  const el=document.getElementById('monthStatus');
+  el.className=ok?'banner':'alert';
+  el.textContent=text;
+}
 async function postJson(url, payload){
   const r = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify(payload)});
   const j = await r.json().catch(()=>({raw:'non-json'}));
   document.getElementById('monthCycleResult').textContent = JSON.stringify({status:r.status,body:j},null,2);
+  setStatus(r.ok, r.ok ? `Updated successfully (${r.status})` : `Failed to update (${r.status})`);
 }
 document.getElementById('monthOpenForm').addEventListener('submit', e=>{e.preventDefault(); postJson('/month/open', Object.fromEntries(new FormData(e.target)));});
 document.getElementById('monthTransitionForm').addEventListener('submit', e=>{e.preventDefault(); postJson('/month/transition', Object.fromEntries(new FormData(e.target)));});
