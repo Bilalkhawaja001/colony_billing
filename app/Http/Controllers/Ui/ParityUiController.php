@@ -23,7 +23,7 @@ class ParityUiController extends Controller
     public function home()
     {
         return session()->has('user_id')
-            ? redirect('/ui/dashboard')
+            ? redirect('/dashboard')
             : redirect('/login');
     }
 
@@ -68,68 +68,131 @@ class ParityUiController extends Controller
         ]);
     }
 
-    public function monthCycle()
+    public function monthCycle(Request $request)
     {
-        return $this->renderUiPage('Month Cycle', '/ui/month-cycle');
+        return view('ui.month-cycle', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+            'rows' => $this->dashboard->monthControl()['rows'] ?? [],
+        ]);
     }
 
-    public function imports()
+    public function imports(Request $request)
     {
-        return $this->renderUiPage('Imports', '/ui/imports');
+        return view('ui.imports', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
     }
 
-    public function billing()
+    public function billing(Request $request)
     {
-        return $this->renderUiPage('Billing', '/ui/billing');
+        return view('ui.billing', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
     }
 
-    public function elecSummary()
+    public function elecSummary(Request $request)
     {
-        return $this->renderUiPage('Electric Summary', '/ui/elec-summary');
+        return view('ui.elec-summary', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+            'unitId' => (string)($request->query('unit_id') ?? ''),
+        ]);
     }
 
-    public function familyDetails()
+    public function familyDetails(Request $request)
     {
-        return view('family-details');
+        return view('family-details', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+            'companyId' => (string)($request->query('company_id') ?? ''),
+        ]);
     }
 
-    public function resultsEmployeeWise()
+    public function resultsEmployeeWise(Request $request)
     {
-        return view('results-employee-wise');
+        return view('results-employee-wise', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
     }
 
-    public function resultsUnitWise()
+    public function resultsUnitWise(Request $request)
     {
-        return view('results-unit-wise');
+        return view('results-unit-wise', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
     }
 
-    public function logs()
+    public function logs(Request $request)
     {
-        return view('logs');
+        return view('logs', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
     }
 
-    public function rates() { return $this->renderUiPage('Rates', '/ui/rates'); }
-    public function waterMeters() { return $this->renderUiPage('Water Meters', '/ui/water-meters'); }
-    public function van() { return $this->renderUiPage('VAN', '/ui/van'); }
-    public function employeeMaster() { return $this->renderUiPage('Employee Master', '/ui/employee-master'); }
-    public function employees() { return $this->renderUiPage('Employees', '/ui/employees'); }
-    public function employeeHelper() { return $this->renderUiPage('Employee Helper', '/ui/employee-helper'); }
-    public function unitMaster() { return $this->renderUiPage('Unit Master', '/ui/unit-master'); }
-    public function meterMaster() { return $this->renderUiPage('Meter Master', '/ui/meter-master'); }
-    public function meterRegisterIngest() { return $this->renderUiPage('Meter Register Ingest', '/ui/meter-register-ingest'); }
-    public function rooms() { return $this->renderUiPage('Rooms', '/ui/rooms'); }
-    public function occupancy() { return $this->renderUiPage('Occupancy', '/ui/occupancy'); }
+    public function rates(Request $request)
+    {
+        return view('ui.rates', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
+    }
+    public function waterMeters(Request $request)
+    {
+        return view('ui.water-meters', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
+    }
+
+    public function van(Request $request)
+    {
+        return view('ui.van', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
+    }
+    public function employeeMaster() { return view('ui.employee-master'); }
+    public function employees() { return view('ui.employees'); }
+    public function employeeHelper() { return view('ui.employee-helper'); }
+    public function unitMaster() { return view('ui.unit-master'); }
+    public function metersHub()
+    {
+        return view('ui.meters-hub');
+    }
+
+    public function meterRegistry()
+    {
+        return view('ui.meter-registry');
+    }
+
+    public function meterReadings()
+    {
+        return view('ui.meter-readings');
+    }
+
+    public function waterTools(Request $request)
+    {
+        return view('ui.water-tools', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
+    }
+
+    public function meterMaster() { return view('ui.meter-master'); }
+    public function meterRegisterIngest() { return view('ui.meter-register-ingest'); }
+    public function rooms() { return view('ui.rooms'); }
+    public function occupancy() { return view('ui.occupancy'); }
     public function electricV1Run() { return $this->renderUiPage('Electric V1 Run', '/ui/electric-v1-run'); }
     public function electricV1Outputs() { return $this->renderUiPage('Electric V1 Outputs', '/ui/electric-v1-outputs'); }
-    public function mastersEmployees() { return $this->renderUiPage('Masters -+ Employees', '/ui/masters/employees'); }
-    public function mastersUnits() { return $this->renderUiPage('Masters -+ Units', '/ui/masters/units'); }
-    public function mastersMeters() { return $this->renderUiPage('Masters -+ Meters', '/ui/masters/meters'); }
-    public function mastersRates() { return $this->renderUiPage('Masters -+ Rates', '/ui/masters/rates'); }
-    public function inputsMapping() { return $this->renderUiPage('Inputs -+ Mapping', '/ui/inputs/mapping'); }
-    public function inputsHr() { return $this->renderUiPage('Inputs -+ HR', '/ui/inputs/hr'); }
-    public function inputsReadings() { return $this->renderUiPage('Inputs -+ Readings', '/ui/inputs/readings'); }
-    public function inputsRo() { return $this->renderUiPage('Inputs -+ RO', '/ui/inputs/ro'); }
-    public function finalizedMonths() { return $this->renderUiPage('Finalized Months', '/ui/finalized-months'); }
+    public function mastersEmployees() { return view('ui.employee-master'); }
+    public function mastersUnits() { return view('ui.unit-master'); }
+    public function mastersMeters() { return view('ui.meter-master'); }
+    public function mastersRates() { return view('ui.rates'); }
+    public function inputsMapping() { return view('ui.inputs-mapping'); }
+    public function inputsHr() { return view('ui.inputs-hr'); }
+    public function inputsReadings() { return view('ui.inputs-readings'); }
+    public function inputsRo() { return view('ui.inputs-ro'); }
+    public function finalizedMonths(Request $request)
+    {
+        return view('ui.finalized-months', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+            'rows' => $this->dashboard->monthControl()['rows'] ?? [],
+        ]);
+    }
 
     public function colonyKpis(Request $request)
     {

@@ -27,47 +27,71 @@ Route::get('/reset-password', [AuthDraftController::class, 'showResetPassword'])
 Route::post('/reset-password', [AuthDraftController::class, 'resetPassword']);
 
 Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
-    Route::get('/ui/profile', [AuthDraftController::class, 'showProfile']);
+    Route::get('/profile', [AuthDraftController::class, 'showProfile']);
+    Route::get('/ui/profile', fn () => redirect('/profile'));
     Route::post('/api/profile/change-password', [AuthDraftController::class, 'changePassword']);
 
-    Route::get('/ui/dashboard', [ParityUiController::class, 'dashboard']);
-    Route::get('/ui/reports', [ParityUiController::class, 'reports']);
-    Route::get('/ui/reconciliation', [ParityUiController::class, 'reconciliation']);
-    Route::get('/ui/elec-summary', [ParityUiController::class, 'elecSummary']);
-    Route::get('/ui/month-control', [ParityUiController::class, 'monthControl']);
-    Route::get('/ui/monthly-setup', [ParityUiController::class, 'monthControl']);
-    Route::get('/ui/imports', [ParityUiController::class, 'imports']);
+    Route::get('/dashboard', [ParityUiController::class, 'dashboard']);
+    Route::get('/imports-validation', [ParityUiController::class, 'imports']);
+    Route::get('/reporting', [ParityUiController::class, 'reports']);
+    Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
+    Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    // Hub: Meters & Readings (single sidebar entry)
+    Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
-    Route::get('/ui/rates', [ParityUiController::class, 'rates']);
-    Route::get('/ui/water-meters', [ParityUiController::class, 'waterMeters']);
-    Route::get('/ui/van', [ParityUiController::class, 'van']);
-    Route::get('/ui/employee-master', [ParityUiController::class, 'employeeMaster']);
-    Route::get('/ui/employees', [ParityUiController::class, 'employees']);
-    Route::get('/ui/employee-helper', [ParityUiController::class, 'employeeHelper']);
-    Route::get('/ui/unit-master', [ParityUiController::class, 'unitMaster']);
-    Route::get('/ui/meter-master', [ParityUiController::class, 'meterMaster']);
-    Route::get('/ui/meter-register-ingest', [ParityUiController::class, 'meterRegisterIngest']);
-    Route::get('/ui/rooms', [ParityUiController::class, 'rooms']);
-    Route::get('/ui/occupancy', [ParityUiController::class, 'occupancy']);
-    Route::get('/ui/electric-v1-run', [ParityUiController::class, 'electricV1Run']);
-    Route::get('/ui/electric-v1-outputs', [ParityUiController::class, 'electricV1Outputs']);
-    Route::get('/ui/masters/employees', [ParityUiController::class, 'mastersEmployees']);
-    Route::get('/ui/masters/units', [ParityUiController::class, 'mastersUnits']);
-    Route::get('/ui/masters/meters', [ParityUiController::class, 'mastersMeters']);
-    Route::get('/ui/masters/rates', [ParityUiController::class, 'mastersRates']);
-    Route::get('/ui/inputs/mapping', [ParityUiController::class, 'inputsMapping']);
-    Route::get('/ui/inputs/hr', [ParityUiController::class, 'inputsHr']);
-    Route::get('/ui/inputs/readings', [ParityUiController::class, 'inputsReadings']);
-    Route::get('/ui/inputs/ro', [ParityUiController::class, 'inputsRo']);
-    Route::get('/ui/finalized-months', [ParityUiController::class, 'finalizedMonths']);
+    // Workspaces under the hub (no separate sidebar entries)
+    Route::get('/meters-readings/registry', [ParityUiController::class, 'meterRegistry']);
+    Route::get('/meters-readings/readings', [ParityUiController::class, 'meterReadings']);
+    Route::get('/meters-readings/water-tools', [ParityUiController::class, 'waterTools']);
+    Route::get('/housing-rooms', [ParityUiController::class, 'rooms']);
+    Route::get('/housing-occupancy', [ParityUiController::class, 'occupancy']);
+    Route::get('/electric-v1-lab/outputs', fn () => redirect('/ui/electric-v1-outputs'));
+    Route::get('/electric-v1-lab/run', fn () => redirect('/ui/electric-v1-run'));
+
+    // Backward-compatible /ui redirects
+    Route::get('/ui/dashboard', fn () => redirect('/dashboard'));
+    Route::get('/ui/imports', fn () => redirect('/imports-validation'));
+    Route::get('/ui/reports', fn () => redirect('/reporting'));
+    Route::get('/ui/reconciliation', fn () => redirect('/reporting'));
+    Route::get('/ui/results/employee-wise', fn () => redirect('/reporting'));
+    Route::get('/ui/results/unit-wise', fn () => redirect('/reporting'));
+    Route::get('/ui/logs', fn () => redirect('/reporting'));
+    Route::get('/ui/employee-master', fn () => redirect('/people-residency'));
+    Route::get('/ui/employees', fn () => redirect('/people-residency'));
+    Route::get('/ui/employee-helper', fn () => redirect('/people-residency'));
+    Route::get('/ui/inputs/hr', fn () => redirect('/people-residency'));
+    Route::get('/ui/unit-master', fn () => redirect('/unit-directory'));
+    // Backward-compatible /ui redirects (meter domain -> new hub/workspaces)
+    Route::get('/ui/meter-master', fn () => redirect('/meters-readings/registry'));
+    Route::get('/ui/masters/meters', fn () => redirect('/meters-readings/registry'));
+
+    Route::get('/ui/inputs/readings', fn () => redirect('/meters-readings/readings'));
+
+    Route::get('/ui/water-meters', fn () => redirect('/meters-readings/water-tools'));
+    Route::get('/ui/inputs/ro', fn () => redirect('/meters-readings/water-tools'));
+    Route::get('/ui/meter-register-ingest', fn () => redirect('/imports-validation'));
+    Route::get('/ui/rooms', fn () => redirect('/housing-rooms'));
+    Route::get('/ui/occupancy', fn () => redirect('/housing-occupancy'));
+    Route::get('/ui/month-control', fn () => redirect('/month-lifecycle'));
+    Route::get('/ui/finalized-months', fn () => redirect('/month-lifecycle'));
+    Route::get('/ui/monthly-setup', fn () => redirect('/month-lifecycle'));
+    Route::get('/ui/family-details', fn () => redirect('/reporting'));
+    Route::get('/ui/elec-summary', fn () => redirect('/reporting'));
+    Route::get('/ui/van', fn () => redirect('/reporting'));
+    Route::get('/ui/rates', fn () => redirect('/rates'));
+
+    // Legacy shell aliases now point to canonical modules
+    Route::get('/ui/masters/employees', fn () => redirect('/people-residency'));
+    Route::get('/ui/masters/units', fn () => redirect('/unit-directory'));
+    Route::get('/ui/masters/meters', fn () => redirect('/meters-readings'));
+    Route::get('/ui/masters/rates', fn () => redirect('/rates'));
+    Route::get('/ui/inputs/mapping', fn () => redirect('/housing-occupancy'));
+
+    Route::get('/rates', [ParityUiController::class, 'rates']);
 
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
-    Route::get('/ui/family-details', [ParityUiController::class, 'familyDetails']);
-    Route::get('/ui/results/employee-wise', [ParityUiController::class, 'resultsEmployeeWise']);
-    Route::get('/ui/results/unit-wise', [ParityUiController::class, 'resultsUnitWise']);
-    Route::get('/ui/logs', [ParityUiController::class, 'logs']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
@@ -79,8 +103,12 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])-
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
-    Route::get('/ui/billing', [ParityUiController::class, 'billing']);
-    Route::get('/ui/month-cycle', [ParityUiController::class, 'monthCycle']);
+    Route::get('/billing-run-lock', [ParityUiController::class, 'billing']);
+    Route::get('/month-lifecycle', [ParityUiController::class, 'monthCycle']);
+
+    // Backward-compatible /ui redirects
+    Route::get('/ui/billing', fn () => redirect('/billing-run-lock'));
+    Route::get('/ui/month-cycle', fn () => redirect('/month-lifecycle'));
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN', 'month.guard.shell'])->group(function () {
@@ -93,7 +121,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/billing/elec/compute', [BillingDraftController::class, 'elecCompute']);
     Route::post('/billing/water/compute', [BillingDraftController::class, 'waterCompute']);
     Route::post('/billing/run', [BillingDraftController::class, 'run']);
-    Route::post('/api/electric-v1/run', [BillingDraftController::class, 'electricV1Run']);
     Route::post('/billing/fingerprint', [BillingDraftController::class, 'fingerprint']);
     Route::get('/billing/fingerprint', [BillingDraftController::class, 'fingerprint']);
     Route::get('/billing/adjustments/list', [BillingDraftController::class, 'adjustmentsList']);
@@ -142,7 +169,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/water/occupancy-snapshot', [BillingDraftController::class, 'waterOccupancySnapshot']);
     Route::get('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsGet']);
     Route::get('/api/water/allocation-preview', [BillingDraftController::class, 'waterAllocationPreview']);
-    Route::get('/api/electric-v1/outputs', [BillingDraftController::class, 'electricV1Outputs']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
@@ -218,3 +244,5 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/export/excel/monthly-summary', [BillingDraftController::class, 'exportExcelMonthlySummary']);
     Route::get('/export/pdf/monthly-summary', [BillingDraftController::class, 'exportPdfMonthlySummary']);
 });
+
+require __DIR__.'/electric_v1.php';
