@@ -155,11 +155,11 @@ class ImportsMonthlySetupService
         DB::statement(
             'INSERT INTO util_monthly_rates_config(month_cycle, elec_rate, water_general_rate, water_drinking_rate, school_van_rate)
              VALUES(?,?,?,?,?)
-             ON CONFLICT(month_cycle) DO UPDATE SET
-             elec_rate=excluded.elec_rate,
-             water_general_rate=excluded.water_general_rate,
-             water_drinking_rate=excluded.water_drinking_rate,
-             school_van_rate=excluded.school_van_rate,
+             ON DUPLICATE KEY UPDATE
+             elec_rate=VALUES(elec_rate),
+             water_general_rate=VALUES(water_general_rate),
+             water_drinking_rate=VALUES(water_drinking_rate),
+             school_van_rate=VALUES(school_van_rate),
              updated_at=CURRENT_TIMESTAMP',
             [$month, $rates['elec_rate'], $rates['water_general_rate'], $rates['water_drinking_rate'], $rates['school_van_rate']]
         );
