@@ -31,8 +31,11 @@
 const csrf=@json(csrf_token());
 async function postJson(url,payload){
  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify(payload)});
- const j=await r.json().catch(()=>({raw:'non-json'}));
- document.getElementById('ratesResult').textContent=JSON.stringify({status:r.status,body:j},null,2);
+ let body; let ok=true;
+ try { body=await r.json(); }
+ catch (e) { ok=false; body={status:'error',message:'Non-JSON response from server'}; }
+ const result= ok && body && typeof body==='object' ? body : {status: r.status, body};
+ document.getElementById('ratesResult').textContent=JSON.stringify(result,null,2);
 }
 document.getElementById('ratesUpsertForm').addEventListener('submit',e=>{e.preventDefault();postJson('/rates/upsert',Object.fromEntries(new FormData(e.target)));});
 document.getElementById('ratesApproveForm').addEventListener('submit',e=>{e.preventDefault();postJson('/rates/approve',Object.fromEntries(new FormData(e.target)));});
