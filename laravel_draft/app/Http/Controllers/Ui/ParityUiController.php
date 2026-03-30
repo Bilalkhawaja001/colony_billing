@@ -150,6 +150,33 @@ class ParityUiController extends Controller
     public function employees() { return view('ui.employees'); }
     public function employeeHelper() { return view('ui.employee-helper'); }
     public function unitMaster() { return view('ui.unit-master'); }
+
+    // Hub: Meters & Readings
+    public function metersHub()
+    {
+        return view('ui.meters-hub');
+    }
+
+    // Workspace: Meter Registry (unit↔meter mapping + registry tooling)
+    public function meterRegistry()
+    {
+        return view('ui.meter-registry');
+    }
+
+    // Workspace: Readings (operator readings console)
+    public function meterReadings()
+    {
+        return view('ui.meter-readings');
+    }
+
+    // Workspace: Water Tools (pre-billing water controls/allocation tools)
+    public function waterTools(Request $request)
+    {
+        return view('ui.water-tools', [
+            'monthCycle' => (string)($request->query('month_cycle') ?? ''),
+        ]);
+    }
+
     public function meterMaster() { return view('ui.meter-master'); }
     public function meterRegisterIngest() { return view('ui.meter-register-ingest'); }
     public function rooms() { return view('ui.rooms'); }
