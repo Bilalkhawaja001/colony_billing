@@ -114,8 +114,7 @@
     <pre id="out" style="margin-top:8px">{}</pre>
   </details>
 
-  <hr style="margin:20px 0">
-  <div id="people_tab_family" style="margin-top:8px">
+  <div id="people_tab_family" style="display:none;margin-top:16px">
     <h4>Family</h4>
     <div class="banner small" id="family_header">Select an employee to load family details.</div>
     <div class="toolbar" style="margin:8px 0">
@@ -139,8 +138,7 @@
     <div class="table-wrap" id="family_children"></div>
   </div>
 
-  <hr style="margin:20px 0">
-  <div id="people_tab_occupancy" style="margin-top:8px">
+  <div id="people_tab_occupancy" style="display:none;margin-top:16px">
     <h4>Occupancy</h4>
     <div class="banner small" id="occupancy_header">Select an employee to load occupancy context.</div>
     <div class="toolbar" style="margin:8px 0">
@@ -164,9 +162,9 @@ function setPeopleTab(tab){
   ['employee','family','occupancy'].forEach(t=>{
     const pane=document.getElementById('people_tab_'+t);
     const btn=document.getElementById('tab_btn_'+t);
+    if(pane){ pane.style.display=(t===tab?'':'none'); }
     if(btn){ btn.className = 'btn' + (t===tab ? ' btn-primary' : ''); }
   });
-  // Panels are always visible; tab selection only highlights header and triggers reloads
   if(tab==='family'){ reloadFamily(); }
   if(tab==='occupancy'){ reloadOccupancy(); }
 }
