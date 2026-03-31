@@ -293,6 +293,36 @@ class MasterDataDraftController extends Controller
         return $this->occupancyDelete($row_id);
     }
 
+    public function occupancyByEmployee(string $companyId)
+    {
+        $emp = DB::table('employees_master')
+            ->where('company_id', $companyId)
+            ->first(['company_id', 'name', 'unit_id', 'colony_type', 'block_floor', 'room_no']);
+
+        if (!$emp) {
+            return response()->json(['status' => 'error', 'error' => 'CompanyID not found'], 404);
+        }
+
+        $rows = DB::table('util_occupancy_monthly')
+            ->where('employee_id', $companyId)
+            ->orderByDesc('month_cycle')
+            ->orderBy('unit_id')
+            ->get(['month_cycle', 'category', 'unit_id', 'room_no', 'active_days']);
+
+        return response()->json([
+            'status' => 'ok',
+            'employee' => [
+                'company_id' => $emp->company_id,
+                'name' => $emp->name,
+                'unit_id' => $emp->unit_id,
+                'colony_type' => $emp->colony_type,
+                'block_floor' => $emp->block_floor,
+                'room_no' => $emp->room_no,
+            ],
+            'occupancy_rows' => $rows,
+        ]);
+    }
+
     public function occupancyAutofill(Request $request)
     {
         $monthCycle = trim((string) $request->query('month_cycle', ''));

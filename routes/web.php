@@ -154,6 +154,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/rooms', [MasterDataDraftController::class, 'rooms']);
     Route::get('/occupancy/context', [MasterDataDraftController::class, 'occupancyContext']);
     Route::get('/occupancy', [MasterDataDraftController::class, 'occupancy']);
+    Route::get('/occupancy/by-employee/{company_id}', [MasterDataDraftController::class, 'occupancyByEmployee']);
 
     Route::get('/employees', [EmployeesMeterParityController::class, 'employees']);
     Route::get('/employees/search', [EmployeesMeterParityController::class, 'employeesSearch']);
@@ -227,6 +228,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::get('/family/details/context', [FamilyRegistryResultsController::class, 'familyDetailsContext']);
     Route::get('/family/details', [FamilyRegistryResultsController::class, 'familyDetails']);
+    Route::get('/family/details/by-employee/{company_id}', [FamilyRegistryResultsController::class, 'familyDetailsByEmployee']);
     Route::get('/registry/employees/{company_id}', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
     Route::get('/registry/employees/<company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGetLiteral']);
     Route::get('/api/results/employee-wise', [FamilyRegistryResultsController::class, 'resultsEmployeeWise']);

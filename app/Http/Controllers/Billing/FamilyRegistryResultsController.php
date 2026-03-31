@@ -33,6 +33,28 @@ class FamilyRegistryResultsController extends Controller
         return response()->json($result, $code);
     }
 
+    public function familyDetailsByEmployee(string $companyId, Request $request)
+    {
+        $monthCycle = trim((string) $request->query('month_cycle', ''));
+        $payload = ['company_id' => $companyId];
+        if ($monthCycle !== '') {
+            $payload['month_cycle'] = $monthCycle;
+        }
+
+        $result = $this->service->familyDetails($payload);
+        $rows = $result['rows'] ?? [];
+        $row = $rows[0] ?? null;
+        $children = $row['children'] ?? [];
+
+        $response = [
+            'status' => 'ok',
+            'family' => $row,
+            'children' => $children,
+        ];
+
+        return response()->json($response, 200);
+    }
+
     public function registryEmployeesUpsert(Request $request)
     {
         $result = $this->service->registryEmployeesUpsert($request->all());
