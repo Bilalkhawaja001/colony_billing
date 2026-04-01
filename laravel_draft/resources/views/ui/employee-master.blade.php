@@ -214,12 +214,22 @@ function setEmployeeContextFromForm(row=null){
     const lookup=document.getElementById('lookup_id');
     if(lookup) lookup.value=cid;
     const emp=document.getElementById('e_CompanyID');
-    if(emp && !emp.value.trim()) emp.value=cid;
+    if(emp) emp.value=cid;
   }
+  const normalizedResidence={
+    unit_id: row?.unit_id ?? row?.Unit_ID ?? v('e_UnitID') ?? '',
+    room_no: row?.room_no ?? row?.['Room No'] ?? v('e_RoomNo') ?? '',
+    block_floor: row?.block_floor ?? row?.['Block Floor'] ?? v('e_BlockFloor') ?? '',
+    colony_type: row?.colony_type ?? row?.['Colony Type'] ?? v('e_ColonyType') ?? '',
+  };
+  if(document.getElementById('e_UnitID') && normalizedResidence.unit_id) document.getElementById('e_UnitID').value=normalizedResidence.unit_id;
+  if(document.getElementById('e_RoomNo') && normalizedResidence.room_no) document.getElementById('e_RoomNo').value=normalizedResidence.room_no;
+  if(document.getElementById('e_BlockFloor') && normalizedResidence.block_floor) document.getElementById('e_BlockFloor').value=normalizedResidence.block_floor;
+  if(document.getElementById('e_ColonyType') && normalizedResidence.colony_type) document.getElementById('e_ColonyType').value=normalizedResidence.colony_type;
   const month=normalizeMonthCycle(document.getElementById('fam_month_cycle')?.value || '');
   const famMonth=document.getElementById('fam_month_cycle');
-  if(famMonth && !famMonth.value.trim() && month){ famMonth.value=month; }
-  return { company_id: cid, month_cycle: month };
+  if(famMonth && month){ famMonth.value=month; }
+  return { company_id: cid, month_cycle: month, ...normalizedResidence };
 }
 function buildOccupancyWorkspaceHref(){
   const link=document.querySelector('a[href="/housing-occupancy"], a[href^="/housing-occupancy?"]');
@@ -371,15 +381,35 @@ async function reloadOccupancy(){
   const query=new URLSearchParams({company_id:cid, month_cycle:month});
   const r=await req('/occupancy/context?'+query.toString());
   show(r);
-  if(r.status!==200 || r.body?.status!=='ok'){ header.textContent='Failed to load occupancy context.'; return; }
+  const occupancyMessage = String(r.body?.message || r.body?.error || r.body?.detail || '');
+  const mappingRequired = occupancyMessage.includes('Unable to resolve occupancy category') || occupancyMessage.includes('complete room mapping first');
+  const residenceSummary = `
+    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${ctx.unit_id||''}"></div>
+    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${ctx.colony_type||''}"></div>
+    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${ctx.block_floor||''}"></div>
+    <div class="field col-3"><label class="label">Room No</label><input disabled value="${ctx.room_no||''}"></div>
+  `;
+  if(r.status!==200 || r.body?.status!=='ok'){
+    buildOccupancyWorkspaceHref();
+    if(mappingRequired){
+      header.textContent='Occupancy mapping required for '+cid;
+      sum.innerHTML = residenceSummary;
+      rowsBox.innerHTML = `<div class="alert">Unable to resolve occupancy category for this employee/month. Please complete room mapping first.</div>`;
+      return;
+    }
+    header.textContent='Failed to load occupancy context.';
+    sum.innerHTML = residenceSummary;
+    return;
+  }
   const emp=r.body.employee||{}; const rows=r.body.occupancy_rows||[];
   header.textContent='Occupancy for '+cid;
+  setEmployeeContextFromForm(emp);
   buildOccupancyWorkspaceHref();
   sum.innerHTML = `
-    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${emp.unit_id||''}"></div>
-    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${emp.colony_type||''}"></div>
-    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${emp.block_floor||''}"></div>
-    <div class="field col-3"><label class="label">Room No</label><input disabled value="${emp.room_no||''}"></div>
+    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${emp.unit_id||ctx.unit_id||''}"></div>
+    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${emp.colony_type||ctx.colony_type||''}"></div>
+    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${emp.block_floor||ctx.block_floor||''}"></div>
+    <div class="field col-3"><label class="label">Room No</label><input disabled value="${emp.room_no||ctx.room_no||''}"></div>
   `;
   if(!rows.length){ rowsBox.innerHTML='<div class="empty">No occupancy records found for this employee.</div>'; return; }
   const cols=['month_cycle','category','unit_id','room_no','active_days'];
@@ -439,10 +469,16 @@ async function fetchById(){
   const id=ctx.company_id;
   if(!id){show({status:'error',error:'CompanyID required'});return;}
   const r=await req('/employees/'+encodeURIComponent(id)); show(r);
-  if(r.status===200 && r.body?.row){
-    const row=r.body.row;
+  const row=r.body?.row || r.body?.employee || (r.body && typeof r.body === 'object' ? r.body : null);
+  if(r.status===200 && row){
     SELECTED_EMPLOYEE_STATE=row;
-    fillForm(row);
+    fillForm({
+      ...row,
+      Unit_ID: row.Unit_ID ?? row.unit_id ?? '',
+      'Room No': row['Room No'] ?? row.room_no ?? '',
+      'Block Floor': row['Block Floor'] ?? row.block_floor ?? '',
+      'Colony Type': row['Colony Type'] ?? row.colony_type ?? '',
+    });
     setEmployeeContextFromForm(row);
     buildOccupancyWorkspaceHref();
   }
