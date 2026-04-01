@@ -22,7 +22,7 @@
     <div id="quick_panel" class="banner" style="margin-bottom:10px">
       <div class="toolbar">
         <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
-        <button class="btn" type="button" onclick="prefillFromRegistry()">Fetch by ID</button>
+        <button class="btn" type="button" onclick="fetchById()">Fetch by ID</button>
         <button class="btn" type="button" onclick="saveToRegistry()">Save Draft Registry</button>
         <span class="muted">Quick mode: required fields fill karo, then Add Employee.</span>
       </div>
@@ -161,6 +161,15 @@ let EMP_ROWS=[]; let EMP_FILTERED=[]; let EMP_PAGE=1; const PAGE_SIZE=25;
 
 function v(id){ return (document.getElementById(id)?.value||'').trim(); }
 let SELECTED_EMPLOYEE_STATE = null;
+function normalizedRowId(source=null){
+  return String(
+    source?.CompanyID ??
+    source?.company_id ??
+    source?.employee_id ??
+    source?.EmployeeID ??
+    ''
+  ).trim();
+}
 function monthFromCurrentDate(){
   const now=new Date();
   const mm=String(now.getMonth()+1).padStart(2,'0');
@@ -169,16 +178,10 @@ function monthFromCurrentDate(){
 }
 function normalizeCompanyId(source=null){
   return String(
-    source?.company_id ??
-    source?.CompanyID ??
-    source?.employee_id ??
-    source?.EmployeeID ??
-    SELECTED_EMPLOYEE_STATE?.company_id ??
-    SELECTED_EMPLOYEE_STATE?.CompanyID ??
-    SELECTED_EMPLOYEE_STATE?.employee_id ??
-    SELECTED_EMPLOYEE_STATE?.EmployeeID ??
-    v('e_CompanyID') ??
-    v('lookup_id') ??
+    normalizedRowId(source) ||
+    normalizedRowId(SELECTED_EMPLOYEE_STATE) ||
+    v('lookup_id') ||
+    v('e_CompanyID') ||
     ''
   ).trim();
 }
@@ -188,6 +191,7 @@ function currentUiMonthCycle(){
     document.querySelector('[name="month_cycle"]')?.value?.trim() ||
     document.querySelector('#month_cycle')?.value?.trim() ||
     document.querySelector('[data-month-cycle]')?.getAttribute('data-month-cycle')?.trim() ||
+    document.querySelector('[data-current-month-cycle]')?.getAttribute('data-current-month-cycle')?.trim() ||
     '';
 }
 function normalizeMonthCycle(explicitMonth=''){
@@ -430,15 +434,21 @@ function setMode(mode){
   if(manage && !EMP_ROWS.length) listEmployees(false);
 }
 
-async function prefillFromRegistry(){
-  const id=normalizeCompanyId(); if(!id){show({status:'error',error:'CompanyID required'});return;}
+async function fetchById(){
+  const ctx=setEmployeeContextFromForm();
+  const id=ctx.company_id;
+  if(!id){show({status:'error',error:'CompanyID required'});return;}
   const r=await req('/employees/'+encodeURIComponent(id)); show(r);
   if(r.status===200 && r.body?.row){
-    SELECTED_EMPLOYEE_STATE=r.body.row;
-    fillForm(r.body.row);
-    setEmployeeContextFromForm(r.body.row);
+    const row=r.body.row;
+    SELECTED_EMPLOYEE_STATE=row;
+    fillForm(row);
+    setEmployeeContextFromForm(row);
     buildOccupancyWorkspaceHref();
   }
+}
+async function prefillFromRegistry(){
+  return fetchById();
 }
 async function saveToRegistry(){ const r=await req('/registry/employees/upsert','POST',payload()); show(r); }
 async function addEmployee(){ const r=await req('/employees/add','POST',payload()); show(r); }
@@ -476,9 +486,8 @@ function renderRows(){
   box.innerHTML='<table><thead><tr><th>CompanyID</th><th>Name</th><th>Department</th><th>Designation</th><th>Unit_ID</th><th>Active</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${r.CompanyID||''}</td><td>${r.Name||''}</td><td>${r.Department||''}</td><td>${r.Designation||''}</td><td>${r.Unit_ID||''}</td><td>${r.Active||''}</td><td><button class="btn" onclick='editRow(${JSON.stringify(r.CompanyID)})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
 }
 function editRow(id){
-  const normalizeId=(row)=>String(row?.CompanyID ?? row?.company_id ?? row?.employee_id ?? row?.EmployeeID ?? '');
-  const targetId=String(id ?? '');
-  const r=EMP_ROWS.find(x=>normalizeId(x)===targetId);
+  const targetId=String(id ?? '').trim();
+  const r=EMP_ROWS.find(x=>normalizedRowId(x)===targetId);
   if(!r) return;
   SELECTED_EMPLOYEE_STATE=r;
   fillForm(r);
