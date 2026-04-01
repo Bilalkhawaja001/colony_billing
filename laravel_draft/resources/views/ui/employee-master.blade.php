@@ -110,12 +110,6 @@
     </div>
   </div>
 
-  <input type="hidden" id="ctx_company_id">
-  <input type="hidden" id="ctx_unit_id">
-  <input type="hidden" id="ctx_room_no">
-  <input type="hidden" id="ctx_block_floor">
-  <input type="hidden" id="ctx_colony_type">
-
   <div id="actionStatus" class="banner" style="margin-top:10px">Ready.</div>
   <details style="margin-top:8px">
     <summary class="muted">Technical response</summary>
@@ -153,7 +147,7 @@
     <div class="banner small" id="occupancy_header">Select an employee to load occupancy context.</div>
     <div class="toolbar" style="margin:8px 0">
       <button class="btn" type="button" onclick="reloadOccupancy()">Reload Occupancy</button>
-      <a class="btn" id="openOccWorkspace" href="/housing-occupancy" target="_blank">Open Full Occupancy Workspace</a>
+      <a class="btn" href="/housing-occupancy" target="_blank">Open Full Occupancy Workspace</a>
     </div>
     <div class="form-grid" id="occupancy_summary"></div>
     <div class="table-wrap" style="margin-top:8px" id="occupancy_rows"></div>
@@ -164,52 +158,32 @@
 const csrf=@json(csrf_token());
 let BULK_CSV_TEXT='';
 let EMP_ROWS=[]; let EMP_FILTERED=[]; let EMP_PAGE=1; const PAGE_SIZE=25;
-let LAST_OCC_ROWS=[];
 
 function v(id){ return (document.getElementById(id)?.value||'').trim(); }
-function currentCompanyId(){ return v('ctx_company_id') || v('e_CompanyID') || v('lookup_id'); }
-function setEmployeeContext(ctx={}){
-  document.getElementById('ctx_company_id').value = ctx.company_id || currentCompanyId() || '';
-  document.getElementById('ctx_unit_id').value = ctx.unit_id || v('e_UnitID') || '';
-  document.getElementById('ctx_room_no').value = ctx.room_no || v('e_RoomNo') || '';
-  document.getElementById('ctx_block_floor').value = ctx.block_floor || v('e_BlockFloor') || '';
-  document.getElementById('ctx_colony_type').value = ctx.colony_type || v('e_ColonyType') || '';
+function currentCompanyId(){ return v('e_CompanyID') || v('lookup_id'); }
+function currentUiMonthCycle(){
+  return document.getElementById('fam_month_cycle')?.value?.trim() ||
+    document.querySelector('[name="month_cycle"]')?.value?.trim() ||
+    document.querySelector('#month_cycle')?.value?.trim() ||
+    document.querySelector('[data-month-cycle]')?.getAttribute('data-month-cycle')?.trim() ||
+    '';
+}
+function effectiveMonthCycle(explicitMonth=''){
+  return (explicitMonth || '').trim() || currentUiMonthCycle();
 }
 function setEmployeeContextFromForm(){
-  setEmployeeContext({
-    company_id: v('e_CompanyID') || v('lookup_id'),
-    unit_id: v('e_UnitID'),
-    room_no: v('e_RoomNo'),
-    block_floor: v('e_BlockFloor'),
-    colony_type: v('e_ColonyType'),
-  });
-}
-function setEmployeeContextFromEmp(emp){
-  const cid = emp?.company_id || emp?.CompanyID || currentCompanyId();
-  setEmployeeContext({
-    company_id: cid || '',
-    unit_id: emp?.unit_id || emp?.Unit_ID || '',
-    room_no: emp?.room_no || emp?.['Room No'] || '',
-    block_floor: emp?.block_floor || emp?.['Block Floor'] || '',
-    colony_type: emp?.colony_type || emp?.['Colony Type'] || '',
-  });
+  const cid=currentCompanyId();
+  if(cid){ document.getElementById('lookup_id').value=cid; }
 }
 function buildOccupancyWorkspaceHref(){
-  const cid = v('ctx_company_id') || currentCompanyId();
-  const unitId = v('ctx_unit_id') || v('e_UnitID');
-  const roomNo = v('ctx_room_no') || v('e_RoomNo');
-  const blockFloor = v('ctx_block_floor') || v('e_BlockFloor');
-  let monthCycle = '';
-  if(Array.isArray(LAST_OCC_ROWS) && LAST_OCC_ROWS.length){
-    monthCycle = LAST_OCC_ROWS.find(r => r?.month_cycle)?.month_cycle || '';
-  }
+  const link=document.querySelector('a[href="/housing-occupancy"]');
+  if(!link) return;
+  const cid=currentCompanyId();
+  const month=effectiveMonthCycle(document.getElementById('fam_month_cycle')?.value || '');
   const params=new URLSearchParams();
   if(cid) params.set('company_id', cid);
-  if(unitId) params.set('unit_id', unitId);
-  if(roomNo) params.set('room_no', roomNo);
-  if(blockFloor) params.set('block_floor', blockFloor);
-  if(monthCycle) params.set('month_cycle', monthCycle);
-  document.getElementById('openOccWorkspace').href='/housing-occupancy'+(params.toString()?('?'+params.toString()):'');
+  if(month) params.set('month_cycle', month);
+  link.href = params.toString() ? `/housing-occupancy?${params.toString()}` : '/housing-occupancy';
 }
 
 function setPeopleTab(tab){
@@ -220,7 +194,7 @@ function setPeopleTab(tab){
     if(btn){ btn.className = 'btn' + (t===tab ? ' btn-primary' : ''); }
   });
   if(tab==='family'){ reloadFamily(); }
-  if(tab==='occupancy'){ setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); reloadOccupancy(); }
+  if(tab==='occupancy'){ reloadOccupancy(); }
 }
 
 async function reloadFamily(){
@@ -237,13 +211,16 @@ async function reloadFamily(){
     document.getElementById('fam_remarks').value='';
     return; }
   header.textContent='Loading family for '+cid+'...';
-  const month=document.getElementById('fam_month_cycle').value.trim();
-  const r=await req('/family/details/by-employee/'+encodeURIComponent(cid)+(month?('?month_cycle='+encodeURIComponent(month)):'') );
+  const month=effectiveMonthCycle(document.getElementById('fam_month_cycle').value);
+  const query=new URLSearchParams({company_id:cid});
+  if(month) query.set('month_cycle', month);
+  const r=await req('/family/details/context?'+query.toString());
   show(r);
   if(r.status!==200 || r.body?.status!=='ok'){ header.textContent='Failed to load family details.'; return; }
   const fam=r.body.family||{}; const kids=r.body.children||[];
   header.textContent='Family for '+cid;
-  document.getElementById('fam_month_cycle').value=fam.month_cycle||'';
+  document.getElementById('fam_month_cycle').value=fam.month_cycle||month||'';
+  buildOccupancyWorkspaceHref();
   document.getElementById('fam_spouse_name').value=fam.spouse_name||'';
   document.getElementById('fam_children_count').value=fam.children_count??'';
   document.getElementById('fam_school_going_children').value=fam.school_going_children??'';
@@ -317,7 +294,7 @@ async function saveFamily(){
   const cid=currentCompanyId();
   const header=document.getElementById('family_header');
   if(!cid){ header.textContent='Set CompanyID in Employee tab first.'; return; }
-  const month=document.getElementById('fam_month_cycle').value.trim();
+  const month=effectiveMonthCycle(document.getElementById('fam_month_cycle').value);
   if(!month){ header.textContent='Month cycle required for family save.'; return; }
   const payload={
     month_cycle:month,
@@ -342,15 +319,16 @@ async function reloadOccupancy(){
   const header=document.getElementById('occupancy_header');
   const sum=document.getElementById('occupancy_summary');
   const rowsBox=document.getElementById('occupancy_rows');
-  if(!cid){ header.textContent='Set CompanyID in Employee tab first.'; sum.innerHTML=''; rowsBox.innerHTML=''; buildOccupancyWorkspaceHref(); return; }
+  if(!cid){ header.textContent='Set CompanyID in Employee tab first.'; sum.innerHTML=''; rowsBox.innerHTML=''; return; }
   header.textContent='Loading occupancy for '+cid+'...';
-  const r=await req('/occupancy/by-employee/'+encodeURIComponent(cid));
+  const month=effectiveMonthCycle(document.getElementById('fam_month_cycle')?.value || '');
+  const query=new URLSearchParams({company_id:cid});
+  if(month) query.set('month_cycle', month);
+  const r=await req('/occupancy/context?'+query.toString());
   show(r);
   if(r.status!==200 || r.body?.status!=='ok'){ header.textContent='Failed to load occupancy context.'; return; }
   const emp=r.body.employee||{}; const rows=r.body.occupancy_rows||[];
-  LAST_OCC_ROWS = rows || [];
   header.textContent='Occupancy for '+cid;
-  setEmployeeContextFromEmp(emp);
   buildOccupancyWorkspaceHref();
   sum.innerHTML = `
     <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${emp.unit_id||''}"></div>
@@ -398,8 +376,6 @@ function payload(){
 function fillForm(r){
   const map={e_CompanyID:'CompanyID',e_Name:'Name',e_Father:"Father's Name",e_CNIC:'CNIC_No.',e_Mobile:'Mobile_No.',e_Department:'Department',e_Section:'Section',e_SubSection:'Sub Section',e_Designation:'Designation',e_EmployeeType:'Employee Type',e_ColonyType:'Colony Type',e_BlockFloor:'Block Floor',e_RoomNo:'Room No',e_SharedRoom:'Shared Room',e_UnitID:'Unit_ID',e_JoinDate:'Join Date',e_LeaveDate:'Leave Date',e_Active:'Active',e_Remarks:'Remarks',e_IronCot:'Iron Cot',e_SingleBed:'Single Bed',e_DoubleBed:'Double Bed',e_Mattress:'Mattress',e_SofaSet:'Sofa Set',e_BedSheet:'Bed Sheet',e_Wardrobe:'Wardrobe',e_CentreTable:'Centre Table',e_WoodenChair:'Wooden Chair',e_DinningTable:'Dinning Table',e_DinningChair:'Dinning Chair',e_SideTable:'Side Table',e_Fridge:'Fridge',e_WaterDispenser:'Water Dispenser',e_WashingMachine:'Washing Machine',e_AirCooler:'Air Cooler',e_AC:'A/C',e_LED:'LED',e_Gyser:'Gyser',e_ElectricKettle:'Electric Kettle',e_WifiRtr:'Wifi Rtr',e_WaterBottle:'Water Bottle',e_LPG:'LPG cylinder',e_GasStove:'Gas Stove',e_Crockery:'Crockery',e_KitchenCabinet:'Kitchen Cabinet',e_Mug:'Mug',e_Bucket:'Bucket',e_Mirror:'Mirror',e_Dustbin:'Dustbin'};
   Object.keys(map).forEach(id=>{ const el=document.getElementById(id); if(el) el.value=(r[map[id]]??'');});
-  setEmployeeContextFromEmp(r||{});
-  buildOccupancyWorkspaceHref();
 }
 
 function showTab(tab){['basic','res','assets'].forEach(t=>document.getElementById('tab-'+t).style.display=(t===tab?'':'none'));}
@@ -415,12 +391,16 @@ function setMode(mode){
 
 async function prefillFromRegistry(){
   const id=(v('lookup_id')||v('e_CompanyID')); if(!id){show({status:'error',error:'CompanyID required'});return;}
-  const r=await req('/registry/employees/'+encodeURIComponent(id)); show(r);
-  if(r.status===200 && r.body?.row){ fillForm(r.body.row); }
+  const r=await req('/employees/'+encodeURIComponent(id)); show(r);
+  if(r.status===200 && r.body?.row){
+    fillForm(r.body.row);
+    setEmployeeContextFromForm();
+    buildOccupancyWorkspaceHref();
+  }
 }
-async function saveToRegistry(){ const r=await req('/registry/employees/upsert','POST',payload()); show(r); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); }
-async function addEmployee(){ const r=await req('/employees/add','POST',payload()); show(r); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); }
-async function upsertEmployee(){ const r=await req('/employees/upsert','POST',payload()); show(r); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); }
+async function saveToRegistry(){ const r=await req('/registry/employees/upsert','POST',payload()); show(r); }
+async function addEmployee(){ const r=await req('/employees/add','POST',payload()); show(r); }
+async function upsertEmployee(){ const r=await req('/employees/upsert','POST',payload()); show(r); }
 async function markLeft(){ const id=v('e_CompanyID'); if(!id){show({status:'error',error:'CompanyID required'});return;} const r=await req('/employees/'+encodeURIComponent(id),'DELETE'); show(r); }
 
 async function loadCsvFile(){ const f=document.getElementById('bulk_csv_file').files?.[0]; if(!f){show({status:'error',error:'Select CSV file'});return;} BULK_CSV_TEXT=await f.text(); show({status:'ok',loaded:f.name,bytes:BULK_CSV_TEXT.length}); }
@@ -453,24 +433,20 @@ function renderRows(){
   document.getElementById('emp_page_info').textContent=`Showing ${s+1}-${e} of ${total} (page ${EMP_PAGE}/${pages})`;
   box.innerHTML='<table><thead><tr><th>CompanyID</th><th>Name</th><th>Department</th><th>Designation</th><th>Unit_ID</th><th>Active</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${r.CompanyID||''}</td><td>${r.Name||''}</td><td>${r.Department||''}</td><td>${r.Designation||''}</td><td>${r.Unit_ID||''}</td><td>${r.Active||''}</td><td><button class="btn" onclick='editRow(${JSON.stringify(r.CompanyID)})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
 }
-function editRow(id){ const r=EMP_ROWS.find(x=>String(x.CompanyID)===String(id)); if(!r) return; fillForm(r); setMode('quick'); setPeopleTab('employee'); }
+function editRow(id){
+  const normalizeId=(row)=>String(row?.CompanyID ?? row?.company_id ?? row?.employee_id ?? row?.EmployeeID ?? '');
+  const targetId=String(id ?? '');
+  const r=EMP_ROWS.find(x=>normalizeId(x)===targetId);
+  if(!r) return;
+  fillForm(r);
+  setEmployeeContextFromForm();
+  buildOccupancyWorkspaceHref();
+  setMode('quick');
+  setPeopleTab('employee');
+}
 function prevEmpPage(){ if(EMP_PAGE>1){EMP_PAGE--; renderRows();} }
 function nextEmpPage(){ const p=Math.max(1,Math.ceil(EMP_FILTERED.length/PAGE_SIZE)); if(EMP_PAGE<p){EMP_PAGE++; renderRows();} }
 
-document.addEventListener('input', (e)=>{
-  if(['e_CompanyID','lookup_id','e_UnitID','e_RoomNo','e_BlockFloor','e_ColonyType'].includes(e.target.id)){
-    setEmployeeContextFromForm();
-    buildOccupancyWorkspaceHref();
-  }
-});
-
-document.addEventListener('change', (e)=>{
-  if(['e_CompanyID','lookup_id','e_UnitID','e_RoomNo','e_BlockFloor','e_ColonyType'].includes(e.target.id)){
-    setEmployeeContextFromForm();
-    buildOccupancyWorkspaceHref();
-  }
-});
-
-showTab('basic'); setMode('quick'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); setPeopleTab('employee');
+showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref();
 </script>
 @endsection
