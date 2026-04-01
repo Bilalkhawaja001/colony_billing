@@ -9,12 +9,12 @@
 <div class="col-8 card">
   <h3 class="section-title">Single Upsert</h3>
   <form id="occUpsertForm" class="form-grid">
-    <div class="field col-3"><label class="label">Month Cycle *</label><input name="month_cycle" placeholder="MM-YYYY"></div>
+    <div class="field col-3"><label class="label">Month Cycle *</label><input name="month_cycle" id="occ_month_cycle" placeholder="MM-YYYY"></div>
     <div class="field col-3"><label class="label">Category *</label><select name="category"><option>Family A+</option><option>Family A</option><option>Family B</option><option>Family C</option><option>Container</option><option>Hostel</option><option>Bachelor</option></select></div>
-    <div class="field col-3"><label class="label">Unit ID *</label><input name="unit_id" placeholder="U-001"></div>
-    <div class="field col-3"><label class="label">Room No *</label><input name="room_no" placeholder="R-01"></div>
-    <div class="field col-4"><label class="label">Employee ID *</label><input name="employee_id" placeholder="E1001"></div>
-    <div class="field col-4"><label class="label">Block Floor</label><input name="block_floor" placeholder="Block A"></div>
+    <div class="field col-3"><label class="label">Unit ID *</label><input name="unit_id" id="occ_unit_id" placeholder="U-001"></div>
+    <div class="field col-3"><label class="label">Room No *</label><input name="room_no" id="occ_room_no" placeholder="R-01"></div>
+    <div class="field col-4"><label class="label">Employee ID *</label><input name="employee_id" id="occ_employee_id" placeholder="E1001"></div>
+    <div class="field col-4"><label class="label">Block Floor</label><input name="block_floor" id="occ_block_floor" placeholder="Block A"></div>
     <div class="field col-4"><label class="label">Active Days</label><input name="active_days" value="30"></div>
     <div class="col-12"><button class="btn btn-primary" type="submit">Upsert Occupancy</button></div>
   </form>
@@ -43,6 +43,35 @@
 const csrf=@json(csrf_token());
 const out=document.getElementById('occResult');
 const rowsEl=document.getElementById('occRows');
+function getQueryParams(){
+  const params={};
+  const sp=new URLSearchParams(window.location.search||'');
+  sp.forEach((v,k)=>{params[k]=v;});
+  return params;
+}
+function pad2(n){ return n<10 ? '0'+n : ''+n; }
+function currentMonthCycle(){
+  const d=new Date();
+  return pad2(d.getMonth()+1)+'-'+d.getFullYear();
+}
+function prefillFromQuery(){
+  const q=getQueryParams();
+  const month=q.month_cycle||currentMonthCycle();
+  const employee=q.company_id||q.employee_id||'';
+  const unitId=q.unit_id||'';
+  const roomNo=q.room_no||'';
+  const blockFloor=q.block_floor||'';
+  const mEl=document.getElementById('occ_month_cycle');
+  const eEl=document.getElementById('occ_employee_id');
+  const uEl=document.getElementById('occ_unit_id');
+  const rEl=document.getElementById('occ_room_no');
+  const bEl=document.getElementById('occ_block_floor');
+  if(mEl) mEl.value=month;
+  if(eEl && employee) eEl.value=employee;
+  if(uEl && unitId) uEl.value=unitId;
+  if(rEl && roomNo) rEl.value=roomNo;
+  if(bEl && blockFloor) bEl.value=blockFloor;
+}
 function setStatus(ok,text){const el=document.getElementById('occStatus'); el.className=ok?'banner':'alert'; el.textContent=text;}
 function show(v){out.textContent=JSON.stringify(v,null,2); const ok=(v?.status>=200&&v?.status<300)||v?.status==='done'; setStatus(ok, ok?'Completed successfully.':'Action failed.');}
 function parseCsv(t){const l=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(l.length<2)return []; const h=l[0].split(',').map(s=>s.trim()); return l.slice(1).map(x=>{const c=x.split(',').map(s=>s.trim()); return Object.fromEntries(h.map((k,i)=>[k,c[i]??'']));});}
@@ -56,5 +85,6 @@ document.getElementById('importOccCsv').onclick=async()=>{const f=document.getEl
 document.getElementById('autofillBtn').onclick=()=>req('/api/occupancy/autofill?month_cycle='+encodeURIComponent(document.getElementById('autofillMonth').value||''),'POST',{});
 document.getElementById('loadOccBtn').onclick=async()=>{const m=encodeURIComponent(document.getElementById('occMonth').value||''); const u=encodeURIComponent(document.getElementById('occUnit').value||''); const r=await req('/occupancy?month_cycle='+m+'&unit_id='+u); render(r.body?.rows||[]);};
 rowsEl.addEventListener('click',async e=>{const id=e.target?.dataset?.id; if(!id) return; await req('/occupancy/'+encodeURIComponent(id),'DELETE'); document.getElementById('loadOccBtn').click();});
+prefillFromQuery();
 </script>
 @endsection
