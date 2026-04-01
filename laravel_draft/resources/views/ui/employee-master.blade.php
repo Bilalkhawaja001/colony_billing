@@ -248,8 +248,16 @@ function setPeopleTab(tab){
     if(pane){ pane.style.display=(t===tab?'':'none'); }
     if(btn){ btn.className = 'btn' + (t===tab ? ' btn-primary' : ''); }
   });
-  if(tab==='family'){ reloadFamily(); }
-  if(tab==='occupancy'){ reloadOccupancy(); }
+  if(tab==='family'){
+    setEmployeeContextFromForm();
+    buildOccupancyWorkspaceHref();
+    reloadFamily();
+  }
+  if(tab==='occupancy'){
+    setEmployeeContextFromForm();
+    buildOccupancyWorkspaceHref();
+    reloadOccupancy();
+  }
 }
 
 async function reloadFamily(){
@@ -370,34 +378,44 @@ async function reloadOccupancy(){
   const mappingRequired = occupancyMessage.includes('Unable to resolve occupancy category') || occupancyMessage.includes('complete room mapping first');
   const row=r.body?.row || {};
   const residenceSummary = `
+    <div class="field col-3"><label class="label">Month</label><input disabled value="${month||''}"></div>
     <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${row.unit_id||ctx.unit_id||''}"></div>
     <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${row.colony_type||ctx.colony_type||''}"></div>
     <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${row.block_floor||ctx.block_floor||''}"></div>
     <div class="field col-3"><label class="label">Room No</label><input disabled value="${row.room_no||ctx.room_no||''}"></div>
+    <div class="field col-3"><label class="label">Category</label><input disabled value="${row.category||''}"></div>
   `;
+  buildOccupancyWorkspaceHref();
   if(r.status!==200 || r.body?.status!=='ok'){
-    buildOccupancyWorkspaceHref();
     if(mappingRequired){
       header.textContent='Occupancy mapping required for '+cid;
       sum.innerHTML = residenceSummary;
-      rowsBox.innerHTML = `<div class="alert">Unable to resolve occupancy category for this employee/month. Please complete room mapping first.</div>`;
+      rowsBox.innerHTML = '<div class="banner">Occupancy mapping is incomplete for the selected employee/month. Open Full Occupancy Workspace to complete monthly occupancy mapping.</div>';
       return;
     }
-    header.textContent='Failed to load occupancy context.';
+    header.textContent='Occupancy status for '+cid;
     sum.innerHTML = residenceSummary;
+    rowsBox.innerHTML = '<div class="banner">Occupancy status is temporarily unavailable. Use Full Occupancy Workspace for detail.</div>';
     return;
   }
-  header.textContent='Occupancy for '+cid;
+  header.textContent='Occupancy status for '+cid;
   setEmployeeContextFromForm(row);
   buildOccupancyWorkspaceHref();
   sum.innerHTML = residenceSummary;
-  rowsBox.innerHTML = '<div class="empty">Occupancy context loaded. Detailed occupancy rows are not returned by this endpoint.</div>';
+  rowsBox.innerHTML = '<div class="banner">Occupancy context is ready. Use full workspace for month-specific editing.</div>';
 }
 
 function show(o){
   document.getElementById('out').textContent = JSON.stringify(o,null,2);
   const ok=(o?.status>=200 && o?.status<300) || o?.status==='ok' || o?.body?.status==='ok';
+  const msg=String(o?.body?.message || o?.body?.error || o?.error || '');
+  const mappingRequired = msg.includes('Unable to resolve occupancy category') || msg.includes('complete room mapping first');
   const el=document.getElementById('actionStatus');
+  if(mappingRequired){
+    el.className='banner';
+    el.textContent='Occupancy mapping is incomplete. Open Full Occupancy Workspace to complete monthly occupancy mapping.';
+    return;
+  }
   el.className=ok?'banner':'alert';
   el.textContent=ok?'Action completed successfully.':'Action failed. Check technical response.';
 }
