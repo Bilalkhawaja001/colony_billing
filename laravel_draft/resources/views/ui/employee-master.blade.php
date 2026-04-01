@@ -272,32 +272,17 @@ async function reloadFamily(){
   const r=await req('/family/details/context?'+query.toString());
   show(r);
   if(r.status!==200 || r.body?.status!=='ok'){ header.textContent='Failed to load family details.'; return; }
-  const fam=r.body.family||{}; const kids=r.body.children||[];
+  const row=r.body?.row || {};
   header.textContent='Family for '+cid;
-  document.getElementById('fam_month_cycle').value=fam.month_cycle||month||'';
+  document.getElementById('fam_month_cycle').value=month||'';
   buildOccupancyWorkspaceHref();
-  document.getElementById('fam_spouse_name').value=fam.spouse_name||'';
-  document.getElementById('fam_children_count').value=fam.children_count??'';
-  document.getElementById('fam_school_going_children').value=fam.school_going_children??'';
-  document.getElementById('fam_van_using_children').value=fam.van_using_children??'';
-  document.getElementById('fam_van_using_adults').value=fam.van_using_adults??'';
-  document.getElementById('fam_remarks').value=fam.remarks||'';
-
-  if(!kids.length){ children.innerHTML='<div class="empty">No child rows for this employee.</div>'; return; }
-  const cols=['child_name','age','school_going','school_name','class_name','van_using_child'];
-  const head='<tr><th>#</th>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
-  const body=kids.map((k,idx)=>{
-    return `<tr>
-      <td>${idx+1}</td>
-      <td><input value="${k.child_name??''}" data-field="child_name" data-index="${idx}"></td>
-      <td><input type="number" min="0" value="${k.age??''}" data-field="age" data-index="${idx}"></td>
-      <td><select data-field="school_going" data-index="${idx}"><option value="0" ${k.school_going?''=='0'?'':'':'selected'}>No</option><option value="1" ${k.school_going? 'selected':''}>Yes</option></select></td>
-      <td><input value="${k.school_name??''}" data-field="school_name" data-index="${idx}"></td>
-      <td><input value="${k.class_name??''}" data-field="class_name" data-index="${idx}"></td>
-      <td><select data-field="van_using_child" data-index="${idx}"><option value="0" ${k.van_using_child?''=='0'?'':'':'selected'}>No</option><option value="1" ${k.van_using_child? 'selected':''}>Yes</option></select></td>
-    </tr>`;
-  }).join('');
-  children.innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  document.getElementById('fam_spouse_name').value=row.spouse_name||'';
+  document.getElementById('fam_children_count').value=row.children_count??'';
+  document.getElementById('fam_school_going_children').value=row.school_going_children??'';
+  document.getElementById('fam_van_using_children').value=row.van_using_children??'';
+  document.getElementById('fam_van_using_adults').value=row.van_using_adults??'';
+  document.getElementById('fam_remarks').value=row.remarks||'';
+  children.innerHTML='<div class="empty">Family context loaded. Detailed child rows are not returned by this endpoint.</div>';
 }
 
 function collectFamilyChildren(){
@@ -383,11 +368,12 @@ async function reloadOccupancy(){
   show(r);
   const occupancyMessage = String(r.body?.message || r.body?.error || r.body?.detail || '');
   const mappingRequired = occupancyMessage.includes('Unable to resolve occupancy category') || occupancyMessage.includes('complete room mapping first');
+  const row=r.body?.row || {};
   const residenceSummary = `
-    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${ctx.unit_id||''}"></div>
-    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${ctx.colony_type||''}"></div>
-    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${ctx.block_floor||''}"></div>
-    <div class="field col-3"><label class="label">Room No</label><input disabled value="${ctx.room_no||''}"></div>
+    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${row.unit_id||ctx.unit_id||''}"></div>
+    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${row.colony_type||ctx.colony_type||''}"></div>
+    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${row.block_floor||ctx.block_floor||''}"></div>
+    <div class="field col-3"><label class="label">Room No</label><input disabled value="${row.room_no||ctx.room_no||''}"></div>
   `;
   if(r.status!==200 || r.body?.status!=='ok'){
     buildOccupancyWorkspaceHref();
@@ -401,21 +387,11 @@ async function reloadOccupancy(){
     sum.innerHTML = residenceSummary;
     return;
   }
-  const emp=r.body.employee||{}; const rows=r.body.occupancy_rows||[];
   header.textContent='Occupancy for '+cid;
-  setEmployeeContextFromForm(emp);
+  setEmployeeContextFromForm(row);
   buildOccupancyWorkspaceHref();
-  sum.innerHTML = `
-    <div class="field col-3"><label class="label">Unit_ID</label><input disabled value="${emp.unit_id||ctx.unit_id||''}"></div>
-    <div class="field col-3"><label class="label">Colony Type</label><input disabled value="${emp.colony_type||ctx.colony_type||''}"></div>
-    <div class="field col-3"><label class="label">Block Floor</label><input disabled value="${emp.block_floor||ctx.block_floor||''}"></div>
-    <div class="field col-3"><label class="label">Room No</label><input disabled value="${emp.room_no||ctx.room_no||''}"></div>
-  `;
-  if(!rows.length){ rowsBox.innerHTML='<div class="empty">No occupancy records found for this employee.</div>'; return; }
-  const cols=['month_cycle','category','unit_id','room_no','active_days'];
-  const head='<tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr>';
-  const body=rows.map(o=>'<tr>'+cols.map(c=>`<td>${o[c]??''}</td>`).join('')+'</tr>').join('');
-  rowsBox.innerHTML = `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  sum.innerHTML = residenceSummary;
+  rowsBox.innerHTML = '<div class="empty">Occupancy context loaded. Detailed occupancy rows are not returned by this endpoint.</div>';
 }
 
 function show(o){
@@ -521,7 +497,7 @@ function renderRows(){
   document.getElementById('emp_page_info').textContent=`Showing ${s+1}-${e} of ${total} (page ${EMP_PAGE}/${pages})`;
   box.innerHTML='<table><thead><tr><th>CompanyID</th><th>Name</th><th>Department</th><th>Designation</th><th>Unit_ID</th><th>Active</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${r.CompanyID||''}</td><td>${r.Name||''}</td><td>${r.Department||''}</td><td>${r.Designation||''}</td><td>${r.Unit_ID||''}</td><td>${r.Active||''}</td><td><button class="btn" onclick='editRow(${JSON.stringify(r.CompanyID)})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
 }
-function editRow(id){
+async function editRow(id){
   const targetId=String(id ?? '').trim();
   const r=EMP_ROWS.find(x=>normalizedRowId(x)===targetId);
   if(!r) return;
@@ -531,6 +507,7 @@ function editRow(id){
   buildOccupancyWorkspaceHref();
   setMode('quick');
   setPeopleTab('employee');
+  await fetchById();
 }
 function prevEmpPage(){ if(EMP_PAGE>1){EMP_PAGE--; renderRows();} }
 function nextEmpPage(){ const p=Math.max(1,Math.ceil(EMP_FILTERED.length/PAGE_SIZE)); if(EMP_PAGE<p){EMP_PAGE++; renderRows();} }
