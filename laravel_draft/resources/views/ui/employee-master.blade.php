@@ -290,7 +290,28 @@ async function reloadFamily(){
   document.getElementById('fam_van_using_children').value=row.van_using_children??'';
   document.getElementById('fam_van_using_adults').value=row.van_using_adults??'';
   document.getElementById('fam_remarks').value=row.remarks||'';
-  children.innerHTML='<div class="empty">Family context loaded. Detailed child rows are not returned by this endpoint.</div>';
+  const detail=await req('/family/details?'+query.toString());
+  if(detail.status===200 && detail.body?.status==='ok'){
+    const rows=detail.body.rows||[];
+    const family=(rows.find(x=>String(x.month_cycle)===String(month) && String(x.company_id)===String(cid)))||null;
+    if(family){
+      document.getElementById('fam_spouse_name').value=family.spouse_name||'';
+      document.getElementById('fam_children_count').value=family.children_count??'';
+      document.getElementById('fam_school_going_children').value=family.school_going_children??'';
+      document.getElementById('fam_van_using_children').value=family.van_using_children??'';
+      document.getElementById('fam_van_using_adults').value=family.van_using_adults??'';
+      document.getElementById('fam_remarks').value=family.remarks||'';
+      children.innerHTML='';
+      const childRows=family.children||[];
+      if(childRows.length===0){
+        children.innerHTML='<div class="empty">No child profiles yet.</div>';
+      } else {
+        childRows.forEach(c=>addFamilyChildRow(c));
+      }
+      return;
+    }
+  }
+  children.innerHTML='<div class="empty">No child profiles yet.</div>';
 }
 
 function collectFamilyChildren(){
@@ -307,32 +328,41 @@ function collectFamilyChildren(){
   Object.keys(byIdx).sort((a,b)=>parseInt(a)-parseInt(b)).forEach((idx,i)=>{
     const r=byIdx[idx];
     rows.push({
+      child_profile_id:r.child_profile_id||'',
       child_name:r.child_name||'',
       age:r.age||'',
       school_going:r.school_going||'0',
       school_name:r.school_name||'',
       class_name:r.class_name||'',
       van_using_child:r.van_using_child||'0',
+      transport_join_date:r.transport_join_date||'',
+      transport_leave_date:r.transport_leave_date||'',
+      default_route_label:r.default_route_label||'',
+      notes:r.notes||'',
     });
   });
   return rows;
 }
 
-function addFamilyChildRow(){
+function addFamilyChildRow(prefill={}){
   const box=document.getElementById('family_children');
   const existing=box.querySelectorAll('tr').length-1; // minus header
   const idx=existing>=0?existing:0;
   const row=`<tr>
-    <td>${idx+1}</td>
-    <td><input data-field="child_name" data-index="${idx}"></td>
-    <td><input type="number" min="0" data-field="age" data-index="${idx}"></td>
-    <td><select data-field="school_going" data-index="${idx}"><option value="0">No</option><option value="1">Yes</option></select></td>
-    <td><input data-field="school_name" data-index="${idx}"></td>
-    <td><input data-field="class_name" data-index="${idx}"></td>
-    <td><select data-field="van_using_child" data-index="${idx}"><option value="0">No</option><option value="1">Yes</option></select></td>
+    <td>${idx+1}<input type="hidden" data-field="child_profile_id" data-index="${idx}" value="${prefill.child_profile_id||''}"></td>
+    <td><input data-field="child_name" data-index="${idx}" value="${prefill.child_name||''}"></td>
+    <td><input type="number" min="0" data-field="age" data-index="${idx}" value="${prefill.age||''}"></td>
+    <td><select data-field="school_going" data-index="${idx}"><option value="0" ${(String(prefill.school_going||'0')==='0'?'selected':'')}>No</option><option value="1" ${(String(prefill.school_going||'0')==='1'?'selected':'')}>Yes</option></select></td>
+    <td><input data-field="school_name" data-index="${idx}" value="${prefill.school_name||''}"></td>
+    <td><input data-field="class_name" data-index="${idx}" value="${prefill.class_name||''}"></td>
+    <td><select data-field="van_using_child" data-index="${idx}"><option value="0" ${(String(prefill.van_using_child||'0')==='0'?'selected':'')}>No</option><option value="1" ${(String(prefill.van_using_child||'0')==='1'?'selected':'')}>Yes</option></select></td>
+    <td><input type="date" data-field="transport_join_date" data-index="${idx}" value="${prefill.transport_join_date||''}"></td>
+    <td><input type="date" data-field="transport_leave_date" data-index="${idx}" value="${prefill.transport_leave_date||''}"></td>
+    <td><input data-field="default_route_label" data-index="${idx}" value="${prefill.default_route_label||''}"></td>
+    <td><input data-field="notes" data-index="${idx}" value="${prefill.notes||''}"></td>
   </tr>`;
   if(existing<0){
-    box.innerHTML=`<table><thead><tr><th>#</th><th>child_name</th><th>age</th><th>school_going</th><th>school_name</th><th>class_name</th><th>van_using_child</th></tr></thead><tbody>${row}</tbody></table>`;
+    box.innerHTML=`<table><thead><tr><th>#</th><th>child_name</th><th>age</th><th>school_going</th><th>school_name</th><th>class_name</th><th>van_using_child</th><th>transport_join_date</th><th>transport_leave_date</th><th>default_route_label</th><th>notes</th></tr></thead><tbody>${row}</tbody></table>`;
   } else {
     box.querySelector('tbody').insertAdjacentHTML('beforeend',row);
   }

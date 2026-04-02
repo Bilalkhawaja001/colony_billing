@@ -242,6 +242,43 @@
     </div>
 
     <div class="col-12 card">
+        <h3 class="section-title">Child Transport Month Usage</h3>
+        <form id="childUsageForm" class="form-grid">
+            <div class="field col-2"><label class="label">Month</label><input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}"></div>
+            <div class="field col-3"><label class="label">Child Profile</label><select name="child_profile_id" id="childProfileId"></select></div>
+            <div class="field col-2"><label class="label">Status</label><input name="usage_status" placeholder="active"></div>
+            <div class="field col-2"><label class="label">Usage From</label><input type="date" name="usage_from_date"></div>
+            <div class="field col-2"><label class="label">Usage To</label><input type="date" name="usage_to_date"></div>
+            <div class="field col-3"><label class="label">Vehicle</label><select name="vehicle_id" id="childUsageVehicleId"></select></div>
+            <div class="field col-3"><label class="label">Route Label</label><input name="route_label"></div>
+            <div class="field col-2"><label class="label">Charge Amount</label><input type="number" step="0.01" name="charge_amount"></div>
+            <div class="field col-4"><label class="label">Remarks</label><input name="remarks"></div>
+            <div class="col-12 toolbar"><button class="btn btn-primary" type="submit">Save Child Usage</button></div>
+        </form>
+        <div class="table-wrap" style="margin-top:12px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Child</th>
+                        <th>CompanyID</th>
+                        <th>Father</th>
+                        <th>Room</th>
+                        <th>Usage From</th>
+                        <th>Usage To</th>
+                        <th>Vehicle</th>
+                        <th>Route</th>
+                        <th>Charge</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="childUsageRows">
+                    <tr><td colspan="10" class="muted">Load a month to view child transport usage.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="col-12 card">
         <h3 class="section-title">Raw Response</h3>
         <pre id="transportResult">Ready.</pre>
     </div>
@@ -258,12 +295,16 @@ const vehicleEntriesRows = document.getElementById('vehicleEntriesRows');
 const rentEntriesRows = document.getElementById('rentEntriesRows');
 const fuelEntriesRows = document.getElementById('fuelEntriesRows');
 const adjustmentEntriesRows = document.getElementById('adjustmentEntriesRows');
+const childUsageRows = document.getElementById('childUsageRows');
 const transportBannerHost = document.getElementById('transportBannerHost');
 const transportMonthLockState = document.getElementById('transportMonthLockState');
 const vehicleForm = document.getElementById('vehicleForm');
 const rentForm = document.getElementById('rentForm');
 const fuelForm = document.getElementById('fuelForm');
 const adjustmentForm = document.getElementById('adjustmentForm');
+const childUsageForm = document.getElementById('childUsageForm');
+const childProfileId = document.getElementById('childProfileId');
+const childUsageVehicleId = document.getElementById('childUsageVehicleId');
 const rentVehicleId = document.getElementById('rentVehicleId');
 const fuelVehicleId = document.getElementById('fuelVehicleId');
 const adjustmentVehicleId = document.getElementById('adjustmentVehicleId');
@@ -507,6 +548,34 @@ function clearEditState(clearMonth = false) {
     resetAdjustmentForm(clearMonth);
 }
 
+function renderChildUsageProfiles(profiles, vehicles) {
+    const profileOptions = (profiles || []).map((row) => `<option value="${row.id}">${row.company_id} - ${row.child_name}</option>`).join('');
+    childProfileId.innerHTML = profileOptions || '<option value="">No child profiles</option>';
+    const vehicleOptions = '<option value="">No vehicle</option>' + (vehicles || []).map((row) => `<option value="${row.id}">${row.vehicle_name} (${row.vehicle_code})</option>`).join('');
+    childUsageVehicleId.innerHTML = vehicleOptions;
+}
+
+function renderChildUsageRows(rows) {
+    if (!rows || !rows.length) {
+        childUsageRows.innerHTML = '<tr><td colspan="10" class="muted">No child transport usage found for selected month.</td></tr>';
+        return;
+    }
+    childUsageRows.innerHTML = rows.map((row) => `
+        <tr>
+            <td>${row.child_name}</td>
+            <td>${row.company_id}</td>
+            <td>${row.father_name || ''}</td>
+            <td>${row.room_no || ''}</td>
+            <td>${row.usage_from_date || ''}</td>
+            <td>${row.usage_to_date || ''}</td>
+            <td>${row.vehicle_name ? `${row.vehicle_name} (${row.vehicle_code})` : ''}</td>
+            <td>${row.route_label || row.default_route_label || ''}</td>
+            <td>${money(row.charge_amount || 0)}</td>
+            <td>${row.usage_status || ''}</td>
+        </tr>
+    `).join('');
+}
+
 async function loadTransport() {
     clearBanner();
     clearEditState();
@@ -533,6 +602,10 @@ async function loadTransport() {
     renderRentEntries(body.rent_entries || []);
     renderFuelEntries(body.fuel_entries || []);
     renderAdjustments(body.adjustments || []);
+
+    const childUsage = await getJson(`/api/transport/child-month-usage?month_cycle=${month}`);
+    renderChildUsageProfiles(childUsage.body?.child_profiles || [], body.vehicles || []);
+    renderChildUsageRows(childUsage.body?.rows || []);
 }
 
 function formToObject(form) {
@@ -642,6 +715,7 @@ vehicleForm.addEventListener('submit', async (e) => { e.preventDefault(); await 
 rentForm.addEventListener('submit', async (e) => { e.preventDefault(); await handlePost(rentForm, '/api/transport/rent-entries/upsert', false); });
 fuelForm.addEventListener('submit', async (e) => { e.preventDefault(); await handlePost(fuelForm, '/api/transport/fuel-entries/upsert'); });
 adjustmentForm.addEventListener('submit', async (e) => { e.preventDefault(); await handlePost(adjustmentForm, '/api/transport/adjustments/upsert'); });
+childUsageForm.addEventListener('submit', async (e) => { e.preventDefault(); await handlePost(childUsageForm, '/api/transport/child-month-usage/upsert'); });
 vehicleCancelEdit.addEventListener('click', () => resetVehicleForm());
 rentCancelEdit.addEventListener('click', () => resetRentForm());
 fuelCancelEdit.addEventListener('click', () => resetFuelForm());

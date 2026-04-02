@@ -69,6 +69,7 @@ class FamilyRegistryResultsService
             $byPair[$key] = [];
         }
 
+        $profileMap = [];
         if ($byPair !== []) {
             $childrenRows = DB::table('family_child_details')
                 ->where(function ($q) use ($rows) {
@@ -85,9 +86,36 @@ class FamilyRegistryResultsService
                 ->orderBy('id')
                 ->get();
 
+            $companyIds = array_values(array_unique(array_map(fn ($row) => $row['company_id'], $rows)));
+            if ($companyIds !== []) {
+                $profiles = DB::table('family_child_profiles')
+                    ->whereIn('company_id', $companyIds)
+                    ->orderBy('company_id')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->get();
+
+                foreach ($profiles as $profile) {
+                    $profileMap[$profile->company_id.'|'.mb_strtolower(trim((string) $profile->child_name))] = (array) $profile;
+                }
+            }
+
             foreach ($childrenRows as $child) {
+                $row = (array) $child;
+                $profileKey = $child->company_id.'|'.mb_strtolower(trim((string) $child->child_name));
+                $profile = $profileMap[$profileKey] ?? null;
+                if ($profile) {
+                    $row['child_profile_id'] = $profile['id'] ?? null;
+                    $row['class_grade'] = $profile['class_grade'] ?? null;
+                    $row['van_using'] = $profile['van_using'] ?? null;
+                    $row['transport_join_date'] = $profile['transport_join_date'] ?? null;
+                    $row['transport_leave_date'] = $profile['transport_leave_date'] ?? null;
+                    $row['default_route_label'] = $profile['default_route_label'] ?? null;
+                    $row['profile_notes'] = $profile['notes'] ?? null;
+                    $row['profile_is_active'] = $profile['is_active'] ?? null;
+                }
                 $key = $child->month_cycle.'|'.$child->company_id;
-                $byPair[$key][] = (array) $child;
+                $byPair[$key][] = $row;
             }
         }
 
@@ -130,6 +158,11 @@ class FamilyRegistryResultsService
             $schoolName = $this->nullableTrim($item['school_name'] ?? null);
             $className = $this->nullableTrim($item['class_name'] ?? null);
             $vanUsingChild = $this->truthy($item['van_using_child'] ?? false);
+            $transportJoinDate = $this->nullableTrim($item['transport_join_date'] ?? null);
+            $transportLeaveDate = $this->nullableTrim($item['transport_leave_date'] ?? null);
+            $defaultRouteLabel = $this->nullableTrim($item['default_route_label'] ?? null);
+            $profileNotes = $this->nullableTrim($item['notes'] ?? null);
+            $profileId = isset($item['child_profile_id']) && $item['child_profile_id'] !== '' ? (int) $item['child_profile_id'] : null;
 
             if ($schoolGoing && (!$schoolName || !$className)) {
                 return ['_http' => 400, 'status' => 'error', 'error' => 'school_name and class_name required when school_going=Yes (child row '.($idx + 1).')'];
@@ -140,12 +173,19 @@ class FamilyRegistryResultsService
             $vanUsingChildren += $vanUsingChild ? 1 : 0;
 
             $parsedChildren[] = [
+                'child_profile_id' => $profileId,
                 'child_name' => $name,
                 'age' => $age,
                 'school_going' => $schoolGoing ? 1 : 0,
                 'school_name' => $schoolName,
                 'class_name' => $className,
                 'van_using_child' => $vanUsingChild ? 1 : 0,
+                'class_grade' => $className,
+                'van_using' => $vanUsingChild ? 1 : 0,
+                'transport_join_date' => $transportJoinDate,
+                'transport_leave_date' => $transportLeaveDate,
+                'default_route_label' => $defaultRouteLabel,
+                'notes' => $profileNotes,
                 'sort_order' => $idx + 1,
             ];
         }
@@ -187,9 +227,51 @@ class FamilyRegistryResultsService
 
             DB::table('family_child_details')->where('month_cycle', $monthCycle)->where('company_id', $companyId)->delete();
             foreach ($parsedChildren as $child) {
-                DB::table('family_child_details')->insert($child + [
+                $profilePayload = [
+                    'company_id' => $companyId,
+                    'child_name' => $child['child_name'],
+                    'school_name' => $child['school_name'],
+                    'class_grade' => $child['class_grade'],
+                    'school_going' => $child['school_going'],
+                    'van_using' => $child['van_using'],
+                    'transport_join_date' => $child['transport_join_date'],
+                    'transport_leave_date' => $child['transport_leave_date'],
+                    'default_route_label' => $child['default_route_label'],
+                    'is_active' => 1,
+                    'sort_order' => $child['sort_order'],
+                    'notes' => $child['notes'],
+                    'updated_at' => now(),
+                ];
+
+                if (!empty($child['child_profile_id'])) {
+                    DB::table('family_child_profiles')->where('id', $child['child_profile_id'])->update($profilePayload);
+                    $profileId = (int) $child['child_profile_id'];
+                } else {
+                    $matchedProfileId = DB::table('family_child_profiles')
+                        ->where('company_id', $companyId)
+                        ->whereRaw('LOWER(TRIM(child_name)) = ?', [mb_strtolower(trim((string) $child['child_name']))])
+                        ->value('id');
+
+                    if ($matchedProfileId) {
+                        DB::table('family_child_profiles')->where('id', $matchedProfileId)->update($profilePayload);
+                        $profileId = (int) $matchedProfileId;
+                    } else {
+                        $profileId = DB::table('family_child_profiles')->insertGetId($profilePayload + [
+                            'created_at' => now(),
+                        ]);
+                    }
+                }
+
+                DB::table('family_child_details')->insert([
                     'month_cycle' => $monthCycle,
                     'company_id' => $companyId,
+                    'child_name' => $child['child_name'],
+                    'age' => $child['age'],
+                    'school_going' => $child['school_going'],
+                    'school_name' => $child['school_name'],
+                    'class_name' => $child['class_name'],
+                    'van_using_child' => $child['van_using_child'],
+                    'sort_order' => $child['sort_order'],
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
