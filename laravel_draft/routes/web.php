@@ -37,7 +37,11 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
-    Route::get('/transport', [ParityUiController::class, 'transport']);
+    Route::get('/transport', function (\Illuminate\Http\Request $request) {
+        return view('ui.transport', [
+            'monthCycle' => (string) ($request->query('month_cycle') ?? ''),
+        ]);
+    });
     // Hub: Meters & Readings (single sidebar entry)
     Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
