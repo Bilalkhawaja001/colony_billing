@@ -11,6 +11,7 @@ use App\Http\Controllers\Billing\EmployeesMeterParityController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
+use App\Http\Controllers\Transport\TransportController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -36,6 +37,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    Route::get('/transport', [ParityUiController::class, 'transport']);
     // Hub: Meters & Readings (single sidebar entry)
     Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
@@ -78,6 +80,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/family-details', fn () => redirect('/reporting'));
     Route::get('/ui/elec-summary', fn () => redirect('/reporting'));
     Route::get('/ui/van', fn () => redirect('/reporting'));
+    Route::get('/ui/transport', fn () => redirect('/transport'));
     Route::get('/ui/rates', fn () => redirect('/rates'));
 
     // Legacy shell aliases now point to canonical modules
@@ -92,6 +95,12 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
+    Route::get('/api/transport/summary', [TransportController::class, 'summary']);
+    Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
+    Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
+    Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
+    Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
+    Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
