@@ -29,13 +29,67 @@
     </div>
 
     <div id="bulk_panel" class="card soft" style="display:none;margin-bottom:10px">
-      <div class="field"><label class="label">Bulk CSV Upload</label><input id="bulk_csv_file" type="file" accept=".csv,text/csv"></div>
+      <div class="field"><label class="label">Employee Bulk Upload</label><input id="bulk_csv_file" type="file" accept=".csv,text/csv"></div>
       <div class="toolbar" style="margin-top:8px">
         <button class="btn" type="button" onclick="loadCsvFile()">Load Selected File</button>
         <button class="btn" type="button" onclick="previewBulk()">Import Preview</button>
-        <button class="btn btn-success" type="button" onclick="commitBulk()">Commit (Upsert)</button>
+        <button class="btn btn-success" type="button" onclick="commitBulk()">Commit Valid Rows</button>
       </div>
-      <pre id="bulk_preview" style="margin-top:8px">Ready.</pre>
+
+      <div class="grid" style="margin-top:12px">
+        <div class="col-3 card">
+          <div class="muted">Loaded Rows</div>
+          <div class="kpi" id="bulk_total_rows">0</div>
+        </div>
+        <div class="col-3 card">
+          <div class="muted">Valid Rows</div>
+          <div class="kpi" id="bulk_valid_rows">0</div>
+        </div>
+        <div class="col-3 card">
+          <div class="muted">Failed Rows</div>
+          <div class="kpi" id="bulk_failed_rows">0</div>
+        </div>
+        <div class="col-3 card">
+          <div class="muted">Committed Rows</div>
+          <div class="kpi" id="bulk_commit_rows">0</div>
+        </div>
+      </div>
+
+      <div class="banner" id="bulk_validation_summary" style="margin-top:10px">No preview yet.</div>
+
+      <div class="grid" style="margin-top:10px">
+        <div class="col-6">
+          <h4 class="section-title">Valid Rows Preview</h4>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Row</th><th>CompanyID</th><th>Name</th><th>Department</th><th>Designation</th><th>Unit_ID</th></tr>
+              </thead>
+              <tbody id="bulk_valid_preview_rows">
+                <tr><td colspan="6"><div class="empty">No valid rows preview yet.</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-6">
+          <h4 class="section-title">Failed Rows Summary</h4>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Row</th><th>Error Code</th><th>Error Message</th></tr>
+              </thead>
+              <tbody id="bulk_failed_preview_rows">
+                <tr><td colspan="3"><div class="empty">No failed rows.</div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <details style="margin-top:10px">
+        <summary class="muted">Show raw preview response</summary>
+        <pre id="bulk_preview" style="margin-top:8px">Ready.</pre>
+      </details>
     </div>
 
     <div id="quick_form_panel">
@@ -515,9 +569,61 @@ async function addEmployee(){ const r=await req('/employees/add','POST',payload(
 async function upsertEmployee(){ const r=await req('/employees/upsert','POST',payload()); show(r); }
 async function markLeft(){ const id=v('e_CompanyID'); if(!id){show({status:'error',error:'CompanyID required'});return;} const r=await req('/employees/'+encodeURIComponent(id),'DELETE'); show(r); }
 
-async function loadCsvFile(){ const f=document.getElementById('bulk_csv_file').files?.[0]; if(!f){show({status:'error',error:'Select CSV file'});return;} BULK_CSV_TEXT=await f.text(); show({status:'ok',loaded:f.name,bytes:BULK_CSV_TEXT.length}); }
-async function previewBulk(){ if(!BULK_CSV_TEXT){show({status:'error',error:'Load CSV first'});return;} const r=await req('/registry/employees/import-preview','POST',{csv_text:BULK_CSV_TEXT}); document.getElementById('bulk_preview').textContent=JSON.stringify(r.body,null,2); show(r); }
-async function commitBulk(){ if(!BULK_CSV_TEXT){show({status:'error',error:'Load CSV first'});return;} const r=await req('/employees/import','POST',{csv_text:BULK_CSV_TEXT}); show(r); }
+let BULK_PREVIEW_CACHE=null;
+function renderBulkSummary(total, valid, failed, summary){
+  document.getElementById('bulk_total_rows').textContent=String(total||0);
+  document.getElementById('bulk_valid_rows').textContent=String(valid||0);
+  document.getElementById('bulk_failed_rows').textContent=String(failed||0);
+  document.getElementById('bulk_validation_summary').textContent=summary||'No preview yet.';
+}
+function renderBulkValidRows(rows){
+  const tbody=document.getElementById('bulk_valid_preview_rows');
+  if(!Array.isArray(rows)||rows.length===0){ tbody.innerHTML='<tr><td colspan="6"><div class="empty">No valid rows preview yet.</div></td></tr>'; return; }
+  tbody.innerHTML=rows.map(item=>{
+    const row=item.row||{};
+    return `<tr><td>${item.row_no??''}</td><td>${item.CompanyID??row.CompanyID??''}</td><td>${row.Name??''}</td><td>${row.Department??''}</td><td>${row.Designation??''}</td><td>${row.Unit_ID??''}</td></tr>`;
+  }).join('');
+}
+function renderBulkFailedRows(rows){
+  const tbody=document.getElementById('bulk_failed_preview_rows');
+  if(!Array.isArray(rows)||rows.length===0){ tbody.innerHTML='<tr><td colspan="3"><div class="empty">No failed rows.</div></td></tr>'; return; }
+  tbody.innerHTML=rows.map(item=>`<tr><td>${item.row_no??''}</td><td>${item.error_code??'ERROR'}</td><td>${item.error_message??item.error??''}</td></tr>`).join('');
+}
+async function loadCsvFile(){
+  const f=document.getElementById('bulk_csv_file').files?.[0];
+  if(!f){show({status:'error',error:'Select CSV file'});return;}
+  BULK_CSV_TEXT=await f.text();
+  BULK_PREVIEW_CACHE=null;
+  const total=Math.max(0,BULK_CSV_TEXT.split(/\r?\n/).filter(Boolean).length-1);
+  document.getElementById('bulk_commit_rows').textContent='0';
+  renderBulkSummary(total,0,0,`File loaded: ${f.name}. Run Import Preview to validate rows before commit.`);
+  renderBulkValidRows([]);
+  renderBulkFailedRows([]);
+  document.getElementById('bulk_preview').textContent=JSON.stringify({status:'ok',loaded:f.name,bytes:BULK_CSV_TEXT.length,rows_detected:total},null,2);
+  show({status:'ok',loaded:f.name,bytes:BULK_CSV_TEXT.length,rows_detected:total});
+}
+async function previewBulk(){
+  if(!BULK_CSV_TEXT){show({status:'error',error:'Load CSV first'});return;}
+  const r=await req('/registry/employees/import-preview','POST',{csv_text:BULK_CSV_TEXT});
+  BULK_PREVIEW_CACHE=r.body||null;
+  document.getElementById('bulk_preview').textContent=JSON.stringify(r.body,null,2);
+  const total=r.body?.total_rows||0, valid=r.body?.accepted_rows||0, failed=r.body?.rejected_rows||0;
+  renderBulkSummary(total,valid,failed,`Preview complete. ${valid} valid row(s), ${failed} failed row(s). Review failed rows before commit.`);
+  renderBulkValidRows(r.body?.accepted_preview||[]);
+  renderBulkFailedRows(r.body?.errors_preview||[]);
+  show(r);
+}
+async function commitBulk(){
+  if(!BULK_CSV_TEXT){show({status:'error',error:'Load CSV first'});return;}
+  const r=await req('/registry/employees/import-commit','POST',{csv_text:BULK_CSV_TEXT});
+  const committed=(r.body?.inserted||0)+(r.body?.updated||0);
+  document.getElementById('bulk_commit_rows').textContent=String(committed);
+  const total=BULK_PREVIEW_CACHE?.total_rows||0;
+  const valid=BULK_PREVIEW_CACHE?.accepted_rows||0;
+  const failed=r.body?.rejected??BULK_PREVIEW_CACHE?.rejected_rows??0;
+  renderBulkSummary(total,valid,failed,`Commit finished. Inserted: ${r.body?.inserted||0}, Updated: ${r.body?.updated||0}, Rejected: ${failed}.`);
+  show(r);
+}
 
 function applyFilters(){
   const q=v('mf_q').toLowerCase(), d=v('mf_dept').toLowerCase(), g=v('mf_desg').toLowerCase(), a=v('mf_active');
