@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Employees_Master (Canonical Columns)</h5>
+
+  <div class='d-flex gap-2 flex-wrap mb-3'>
+    <button id='mode_quick' class='btn btn-sm btn-primary' onclick="setEmpMode('quick')">Quick Add/Edit</button>
+    <button id='mode_bulk' class='btn btn-sm btn-outline-primary' onclick="setEmpMode('bulk')">Bulk Upload</button>
+    <button id='mode_manage' class='btn btn-sm btn-outline-primary' onclick="setEmpMode('manage')">Manage/List</button>
+  </div>
+
+  <ul class='nav nav-tabs mb-3' id='empTabs' role='tablist'>
+    <li class='nav-item'><button class='nav-link active' data-bs-toggle='tab' data-bs-target='#tab-basic' type='button'>Basic Info</button></li>
+    <li class='nav-item'><button class='nav-link' data-bs-toggle='tab' data-bs-target='#tab-res' type='button'>Residence</button></li>
+    <li class='nav-item'><button class='nav-link' data-bs-toggle='tab' data-bs-target='#tab-assets' type='button'>Assets</button></li>
+  </ul>
+
+  <div id='quick_panel' class='alert alert-secondary py-2'>
+    <div class='d-flex gap-2 align-items-center flex-wrap'>
+      <input id='lookup_id' class='form-control' style='max-width:220px' placeholder='CompanyID'>
+      <button class='btn btn-outline-secondary btn-sm' onclick='prefillFromRegistry()'>Fetch by ID</button>
+      <button class='btn btn-outline-secondary btn-sm' onclick='saveToRegistry()'>Save Draft Registry</button>
+      <span class='text-muted small'>Quick mode: required fields fill karo, then Add Employee.</span>
+    </div>
+  </div>
+
+  <div id='bulk_panel' class='alert alert-secondary py-2' style='display:none;'>
+    <label class='form-label mb-1'>Bulk CSV (headers = canonical column names)</label>
+    <div class='d-flex gap-2 flex-wrap mb-2'>
+      <input id='bulk_csv_file' type='file' class='form-control' accept='.csv,text/csv' style='max-width:320px' onchange='loadCsvFile()'>
+      <button class='btn btn-outline-secondary btn-sm' onclick='loadCsvFile()'>Load Selected File</button>
+      <button class='btn btn-outline-secondary btn-sm' onclick='previewBulk()'>Import Preview</button>
+      <button class='btn btn-outline-secondary btn-sm' onclick='commitBulk()'>Commit (Upsert)</button>
+    </div>
+    <div class='small text-muted'>CSV paste textbox removed — file upload only.</div>
+    <div id='bulk_preview' class='mt-2 small'></div>
+  </div>
+
+  <div id='quick_form_panel' class='tab-content'>
+    <div class='tab-pane fade show active' id='tab-basic'>
+      <div class='grid'>
+        <div class='field'><label>CompanyID*</label><input id='e_CompanyID' class='form-control'></div>
+        <div class='field'><label>Name*</label><input id='e_Name' class='form-control'></div>
+        <div class='field'><label>Father's Name</label><input id='e_Father' class='form-control'></div>
+        <div class='field'><label>CNIC_No.*</label><input id='e_CNIC' class='form-control'></div>
+        <div class='field'><label>Mobile_No.</label><input id='e_Mobile' class='form-control'></div>
+        <div class='field'><label>Department*</label><input id='e_Department' class='form-control'></div>
+        <div class='field'><label>Section</label><input id='e_Section' class='form-control'></div>
+        <div class='field'><label>Sub Section</label><input id='e_SubSection' class='form-control'></div>
+        <div class='field'><label>Designation*</label><input id='e_Designation' class='form-control'></div>
+        <div class='field'><label>Employee Type</label><input id='e_EmployeeType' class='form-control'></div>
+        <div class='field'><label>Join Date</label><input id='e_JoinDate' type='date' class='form-control'></div>
+        <div class='field'><label>Leave Date</label><input id='e_LeaveDate' type='date' class='form-control'></div>
+        <div class='field'><label>Active*</label><select id='e_Active' class='form-select'><option>Yes</option><option>No</option></select></div>
+        <div class='field'><label>Remarks</label><input id='e_Remarks' class='form-control'></div>
+      </div>
+    </div>
+
+    <div class='tab-pane fade' id='tab-res'>
+      <div class='grid'>
+        <div class='field'><label>Colony Type</label><input id='e_ColonyType' class='form-control'></div>
+        <div class='field'><label>Block Floor</label><input id='e_BlockFloor' class='form-control'></div>
+        <div class='field'><label>Room No</label><input id='e_RoomNo' class='form-control'></div>
+        <div class='field'><label>Shared Room</label><input id='e_SharedRoom' class='form-control'></div>
+        <div class='field'><label>Unit_ID*</label><input id='e_UnitID' class='form-control'></div>
+      </div>
+    </div>
+
+    <div class='tab-pane fade' id='tab-assets'>
+      <div class='grid'>
+        <div class='field'><label>Iron Cot</label><input id='e_IronCot' class='form-control'></div>
+        <div class='field'><label>Single Bed</label><input id='e_SingleBed' class='form-control'></div>
+        <div class='field'><label>Double Bed</label><input id='e_DoubleBed' class='form-control'></div>
+        <div class='field'><label>Mattress</label><input id='e_Mattress' class='form-control'></div>
+        <div class='field'><label>Sofa Set</label><input id='e_SofaSet' class='form-control'></div>
+        <div class='field'><label>Bed Sheet</label><input id='e_BedSheet' class='form-control'></div>
+        <div class='field'><label>Wardrobe</label><input id='e_Wardrobe' class='form-control'></div>
+        <div class='field'><label>Centre Table</label><input id='e_CentreTable' class='form-control'></div>
+        <div class='field'><label>Wooden Chair</label><input id='e_WoodenChair' class='form-control'></div>
+        <div class='field'><label>Dinning Table</label><input id='e_DinningTable' class='form-control'></div>
+        <div class='field'><label>Dinning Chair</label><input id='e_DinningChair' class='form-control'></div>
+        <div class='field'><label>Side Table</label><input id='e_SideTable' class='form-control'></div>
+        <div class='field'><label>Fridge</label><input id='e_Fridge' class='form-control'></div>
+        <div class='field'><label>Water Dispenser</label><input id='e_WaterDispenser' class='form-control'></div>
+        <div class='field'><label>Washing Machine</label><input id='e_WashingMachine' class='form-control'></div>
+        <div class='field'><label>Air Cooler</label><input id='e_AirCooler' class='form-control'></div>
+        <div class='field'><label>A/C</label><input id='e_AC' class='form-control'></div>
+        <div class='field'><label>LED</label><input id='e_LED' class='form-control'></div>
+        <div class='field'><label>Gyser</label><input id='e_Gyser' class='form-control'></div>
+        <div class='field'><label>Electric Kettle</label><input id='e_ElectricKettle' class='form-control'></div>
+        <div class='field'><label>Wifi Rtr</label><input id='e_WifiRtr' class='form-control'></div>
+        <div class='field'><label>Water Bottle</label><input id='e_WaterBottle' class='form-control'></div>
+        <div class='field'><label>LPG cylinder</label><input id='e_LPG' class='form-control'></div>
+        <div class='field'><label>Gas Stove</label><input id='e_GasStove' class='form-control'></div>
+        <div class='field'><label>Crockery</label><input id='e_Crockery' class='form-control'></div>
+        <div class='field'><label>Kitchen Cabinet</label><input id='e_KitchenCabinet' class='form-control'></div>
+        <div class='field'><label>Mug</label><input id='e_Mug' class='form-control'></div>
+        <div class='field'><label>Bucket</label><input id='e_Bucket' class='form-control'></div>
+        <div class='field'><label>Mirror</label><input id='e_Mirror' class='form-control'></div>
+        <div class='field'><label>Dustbin</label><input id='e_Dustbin' class='form-control'></div>
+      </div>
+    </div>
+  </div>
+
+  <div id='quick_actions' class='toolbar mt-3 d-flex gap-2 flex-wrap'>
+    <button class='btn btn-primary' onclick='addEmployee()'>Add Employee</button>
+    <button class='btn btn-outline-secondary' onclick='saveToRegistry()'>Save Draft Registry</button>
+  </div>
+
+  <div id='manage_panel' style='display:none;'>
+    <div class='toolbar mt-3 d-flex gap-2 flex-wrap'>
+      <button class='btn btn-outline-secondary' onclick="listEmployees(false)">List All</button>
+      <button class='btn btn-outline-secondary' onclick="listEmployees(true)">List Active</button>
+      <button class='btn btn-outline-danger' onclick='markLeft()'>Mark Left (Active=No)</button>
+      <button class='btn btn-outline-warning' onclick='changeResidenceNextMonth()'>Change Unit/Room (Next Month)</button>
+      <button class='btn btn-outline-dark' onclick='clearTable()'>Clear Table (UI)</button>
+      <button class='btn btn-outline-success' onclick='exportFilteredCsv()'>Export Filtered CSV</button>
+    </div>
+    <div class='card mt-2 p-2'>
+      <div class='grid'>
+        <div class='field'><label>Search (any)</label><input id='mf_q' class='form-control' placeholder='CompanyID/Name/CNIC/Dept/Unit' oninput='applyEmpFilters()'></div>
+        <div class='field'><label>Department</label><input id='mf_dept' class='form-control' oninput='applyEmpFilters()'></div>
+        <div class='field'><label>Designation</label><input id='mf_desg' class='form-control' oninput='applyEmpFilters()'></div>
+        <div class='field'><label>Unit_ID</label><input id='mf_unit' class='form-control' oninput='applyEmpFilters()'></div>
+        <div class='field'><label>Active</label><select id='mf_active' class='form-select' onchange='applyEmpFilters()'><option value=''>All</option><option value='Yes'>Yes</option><option value='No'>No</option></select></div>
+      </div>
+      <div class='mt-2'>
+        <details>
+          <summary><b>Columns</b> (show/hide)</summary>
+          <div id='col_picker' class='d-flex flex-wrap gap-2 mt-2'></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <pre id='out' class='mt-3'></pre>
+  <div class='d-flex justify-content-between align-items-center mt-2'>
+    <div id='emp_page_info' class='small text-muted'></div>
+    <div class='d-flex gap-2'>
+      <button class='btn btn-sm btn-outline-secondary' onclick='prevEmpPage()'>Prev</button>
+      <button class='btn btn-sm btn-outline-secondary' onclick='nextEmpPage()'>Next</button>
+    </div>
+  </div>
+  <div id='emp_list' class='mt-2'></div>
+</div>
+
+<script>
+let BULK_CSV_TEXT = '';
+let EMP_ROWS = [];
+let EMP_FILTERED_ROWS = [];
+let EMP_PAGE = 1;
+const EMP_PAGE_SIZE = 50;
+let EMP_VISIBLE_COLS = null;
+
+function notify(msg, ok=true){
+  const out = document.getElementById('out');
+  out.textContent = JSON.stringify({status: ok ? 'ok' : 'error', message: msg}, null, 2);
+}
+
+function initColumnPicker(allCols){
+  const box = document.getElementById('col_picker');
+  if(!box) return;
+  box.innerHTML = allCols.map(c => {
+    const checked = EMP_VISIBLE_COLS.includes(c) ? 'checked' : '';
+    return `<label class='small border rounded p-1'><input type='checkbox' ${checked} onchange="toggleColumn(${JSON.stringify(c)}, this.checked)"> ${c}</label>`;
+  }).join('');
+}
+
+function toggleColumn(col, isChecked){
+  if(isChecked){
+    if(!EMP_VISIBLE_COLS.includes(col)) EMP_VISIBLE_COLS.push(col);
+  } else {
+    EMP_VISIBLE_COLS = EMP_VISIBLE_COLS.filter(c => c!==col);
+  }
+  renderEmployees(EMP_FILTERED_ROWS);
+}
+
+function setEmpMode(mode){
+  const quick = mode==='quick';
+  const bulk = mode==='bulk';
+  const manage = mode==='manage';
+
+  document.getElementById('quick_panel').style.display = quick ? '' : 'none';
+  document.getElementById('bulk_panel').style.display = bulk ? '' : 'none';
+  document.getElementById('empTabs').style.display = quick ? '' : 'none';
+  document.getElementById('quick_form_panel').style.display = quick ? '' : 'none';
+  document.getElementById('quick_actions').style.display = quick ? '' : 'none';
+  document.getElementById('manage_panel').style.display = manage ? '' : 'none';
+
+  document.getElementById('mode_quick').className = 'btn btn-sm ' + (quick ? 'btn-primary' : 'btn-outline-primary');
+  document.getElementById('mode_bulk').className = 'btn btn-sm ' + (bulk ? 'btn-primary' : 'btn-outline-primary');
+  document.getElementById('mode_manage').className = 'btn btn-sm ' + (manage ? 'btn-primary' : 'btn-outline-primary');
+
+  if(manage && !document.getElementById('emp_list').innerHTML.trim()) listEmployees(false);
+}
+
+function payload(){
+  return {
+    CompanyID:v('e_CompanyID'), Name:v('e_Name'), "Father's Name":v('e_Father'), "CNIC_No.":v('e_CNIC'), "Mobile_No.":v('e_Mobile'),
+    Department:v('e_Department'), Section:v('e_Section'), "Sub Section":v('e_SubSection'), Designation:v('e_Designation'), "Employee Type":v('e_EmployeeType'),
+    "Colony Type":v('e_ColonyType'), "Block Floor":v('e_BlockFloor'), "Room No":v('e_RoomNo'), "Shared Room":v('e_SharedRoom'), Unit_ID:v('e_UnitID'),
+    "Join Date":v('e_JoinDate'), "Leave Date":v('e_LeaveDate'), Active:v('e_Active'),
+    "Iron Cot":v('e_IronCot'), "Single Bed":v('e_SingleBed'), "Double Bed":v('e_DoubleBed'), "Mattress":v('e_Mattress'), "Sofa Set":v('e_SofaSet'),
+    "Bed Sheet":v('e_BedSheet'), "Wardrobe":v('e_Wardrobe'), "Centre Table":v('e_CentreTable'), "Wooden Chair":v('e_WoodenChair'),
+    "Dinning Table":v('e_DinningTable'), "Dinning Chair":v('e_DinningChair'), "Side Table":v('e_SideTable'), "Fridge":v('e_Fridge'),
+    "Water Dispenser":v('e_WaterDispenser'), "Washing Machine":v('e_WashingMachine'), "Air Cooler":v('e_AirCooler'), "A/C":v('e_AC'),
+    "LED":v('e_LED'), "Gyser":v('e_Gyser'), "Electric Kettle":v('e_ElectricKettle'), "Wifi Rtr":v('e_WifiRtr'), "Water Bottle":v('e_WaterBottle'),
+    "LPG cylinder":v('e_LPG'), "Gas Stove":v('e_GasStove'), "Crockery":v('e_Crockery'), "Kitchen Cabinet":v('e_KitchenCabinet'),
+    "Mug":v('e_Mug'), "Bucket":v('e_Bucket'), "Mirror":v('e_Mirror'), "Dustbin":v('e_Dustbin'), "Remarks":v('e_Remarks')
+  };
+}
+
+function setField(id,val){ const el=document.getElementById(id); if(el) el.value = (val ?? ''); }
+
+function fillForm(r){
+  setField('e_CompanyID', r['CompanyID']); setField('e_Name', r['Name']); setField('e_Father', r["Father's Name"]); setField('e_CNIC', r['CNIC_No.']);
+  setField('e_Mobile', r['Mobile_No.']); setField('e_Department', r['Department']); setField('e_Section', r['Section']); setField('e_SubSection', r['Sub Section']);
+  setField('e_Designation', r['Designation']); setField('e_EmployeeType', r['Employee Type']); setField('e_ColonyType', r['Colony Type']);
+  setField('e_BlockFloor', r['Block Floor']); setField('e_RoomNo', r['Room No']); setField('e_SharedRoom', r['Shared Room']); setField('e_UnitID', r['Unit_ID']);
+  setField('e_JoinDate', r['Join Date']); setField('e_LeaveDate', r['Leave Date']); setField('e_Active', r['Active'] || 'Yes'); setField('e_Remarks', r['Remarks']);
+  setField('e_IronCot', r['Iron Cot']); setField('e_SingleBed', r['Single Bed']); setField('e_DoubleBed', r['Double Bed']); setField('e_Mattress', r['Mattress']);
+  setField('e_SofaSet', r['Sofa Set']); setField('e_BedSheet', r['Bed Sheet']); setField('e_Wardrobe', r['Wardrobe']); setField('e_CentreTable', r['Centre Table']);
+  setField('e_WoodenChair', r['Wooden Chair']); setField('e_DinningTable', r['Dinning Table']); setField('e_DinningChair', r['Dinning Chair']); setField('e_SideTable', r['Side Table']);
+  setField('e_Fridge', r['Fridge']); setField('e_WaterDispenser', r['Water Dispenser']); setField('e_WashingMachine', r['Washing Machine']); setField('e_AirCooler', r['Air Cooler']);
+  setField('e_AC', r['A/C']); setField('e_LED', r['LED']); setField('e_Gyser', r['Gyser']); setField('e_ElectricKettle', r['Electric Kettle']);
+  setField('e_WifiRtr', r['Wifi Rtr']); setField('e_WaterBottle', r['Water Bottle']); setField('e_LPG', r['LPG cylinder']); setField('e_GasStove', r['Gas Stove']);
+  setField('e_Crockery', r['Crockery']); setField('e_KitchenCabinet', r['Kitchen Cabinet']); setField('e_Mug', r['Mug']); setField('e_Bucket', r['Bucket']);
+  setField('e_Mirror', r['Mirror']); setField('e_Dustbin', r['Dustbin']);
+}
+
+async function prefillFromRegistry(){
+  const id = (v('lookup_id') || v('e_CompanyID')).trim();
+  if(!id){ document.getElementById('out').textContent='CompanyID required for fetch'; return; }
+  const r = await fetch('/registry/employees/' + encodeURIComponent(id));
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+  if(data.status === 'ok' && data.row) fillForm(data.row);
+}
+
+function saveToRegistry(){
+  post('/registry/employees/upsert', payload());
+}
+
+async function loadCsvFile(){
+  const f = document.getElementById('bulk_csv_file')?.files?.[0];
+  if(!f){ notify('Please select CSV file', false); return; }
+  BULK_CSV_TEXT = await f.text();
+  const lines = (BULK_CSV_TEXT || '').split(/\r?\n/).filter(x=>x.trim()!=='');
+  notify(`Loaded ${f.name} | rows: ${Math.max(0, lines.length-1)}`);
+}
+
+async function previewBulk(){
+  if(!BULK_CSV_TEXT.trim()){ notify('Load CSV file first', false); return; }
+  const r = await fetch('/employees/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_text:BULK_CSV_TEXT,commit:false})});
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+  const bp = document.getElementById('bulk_preview');
+  if(data.status==='ok'){
+    const rows = data.preview || [];
+    const errs = data.errors_preview || [];
+    let html = `<b>Preview:</b> accepted=${data.accepted_rows||0}, rejected=${data.rejected_rows||0}`;
+    if(rows.length){
+      html += "<table class='table table-sm mt-2'><thead><tr><th>row_no</th><th>CompanyID</th><th>mode</th></tr></thead><tbody>" + rows.map(x=>`<tr><td>${x.row_no}</td><td>${x.CompanyID||''}</td><td>${x.mode||''}</td></tr>`).join('') + "</tbody></table>";
+    }
+    if(errs.length){
+      html += "<div class='mt-2 text-danger'><b>Rejected rows</b></div>";
+      html += "<table class='table table-sm table-bordered'><thead><tr><th>row_no</th><th>CompanyID</th><th>error</th></tr></thead><tbody>" + errs.map(e=>`<tr><td>${e.row_no||''}</td><td>${e.CompanyID||''}</td><td>${e.error||''}</td></tr>`).join('') + "</tbody></table>";
+    }
+    bp.innerHTML = html;
+  } else {
+    bp.innerHTML = `<span class='text-danger'>${data.error||'Preview failed'}</span>`;
+  }
+}
+
+async function commitBulk(){
+  if(!BULK_CSV_TEXT.trim()){ notify('Load CSV file first', false); return; }
+  const r = await fetch('/employees/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_text:BULK_CSV_TEXT,commit:true})});
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+  if(data.status==='ok'){
+    notify(`Commit done | inserted=${data.inserted||0}, updated=${data.updated||0}, rejected=${data.rejected||0}`);
+    setEmpMode('manage');
+    await listEmployees(false);
+  }
+}
+
+function renderEmployees(rows){
+  const box = document.getElementById('emp_list');
+  const info = document.getElementById('emp_page_info');
+  if(!rows || !rows.length){ box.innerHTML = "<div class='text-muted small'>No employees found.</div>"; info.textContent=''; return; }
+
+  const total = rows.length;
+  const pages = Math.max(1, Math.ceil(total / EMP_PAGE_SIZE));
+  if(EMP_PAGE > pages) EMP_PAGE = pages;
+  const start = (EMP_PAGE - 1) * EMP_PAGE_SIZE;
+  const end = Math.min(total, start + EMP_PAGE_SIZE);
+  const pageRows = rows.slice(start, end);
+
+  const baseCols = [
+    'Actions','CompanyID','Name',"Father's Name",'CNIC_No.','Mobile_No.','Department','Section','Sub Section','Designation','Employee Type',
+    'Colony Type','Block Floor','Room No','Shared Room','Join Date','Leave Date','Active','Iron Cot','Single Bed','Double Bed',
+    'Mattress','Sofa Set','Bed Sheet','Wardrobe','Centre Table','Wooden Chair','Dinning Table','Dinning Chair','Side Table','Fridge',
+    'Water Dispenser','Washing Machine','Air Cooler','A/C','LED','Gyser','Electric Kettle','Wifi Rtr','Water Bottle','LPG cylinder',
+    'Gas Stove','Crockery','Kitchen Cabinet','Mug','Bucket','Mirror','Dustbin','Remarks'
+  ];
+  if(!EMP_VISIBLE_COLS){ EMP_VISIBLE_COLS = baseCols.filter(c => !['Iron Cot','Single Bed','Double Bed','Mattress','Sofa Set','Bed Sheet','Wardrobe','Centre Table','Wooden Chair','Dinning Table','Dinning Chair','Side Table','Fridge','Water Dispenser','Washing Machine','Air Cooler','A/C','LED','Gyser','Electric Kettle','Wifi Rtr','Water Bottle','LPG cylinder','Gas Stove','Crockery','Kitchen Cabinet','Mug','Bucket','Mirror','Dustbin'].includes(c)); initColumnPicker(baseCols); }
+  const cols = baseCols.filter(c => EMP_VISIBLE_COLS.includes(c));
+
+  const thead = '<tr>' + cols.map(c => `<th style='position:sticky;top:0;background:#fff;z-index:2;'>${c}</th>`).join('') + '</tr>';
+  const tbody = pageRows.map(r => {
+    const actionCell = `<td>
+      <button class='btn btn-sm btn-outline-primary me-1' onclick='editFromRow(${JSON.stringify(r.CompanyID)})'>Edit</button>
+      <button class='btn btn-sm btn-outline-danger' onclick='markLeftFromRow(${JSON.stringify(r.CompanyID)})'>Left</button>
+    </td>`;
+    const rest = cols.filter(c=>c!=='Actions').map(c => `<td>${(r[c] ?? '')}</td>`).join('');
+    return `<tr>${cols.includes('Actions') ? actionCell : ''}${rest}</tr>`;
+  }).join('');
+
+  info.textContent = `Showing ${start+1}-${end} of ${total} (page ${EMP_PAGE}/${pages})`;
+  box.innerHTML = `<div class='table-responsive'><table class='table table-sm table-striped'><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+}
+
+function applyEmpFilters(){
+  const q=(document.getElementById('mf_q')?.value||'').trim().toLowerCase();
+  const dept=(document.getElementById('mf_dept')?.value||'').trim().toLowerCase();
+  const desg=(document.getElementById('mf_desg')?.value||'').trim().toLowerCase();
+  const unit=(document.getElementById('mf_unit')?.value||'').trim().toLowerCase();
+  const active=(document.getElementById('mf_active')?.value||'').trim();
+
+  EMP_FILTERED_ROWS=(EMP_ROWS||[]).filter(r=>{
+    const company=(r['CompanyID']||'').toLowerCase();
+    const name=(r['Name']||'').toLowerCase();
+    const cnic=(r['CNIC_No.']||'').toLowerCase();
+    const d=(r['Department']||'').toLowerCase();
+    const g=(r['Designation']||'').toLowerCase();
+    const u=(r['Unit_ID']||'').toLowerCase();
+    const any=[company,name,cnic,d,g,u].join(' ');
+    if(q && !any.includes(q)) return false;
+    if(dept && !d.includes(dept)) return false;
+    if(desg && !g.includes(desg)) return false;
+    if(unit && !u.includes(unit)) return false;
+    if(active && (r['Active']||'')!==active) return false;
+    return true;
+  });
+
+  EMP_PAGE = 1;
+  document.getElementById('out').textContent = JSON.stringify({status:'ok', total:(EMP_ROWS||[]).length, filtered:EMP_FILTERED_ROWS.length}, null, 2);
+  renderEmployees(EMP_FILTERED_ROWS);
+}
+
+async function listEmployees(activeOnly){
+  const r = await fetch('/employees?active_only=' + (activeOnly ? '1' : '0'));
+  const data = await r.json();
+  EMP_ROWS = data.rows || [];
+  EMP_FILTERED_ROWS = [...EMP_ROWS];
+  EMP_PAGE = 1;
+  document.getElementById('out').textContent = JSON.stringify({status:data.status, count:EMP_ROWS.length, active_only:!!activeOnly}, null, 2);
+  renderEmployees(EMP_FILTERED_ROWS);
+}
+
+function clearTable(){
+  document.getElementById('emp_list').innerHTML = '';
+  document.getElementById('emp_page_info').textContent = '';
+  document.getElementById('out').textContent = JSON.stringify({status:'ok', message:'Table cleared (UI only)'}, null, 2);
+}
+
+function prevEmpPage(){
+  if(EMP_PAGE>1){ EMP_PAGE--; renderEmployees(EMP_FILTERED_ROWS); }
+}
+
+function nextEmpPage(){
+  const pages=Math.max(1, Math.ceil((EMP_FILTERED_ROWS||[]).length / EMP_PAGE_SIZE));
+  if(EMP_PAGE<pages){ EMP_PAGE++; renderEmployees(EMP_FILTERED_ROWS); }
+}
+
+function editFromRow(companyID){
+  const r=(EMP_ROWS||[]).find(x => String(x['CompanyID'])===String(companyID));
+  if(!r) return;
+  fillForm(r);
+  setEmpMode('quick');
+  notify(`Loaded ${companyID} in form for editing`);
+}
+
+async function markLeftFromRow(companyID){
+  setField('e_CompanyID', companyID);
+  await markLeft();
+}
+
+async function markLeft(){
+  const id = (v('e_CompanyID') || '').trim();
+  if(!id){ document.getElementById('out').textContent = 'CompanyID required'; return; }
+  const leaveDate = v('e_LeaveDate') || new Date().toISOString().slice(0,10);
+  const ok = confirm(`Mark employee ${id} as left?\nLeave Date: ${leaveDate}`);
+  if(!ok) return;
+  const r = await fetch('/employees/' + encodeURIComponent(id), {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({Active:'No', 'Leave Date': leaveDate})
+  });
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+  await listEmployees(true);
+}
+
+async function changeResidenceNextMonth(){
+  const id = (v('e_CompanyID') || '').trim();
+  if(!id){ document.getElementById('out').textContent = 'CompanyID required'; return; }
+  const monthCycle = prompt('Enter effective month_cycle (YYYY-MM), e.g. 2026-03');
+  if(!monthCycle){ return; }
+
+  const patch = {
+    month_cycle: monthCycle,
+    Unit_ID: v('e_UnitID'),
+    'Colony Type': v('e_ColonyType'),
+    'Block Floor': v('e_BlockFloor'),
+    'Room No': v('e_RoomNo'),
+    'Shared Room': v('e_SharedRoom')
+  };
+
+  const ok = confirm(`Apply residence change for ${id}?\nMonth: ${monthCycle}\nUnit: ${patch.Unit_ID}`);
+  if(!ok) return;
+
+  const r = await fetch('/employees/' + encodeURIComponent(id), {
+    method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(patch)
+  });
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+}
+
+function exportFilteredCsv(){
+  const rows = (EMP_FILTERED_ROWS||[]);
+  if(!rows.length){ notify('No filtered rows to export', false); return; }
+  const cols = [
+    'CompanyID','Name',"Father's Name",'CNIC_No.','Mobile_No.','Department','Section','Sub Section','Designation','Employee Type',
+    'Colony Type','Block Floor','Room No','Shared Room','Join Date','Leave Date','Active','Iron Cot','Single Bed','Double Bed',
+    'Mattress','Sofa Set','Bed Sheet','Wardrobe','Centre Table','Wooden Chair','Dinning Table','Dinning Chair','Side Table','Fridge',
+    'Water Dispenser','Washing Machine','Air Cooler','A/C','LED','Gyser','Electric Kettle','Wifi Rtr','Water Bottle','LPG cylinder',
+    'Gas Stove','Crockery','Kitchen Cabinet','Mug','Bucket','Mirror','Dustbin','Remarks','Unit_ID'
+  ];
+  const esc = v => {
+    const s = (v ?? '').toString();
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [cols.join(',')].concat(rows.map(r => cols.map(c => esc(r[c])).join(',')));
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'employees_filtered_export.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+  notify(`Exported ${rows.length} rows`);
+}
+
+function addEmployee(){
+  const p = payload();
+  const req = ['CompanyID','Name','CNIC_No.','Department','Designation','Unit_ID'];
+  const miss = req.filter(k => !(p[k]||'').toString().trim());
+  if(miss.length){
+    notify('Missing required: ' + miss.join(', '), false);
+    return;
+  }
+  post('/employees/add', p);
+}
+
+setEmpMode('quick');
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Meter Master</h5>
+
+  <div class='grid'>
+    <div class='field'><label>Month Cycle*</label><input id='m_month' class='form-control' placeholder='YYYY-MM'></div>
+    <div class='field'><label>Unit_ID*</label><input id='m_unit' class='form-control' placeholder='SBC-G-000' onblur='loadPreviousReading()'></div>
+    <div class='field'><label>Previous Reading (auto)</label><input id='m_prev' class='form-control' type='number' step='0.0001'></div>
+    <div class='field'><label>Current Reading*</label><input id='m_curr' class='form-control' type='number' step='0.0001'></div>
+    <div class='field'><label>Rollover?</label><select id='m_roll' class='form-select'><option value='0'>No</option><option value='1'>Yes</option></select></div>
+    <div class='field'><label>Source Ref</label><input id='m_source' class='form-control' placeholder='Manual entry / Sheet ref'></div>
+  </div>
+
+  <div class='toolbar mt-2'>
+    <button class='btn btn-primary' onclick='saveReadingAndUnits()'>Save Reading (Auto Units)</button>
+    <button class='btn btn-outline-secondary' onclick='loadPreviousReading()'>Auto Pick Previous</button>
+    <button class='btn btn-outline-secondary' onclick='listMeters()'>List Meters</button>
+    <button class='btn btn-outline-dark' onclick='clearMeterTable()'>Clear Table (UI)</button>
+  </div>
+
+  <div class='card mt-2 p-2'>
+    <div class='grid'>
+      <div class='field'><label>Filter Month</label><input id='f_month' class='form-control' placeholder='YYYY-MM' oninput='listMeters()'></div>
+      <div class='field'><label>Filter Unit_ID</label><input id='f_unit' class='form-control' oninput='listMeters()'></div>
+    </div>
+  </div>
+
+  <pre id='out' class='mt-3'></pre>
+  <div id='meter_list' class='mt-2'></div>
+</div>
+
+<script>
+async function loadPreviousReading(){
+  const unit = (v('m_unit')||'').trim();
+  if(!unit) return;
+  const r = await fetch('/meter-reading/latest/' + encodeURIComponent(unit));
+  const j = await r.json();
+  if(j.status==='ok' && j.row){
+    document.getElementById('m_prev').value = j.row.current_reading ?? '';
+    document.getElementById('out').textContent = JSON.stringify({status:'ok', message:'Previous reading auto-picked', from_month:j.row.month_cycle, previous_reading:j.row.current_reading}, null, 2);
+  } else {
+    document.getElementById('out').textContent = JSON.stringify({status:'ok', message:'No previous reading found; enter manually'}, null, 2);
+  }
+}
+
+async function saveReadingAndUnits(){
+  const payload = {
+    month_cycle: (v('m_month')||'').trim(),
+    unit_id: (v('m_unit')||'').trim(),
+    previous_reading: Number(v('m_prev')||0),
+    current_reading: Number(v('m_curr')||0),
+    rollover_flag: v('m_roll')||'0',
+    source_ref: (v('m_source')||'').trim()
+  };
+
+  if(!payload.month_cycle || !payload.unit_id){
+    document.getElementById('out').textContent = JSON.stringify({status:'error', error:'month_cycle and unit_id required'}, null, 2);
+    return;
+  }
+
+  const r = await fetch('/meter-reading/upsert', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)
+  });
+  const j = await r.json();
+  document.getElementById('out').textContent = JSON.stringify(j, null, 2);
+  if(j.status==='ok') listMeters();
+}
+
+function renderMeters(rows){
+  const box = document.getElementById('meter_list');
+  if(!rows || !rows.length){ box.innerHTML = "<div class='text-muted small'>No meter rows found.</div>"; return; }
+  const cols = ['month_cycle','unit_id','meter_units','source_ref','updated_at'];
+  const head = '<tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+  const body = rows.map(r=>'<tr>'+cols.map(c=>`<td>${r[c]??''}</td>`).join('')+'</tr>').join('');
+  box.innerHTML = `<div class='table-responsive'><table class='table table-sm table-striped'><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+}
+
+async function listMeters(){
+  const m = encodeURIComponent((v('f_month')||'').trim());
+  const u = encodeURIComponent((v('f_unit')||'').trim());
+  const r = await fetch(`/meter-unit?month_cycle=${m}&unit_id=${u}`);
+  const j = await r.json();
+  document.getElementById('out').textContent = JSON.stringify({status:j.status, count:(j.rows||[]).length}, null, 2);
+  renderMeters(j.rows||[]);
+}
+
+function clearMeterTable(){
+  document.getElementById('meter_list').innerHTML='';
+  document.getElementById('out').textContent = JSON.stringify({status:'ok', message:'Table cleared (UI only)'}, null, 2);
+}
+
+listMeters();
+</script>
+{% endblock %}

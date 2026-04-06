@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Reconciliation Dashboard</h5>
+
+  <div style='display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;'>
+    <input id='month_cycle' class='form-control' placeholder='e.g. Mar-2026' style='max-width:220px;' />
+    <button id='btn_load' class='btn btn-primary'>Load</button>
+    <button id='btn_export' class='btn btn-success'>Download Reconciliation Excel</button>
+    <button id='btn_open_payment' class='btn btn-warning'>Log New Payment</button>
+  </div>
+
+  <div style='display:grid; grid-template-columns: repeat(4, minmax(140px,1fr)); gap:10px; margin-top:12px;'>
+    <div class='card'><div style='font-size:12px; opacity:.8;'>Total Billed</div><div id='card_billed' style='font-size:20px; font-weight:700;'>0</div></div>
+    <div class='card'><div style='font-size:12px; opacity:.8;'>Total Recovered</div><div id='card_recovered' style='font-size:20px; font-weight:700;'>0</div></div>
+    <div class='card'><div style='font-size:12px; opacity:.8;'>Balance (Outstanding)</div><div id='card_balance' style='font-size:20px; font-weight:700;'>0</div></div>
+    <div class='card'><div style='font-size:12px; opacity:.8;'>Recovery Ratio</div><div id='card_ratio' style='font-size:20px; font-weight:700;'>0%</div></div>
+  </div>
+
+  <pre id='out' style='margin-top:12px; max-height:420px; overflow:auto; background:#0f172a; color:#e2e8f0; padding:12px; border-radius:8px;'></pre>
+</div>
+
+<!-- Payment Modal -->
+<div id='pay_modal' style='display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9999;'>
+  <div style='max-width:520px; margin:6% auto; background:#fff; border-radius:10px; padding:14px;'>
+    <h6 style='margin-bottom:10px;'>Log New Payment</h6>
+
+    <div style='display:grid; grid-template-columns:1fr 1fr; gap:8px;'>
+      <div style='grid-column:1 / span 2;'>
+        <label>Employee_ID</label>
+        <input id='p_employee_id' class='form-control' placeholder='e.g. E001' />
+      </div>
+      <div>
+        <label>Name</label>
+        <input id='p_employee_name' class='form-control' readonly />
+      </div>
+      <div>
+        <label>Unit_ID</label>
+        <input id='p_unit_id' class='form-control' readonly />
+      </div>
+      <div>
+        <label>Amount_Paid</label>
+        <input id='p_amount_paid' class='form-control' type='number' step='0.01' min='0.01' />
+      </div>
+      <div>
+        <label>Payment_Method</label>
+        <select id='p_method' class='form-control'>
+          <option>Cash</option>
+          <option>Bank Transfer</option>
+          <option>Salary Deduction</option>
+        </select>
+      </div>
+      <div>
+        <label>Reference_No</label>
+        <input id='p_ref' class='form-control' placeholder='Receipt # / Txn ID' />
+      </div>
+      <div>
+        <label>Payment_Date</label>
+        <input id='p_date' class='form-control' type='date' />
+      </div>
+      <div>
+        <label>Admin Actor ID</label>
+        <input id='p_actor' class='form-control' value='1' />
+      </div>
+    </div>
+
+    <div style='display:flex; justify-content:flex-end; gap:8px; margin-top:12px;'>
+      <button id='btn_cancel_payment' class='btn btn-secondary'>Cancel</button>
+      <button id='btn_save_payment' class='btn btn-primary'>Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const out = document.getElementById('out');
+  const inp = document.getElementById('month_cycle');
+  const fmt = (n)=> Number(n||0).toFixed(2);
+  const modal = document.getElementById('pay_modal');
+
+  const setCards = (s={}) => {
+    document.getElementById('card_billed').textContent = fmt(s.billed_total);
+    document.getElementById('card_recovered').textContent = fmt(s.recovered_total);
+    document.getElementById('card_balance').textContent = fmt(s.outstanding_total);
+    document.getElementById('card_ratio').textContent = `${fmt(s.recovery_ratio)}%`;
+  };
+
+  async function loadReconciliation() {
+    const m = (inp.value || '').trim();
+    if(!m){ out.textContent = 'month_cycle required'; return; }
+    out.textContent = 'Loading...';
+    const r = await fetch(`/reports/reconciliation?month_cycle=${encodeURIComponent(m)}`);
+    const j = await r.json();
+    if (j && j.status === 'ok') setCards(j.summary || {});
+    out.textContent = JSON.stringify(j, null, 2);
+  }
+
+  document.getElementById('btn_load').addEventListener('click', loadReconciliation);
+
+  document.getElementById('btn_export').addEventListener('click', ()=>{
+    const m = (inp.value || '').trim();
+    if(!m){ out.textContent = 'month_cycle required for export'; return; }
+    window.location.href = `/export/excel/reconciliation?month_cycle=${encodeURIComponent(m)}`;
+  });
+
+  document.getElementById('btn_open_payment').addEventListener('click', ()=>{
+    document.getElementById('p_date').value = new Date().toISOString().slice(0,10);
+    modal.style.display = 'block';
+  });
+
+  document.getElementById('btn_cancel_payment').addEventListener('click', ()=>{
+    modal.style.display = 'none';
+  });
+
+  document.getElementById('p_employee_id').addEventListener('blur', async (e)=>{
+    const id = (e.target.value || '').trim();
+    if(!id) return;
+    try {
+      const r = await fetch(`/employees/${encodeURIComponent(id)}`);
+      const j = await r.json();
+      if (r.ok && j.row) {
+        document.getElementById('p_employee_name').value = j.row.Name || '';
+        document.getElementById('p_unit_id').value = j.row.Unit_ID || '';
+      }
+    } catch (_) {}
+  });
+
+  document.getElementById('btn_save_payment').addEventListener('click', async ()=>{
+    const month = (inp.value || '').trim();
+    if(!month){ out.textContent = 'Set month_cycle on dashboard first'; return; }
+
+    const payload = {
+      actor_user_id: (document.getElementById('p_actor').value || '1').trim(),
+      employee_id: (document.getElementById('p_employee_id').value || '').trim(),
+      month_cycle: month,
+      amount_paid: Number(document.getElementById('p_amount_paid').value || 0),
+      payment_method: (document.getElementById('p_method').value || '').trim(),
+      reference_no: (document.getElementById('p_ref').value || '').trim(),
+      payment_date: (document.getElementById('p_date').value || '').trim(),
+    };
+
+    const r = await fetch('/recovery/payment', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const j = await r.json();
+    if (!r.ok) {
+      out.textContent = JSON.stringify(j, null, 2);
+      return;
+    }
+
+    modal.style.display = 'none';
+    await loadReconciliation();
+  });
+})();
+</script>
+{% endblock %}

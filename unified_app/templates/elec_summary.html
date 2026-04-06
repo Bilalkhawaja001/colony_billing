@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>ELEC Summary Report</h5>
+  <div class='grid'>
+    <div class='field'><label>Month</label><input id='es_month' class='form-control' placeholder='Jan-2026'></div>
+    <div class='field'><label>Unit_ID (optional)</label><input id='es_unit' class='form-control'></div>
+  </div>
+  <div class='toolbar'>
+    <button class='btn btn-primary' onclick="post('/billing/elec/compute',{month_cycle:v('es_month'),zero_attendance_policy:'zero'})">Compute ELEC</button>
+    <button class='btn btn-outline-secondary' onclick="get('/reports/elec-summary?month_cycle='+encodeURIComponent(v('es_month'))+'&unit_id='+encodeURIComponent(v('es_unit')))">View Report</button>
+  </div>
+  <pre id='out' class='mt-3'></pre>
+</div>
+{% endblock %}

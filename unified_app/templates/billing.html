@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='stack'>
+  <div class='card'>
+    <div class='d-flex justify-content-between align-items-center flex-wrap gap-2'>
+      <div>
+        <h5 class='mb-1'>Billing Control Center</h5>
+        <div class='muted mb-0'>Run billing, approve/lock cycle, fingerprint, and post-lock adjustments from one screen.</div>
+      </div>
+      <div class='chip-row'>
+        <span class='chip chip-soft'>Admin Flow</span>
+        <span class='chip chip-soft'>Maker-Checker</span>
+      </div>
+    </div>
+
+    <div class='grid mt-3'>
+      <div class='field'><label>Month Cycle</label><input id='bm' class='form-control' placeholder='Jan-2026'></div>
+      <div class='field'><label>Run Key</label><input id='rk' class='form-control' placeholder='RUN-01'></div>
+      <div class='field'><label>Run ID</label><input id='rid' class='form-control' placeholder='for approve/lock'></div>
+      <div class='field'><label>Actor User ID</label><input id='actor' class='form-control' value='1'></div>
+    </div>
+
+    <div class='toolbar mt-2'>
+      <button class='btn btn-primary' onclick='runBilling()'>Run Billing</button>
+      <button class='btn btn-outline-secondary' onclick='approveBilling()'>Approve Run</button>
+      <button class='btn btn-outline-secondary' onclick='lockBilling()'>Lock Run</button>
+      <button class='btn btn-outline-secondary' onclick='fingerprintBilling()'>Fingerprint</button>
+    </div>
+  </div>
+
+  <div class='card'>
+    <h6 class='mb-2'>ELEC Inputs</h6>
+    <div class='grid'>
+      <div class='field'><label>Unit_ID</label><input id='mu_unit' class='form-control' placeholder='for meter upsert'></div>
+      <div class='field'><label>Meter Units</label><input id='mu_units' class='form-control' type='number' min='0' step='0.0001' value='0'></div>
+    </div>
+    <div class='toolbar mt-2'>
+      <button class='btn btn-outline-secondary' onclick='upsertMeterUnits()'>Upsert MeterUnits</button>
+      <button class='btn btn-outline-secondary' onclick='computeElecSplit()'>Compute ELEC Split</button>
+    </div>
+  </div>
+
+  <div class='card'>
+    <h6 class='mb-2'>Post-Lock Adjustments</h6>
+    <div class='grid'>
+      <div class='field'><label>Employee ID</label><input id='adj_employee' class='form-control' placeholder='e.g. 1001'></div>
+      <div class='field'><label>Utility Type</label>
+        <select id='adj_utility' class='form-select'>
+          <option value='ELEC'>ELEC</option>
+          <option value='WATER'>WATER</option>
+          <option value='VAN'>VAN</option>
+          <option value='LPG'>LPG</option>
+          <option value='OTHER'>OTHER</option>
+        </select>
+      </div>
+      <div class='field'><label>Amount Delta</label><input id='adj_delta' class='form-control' type='number' step='0.01' value='0'></div>
+      <div class='field'><label>Adjustment ID (Approve)</label><input id='adj_id' class='form-control' placeholder='latest id'></div>
+    </div>
+    <div class='field mt-2'><label>Reason</label><input id='adj_reason' class='form-control' placeholder='reason required for audit trail'></div>
+
+    <div class='toolbar mt-2'>
+      <button class='btn btn-primary' onclick='createAdjustment()'>Create Adjustment</button>
+      <button class='btn btn-outline-secondary' onclick='approveAdjustment()'>Approve Adjustment</button>
+      <button class='btn btn-outline-secondary' onclick='listAdjustments()'>Refresh List</button>
+    </div>
+
+    <div class='table-responsive mt-3'>
+      <table class='table table-sm'>
+        <thead>
+          <tr>
+            <th>ID</th><th>Month</th><th>Employee</th><th>Type</th><th>Delta</th><th>Status</th><th>Created By</th><th>Approved By</th>
+          </tr>
+        </thead>
+        <tbody id='adj_rows'>
+          <tr><td colspan='8' class='text-muted'>No rows loaded</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class='card'>
+    <h6 class='mb-2'>API Response</h6>
+    <pre id='out'></pre>
+  </div>
+</div>
+{% endblock %}

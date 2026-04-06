@@ -1,0 +1,12 @@
+[
+  {
+    "severity": "ERROR",
+    "exception_code": "E_READ_REVERSE",
+    "message": "CurrentReading is less than PreviousReading; unit skipped",
+    "company_id": "N/A",
+    "unit_id": "U1",
+    "room_id": "N/A",
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31"
+  }
+]

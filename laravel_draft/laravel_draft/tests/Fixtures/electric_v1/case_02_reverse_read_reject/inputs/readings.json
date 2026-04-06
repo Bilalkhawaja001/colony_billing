@@ -1,0 +1,11 @@
+[
+  {
+    "cycle_start_date": "2026-03-01",
+    "cycle_end_date": "2026-03-31",
+    "unit_id": "U1",
+    "previous_reading": 140,
+    "current_reading": 100,
+    "reading_status": "NORMAL",
+    "updated_at": "2026-03-31T23:59:00"
+  }
+]

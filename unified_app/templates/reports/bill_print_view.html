@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Billing Print View</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+    .row { display: flex; justify-content: space-between; gap: 12px; }
+    .card { border: 1px solid #d8d8d8; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .muted { color: #666; font-size: 12px; }
+    h1 { font-size: 22px; margin: 0 0 8px 0; }
+    h2 { font-size: 16px; margin: 0 0 8px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+    th { background: #f5f5f5; text-align: left; }
+    .right { text-align: right; }
+    .total { font-weight: 700; }
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div>
+      <h1>Utility Billing Statement</h1>
+      <div class="muted">Generated: {{ current_date.strftime('%d-%b-%Y %I:%M %p') }}</div>
+    </div>
+    <button class="no-print" onclick="window.print()">Print</button>
+  </div>
+
+  <div class="card">
+    <h2>Employee</h2>
+    <div class="row">
+      <div><strong>ID:</strong> {{ bill.employee.id }}</div>
+      <div><strong>Name:</strong> {{ bill.employee.name }}</div>
+      <div><strong>Department:</strong> {{ bill.employee.department or '-' }}</div>
+      <div><strong>Unit ID:</strong> {{ bill.employee.unit_id or '-' }}</div>
+      <div><strong>Month:</strong> {{ bill.month_cycle }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Billing Lines</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Utility</th>
+          <th class="right">Qty</th>
+          <th class="right">Rate</th>
+          <th class="right">Amount</th>
+          <th>Enrichment</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in bill.items %}
+        <tr>
+          <td>{{ item.label }}</td>
+          <td class="right">{{ '%.4f'|format(item.qty) }}</td>
+          <td class="right">{{ '%.4f'|format(item.rate) }}</td>
+          <td class="right">{{ '%.2f'|format(item.amount) }}</td>
+          <td>
+            {% if item.utility_type == 'SCHOOL_VAN' %}
+              Children: {{ item.meta.child_names|join(', ') if item.meta.child_names else '-' }}
+            {% elif item.utility_type == 'ELEC' %}
+              Unit: {{ item.meta.unit_id or '-' }},
+              Meter: {{ item.meta.meter.previous_reading if item.meta.meter else '-' }} → {{ item.meta.meter.current_reading if item.meta.meter else '-' }}
+              ({{ item.meta.meter.consumed_units if item.meta.meter else '-' }} units)
+            {% elif item.utility_type in ['WATER_GENERAL','WATER_DRINKING','WATER'] %}
+              Category: {{ item.meta.category or '-' }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" class="right total">Grand Total</td>
+          <td class="right total">{{ '%.2f'|format(bill.totals.grand_total) }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>School Van Breakdown</h2>
+    <table>
+      <thead>
+        <tr><th>Child</th><th>School</th><th>Class</th><th class="right">Amount</th></tr>
+      </thead>
+      <tbody>
+        {% for c in bill.school_van.children %}
+        <tr>
+          <td>{{ c.child_name }}</td>
+          <td>{{ c.school_name or '-' }}</td>
+          <td>{{ c.class_level or '-' }}</td>
+          <td class="right">{{ '%.2f'|format(c.amount or 0) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">No school van charges.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Electricity Enrichment</h2>
+    <div><strong>Unit:</strong> {{ bill.electricity.unit_id or '-' }}</div>
+    <div><strong>Meter Reading:</strong>
+      {% if bill.electricity.meter %}
+        {{ bill.electricity.meter.previous_reading }} → {{ bill.electricity.meter.current_reading }}
+        (Consumed: {{ bill.electricity.meter.consumed_units }})
+      {% else %}
+        -
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

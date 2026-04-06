@@ -1,0 +1,188 @@
+:root{
+  --bg:#f3f5f9;
+  --surface:#ffffff;
+  --surface-2:#f9fafc;
+  --text:#1f2937;
+  --muted:#64748b;
+  --border:#d9e0ea;
+  --primary:#2f6fed;
+  --primary-strong:#1f5fe0;
+
+  --r-sm:8px;
+  --r-md:12px;
+  --r-lg:14px;
+
+  /* Elevation levels: 0/1/2 only */
+  --elev-0:none;
+  --elev-1:0 1px 2px rgba(16,24,40,.07), 0 6px 18px rgba(16,24,40,.06);
+  --elev-2:0 2px 8px rgba(16,24,40,.10), 0 14px 28px rgba(16,24,40,.10);
+
+  --space-1:8px;
+  --space-2:16px;
+  --space-3:24px;
+  --speed:180ms;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Inter,Roboto,"Segoe UI",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.app-shell{display:flex;height:100vh;overflow:hidden}
+.app-sidebar{
+  width:260px;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  padding:var(--space-2);
+  position:fixed;
+  inset:0 auto 0 0;
+  overflow:auto;
+  transition:width var(--speed) ease, transform var(--speed) ease;
+  z-index:1000;
+}
+.sidebar-collapsed .app-sidebar{width:76px}
+
+.sidebar-header{padding:6px 4px 14px 4px;margin-bottom:8px;border-bottom:1px solid var(--border)}
+.brand-logo{margin-bottom:8px}
+.brand-logo-img{width:44px;height:44px;object-fit:contain;display:block}
+.brand-title{font-size:13px;font-weight:700;line-height:1.25;letter-spacing:.2px}
+.brand-sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:600}
+.brand-sub-2{font-size:11px;color:#475569;margin-top:2px;font-weight:600;letter-spacing:.25px}
+.sidebar-collapsed .brand-logo,.sidebar-collapsed .brand-sub,.sidebar-collapsed .brand-sub-2,.sidebar-collapsed .brand-title{display:none}
+
+.sidebar-nav{display:flex;flex-direction:column;gap:6px}
+.side-link{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 10px;
+  border-radius:10px;
+  color:var(--text);text-decoration:none;
+  border:1px solid transparent;
+  transition:all var(--speed) ease;
+}
+.side-link .icon{width:20px;text-align:center;opacity:.9}
+.side-link .label{font-size:14px;font-weight:500;white-space:nowrap}
+.sidebar-collapsed .side-link .label{display:none}
+.side-link:hover{background:var(--surface-2);border-color:var(--border)}
+.side-link.active{background:#eaf1ff;border-color:#c9d9ff;color:#103b96;box-shadow:var(--elev-1)}
+
+.app-main{margin-left:260px;flex:1;display:flex;flex-direction:column;min-width:0;transition:margin-left var(--speed) ease}
+.sidebar-collapsed .app-main{margin-left:76px}
+
+.topbar{
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  padding:12px var(--space-2);
+  position:sticky;top:0;z-index:900;
+}
+.app-title{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px}
+
+.app-content{padding:var(--space-2);overflow:auto;height:100%}
+
+.elev-1{box-shadow:var(--elev-1)}
+.elev-2{box-shadow:var(--elev-2)}
+
+h1,h2,h3,h4,h5,h6{color:#0f172a;font-weight:650}
+h5{font-size:18px;margin-bottom:12px}
+h6{font-size:14px;color:#334155;margin-bottom:8px}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r-lg);
+  padding:var(--space-2);
+  box-shadow:var(--elev-1);
+  transition:box-shadow var(--speed) ease, transform var(--speed) ease;
+}
+.card:hover{box-shadow:var(--elev-2)}
+
+.nav-tabs{border-bottom:1px solid var(--border)}
+.nav-tabs .nav-link{
+  border:1px solid var(--border);
+  border-bottom-color:transparent;
+  background:var(--surface-2);
+  color:#334155;
+  border-radius:10px 10px 0 0;
+  margin-right:6px;
+  box-shadow:var(--elev-1);
+}
+.nav-tabs .nav-link.active{background:var(--surface);color:#0f172a;font-weight:600}
+
+.grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:var(--space-1)}
+.field label{display:block;font-size:12px;color:#475569;margin-bottom:4px;font-weight:600}
+
+.form-control,.form-select{
+  background:var(--surface);
+  color:var(--text);
+  border:1px solid #cfd8e3;
+  border-radius:10px;
+  min-height:38px;
+}
+.form-control:focus,.form-select:focus{border-color:#a9c3ff;box-shadow:0 0 0 3px rgba(47,111,237,.15)}
+
+.toolbar{display:flex;gap:var(--space-1);flex-wrap:wrap;margin-top:var(--space-1)}
+
+.btn{border-radius:10px;transition:all var(--speed) ease}
+.btn-primary{background:var(--primary);border-color:var(--primary);box-shadow:var(--elev-1)}
+.btn-primary:hover{background:var(--primary-strong);border-color:var(--primary-strong);box-shadow:var(--elev-2);transform:translateY(-1px)}
+.btn-outline-secondary{border-color:#cdd7e3;color:#334155;background:var(--surface)}
+.btn-outline-secondary:hover{background:#eef2f7;border-color:#b8c6d8}
+.btn-ghost{background:transparent;border:1px solid transparent;color:#334155}
+.btn-ghost:hover{background:#eef2f7;border-color:#d9e0ea}
+
+.table-responsive{
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface);
+  box-shadow:var(--elev-1);
+}
+.table{margin:0;background:var(--surface)}
+.table th{
+  background:#f7f9fc;
+  color:#0f172a;
+  border-color:#e2e8f0;
+  position:sticky;
+  top:0;
+  z-index:1;
+}
+.table td,.table th{border-color:#e2e8f0;padding:.48rem .52rem;vertical-align:middle}
+.table tbody tr:hover{background:#f8fbff}
+
+pre{
+  background:#f8fafc;
+  color:#0f172a;
+  padding:10px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  box-shadow:var(--elev-0);
+}
+
+.muted{font-size:12px;color:var(--muted);margin-top:8px}
+
+.stack{display:flex;flex-direction:column;gap:var(--space-2)}
+.chip-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
+  border:1px solid var(--border);
+}
+.chip-soft{background:#f2f6ff;color:#274690;border-color:#cbdcff}
+.chip-ok{background:#ecfdf3;color:#166534;border-color:#bbf7d0}
+
+@media (max-width: 1024px){
+  .grid{grid-template-columns:repeat(2,minmax(160px,1fr))}
+}
+@media (max-width: 768px){
+  .app-sidebar{transform:translateX(-100%)}
+  .app-main{margin-left:0}
+  .sidebar-collapsed .app-sidebar{transform:translateX(-100%);width:260px}
+  .sidebar-open .app-sidebar{transform:translateX(0)}
+  .grid{grid-template-columns:1fr}
+}

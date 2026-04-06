@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Employee Entry Helper</h5>
+
+  <div class='toolbar'>
+    <input id='s_q' class='form-control' style='max-width:320px' placeholder='Search CompanyID / CNIC_No. / Name'>
+    <button class='btn btn-outline-secondary' onclick='searchEmp()'>Find/Load</button>
+  </div>
+
+  <div class='alert alert-secondary mt-3'>
+    <b>Bulk CSV Upload</b>
+    <div class='d-flex gap-2 flex-wrap mt-2'>
+      <input id='h_csv_file' type='file' class='form-control' accept='.csv,text/csv' style='max-width:320px' onchange='helperLoadCsv()'>
+      <button class='btn btn-outline-secondary btn-sm' onclick='helperLoadCsv()'>Load Selected File</button>
+      <button class='btn btn-outline-secondary btn-sm' onclick='helperPreviewCsv()'>Preview</button>
+      <button class='btn btn-outline-secondary btn-sm' onclick='helperCommitCsv()'>Commit</button>
+    </div>
+    <div id='h_csv_status' class='small mt-2 text-muted'>No file loaded</div>
+    <div id='h_csv_preview' class='mt-2 small'></div>
+  </div>
+
+  <h6 class='mt-3'>Identity & Org</h6>
+  <div class='grid'>
+    <div class='field'><label>CompanyID</label><input id='f_CompanyID' class='form-control'></div>
+    <div class='field'><label>Name</label><input id='f_Name' class='form-control'></div>
+    <div class='field'><label>Father\'s Name</label><input id='f_FathersName' class='form-control'></div>
+    <div class='field'><label>CNIC_No.</label><input id='f_CNIC' class='form-control'></div>
+    <div class='field'><label>Mobile_No.</label><input id='f_Mobile' class='form-control'></div>
+    <div class='field'><label>Department</label><select id='f_Department' class='form-select' onchange='applySectionFilters()'></select></div>
+    <div class='field'><label>Section</label><select id='f_Section' class='form-select' onchange='applySubSectionFilters()'></select></div>
+    <div class='field'><label>Sub Section</label><select id='f_SubSection' class='form-select'></select></div>
+    <div class='field'><label>Designation</label><input id='f_Designation' class='form-control'></div>
+    <div class='field'><label>Employee Type</label><input id='f_EmployeeType' class='form-control'></div>
+  </div>
+
+  <h6 class='mt-3'>Residence</h6>
+  <div class='grid'>
+    <div class='field'><label>Colony Type</label><input id='f_ColonyType' class='form-control'></div>
+    <div class='field'><label>Block Floor</label><input id='f_BlockFloor' class='form-control'></div>
+    <div class='field'><label>Room No</label><input id='f_RoomNo' class='form-control'></div>
+    <div class='field'><label>Shared Room</label><input id='f_SharedRoom' class='form-control'></div>
+    <div class='field'><label>Join Date</label><input id='f_JoinDate' class='form-control' type='date'></div>
+    <div class='field'><label>Leave Date</label><input id='f_LeaveDate' class='form-control' type='date'></div>
+    <div class='field'><label>Active</label><select id='f_Active' class='form-select'><option>Yes</option><option>No</option></select></div>
+    <div class='field'><label>Unit_ID</label><input id='f_UnitID' class='form-control' list='unit_suggest'></div>
+    <datalist id='unit_suggest'></datalist>
+  </div>
+
+  <details class='mt-3'>
+    <summary><b>Assets</b> (collapsed)</summary>
+    <div class='grid mt-2'>
+      <div class='field'><label>Iron Cot</label><input id='f_IronCot' class='form-control'></div>
+      <div class='field'><label>Single Bed</label><input id='f_SingleBed' class='form-control'></div>
+      <div class='field'><label>Double Bed</label><input id='f_DoubleBed' class='form-control'></div>
+      <div class='field'><label>Mattress</label><input id='f_Mattress' class='form-control'></div>
+      <div class='field'><label>Sofa Set</label><input id='f_SofaSet' class='form-control'></div>
+      <div class='field'><label>Bed Sheet</label><input id='f_BedSheet' class='form-control'></div>
+      <div class='field'><label>Wardrobe</label><input id='f_Wardrobe' class='form-control'></div>
+      <div class='field'><label>Centre Table</label><input id='f_CentreTable' class='form-control'></div>
+      <div class='field'><label>Wooden Chair</label><input id='f_WoodenChair' class='form-control'></div>
+      <div class='field'><label>Dinning Table</label><input id='f_DinningTable' class='form-control'></div>
+      <div class='field'><label>Dinning Chair</label><input id='f_DinningChair' class='form-control'></div>
+      <div class='field'><label>Side Table</label><input id='f_SideTable' class='form-control'></div>
+      <div class='field'><label>Fridge</label><input id='f_Fridge' class='form-control'></div>
+      <div class='field'><label>Water Dispenser</label><input id='f_WaterDispenser' class='form-control'></div>
+      <div class='field'><label>Washing Machine</label><input id='f_WashingMachine' class='form-control'></div>
+      <div class='field'><label>Air Cooler</label><input id='f_AirCooler' class='form-control'></div>
+      <div class='field'><label>A/C</label><input id='f_AC' class='form-control'></div>
+      <div class='field'><label>LED</label><input id='f_LED' class='form-control'></div>
+      <div class='field'><label>Gyser</label><input id='f_Gyser' class='form-control'></div>
+      <div class='field'><label>Electric Kettle</label><input id='f_ElectricKettle' class='form-control'></div>
+      <div class='field'><label>Wifi Rtr</label><input id='f_WifiRtr' class='form-control'></div>
+      <div class='field'><label>Water Bottle</label><input id='f_WaterBottle' class='form-control'></div>
+      <div class='field'><label>LPG cylinder</label><input id='f_LPG' class='form-control'></div>
+      <div class='field'><label>Gas Stove</label><input id='f_GasStove' class='form-control'></div>
+      <div class='field'><label>Crockery</label><input id='f_Crockery' class='form-control'></div>
+      <div class='field'><label>Kitchen Cabinet</label><input id='f_KitchenCabinet' class='form-control'></div>
+      <div class='field'><label>Mug</label><input id='f_Mug' class='form-control'></div>
+      <div class='field'><label>Bucket</label><input id='f_Bucket' class='form-control'></div>
+      <div class='field'><label>Mirror</label><input id='f_Mirror' class='form-control'></div>
+      <div class='field'><label>Dustbin</label><input id='f_Dustbin' class='form-control'></div>
+    </div>
+  </details>
+
+  <h6 class='mt-3'>Remarks</h6>
+  <div class='field'><input id='f_Remarks' class='form-control'></div>
+
+  <div class='toolbar mt-3 d-flex gap-2 flex-wrap'>
+    <button class='btn btn-primary' onclick='addNew()'>Add New</button>
+    <button class='btn btn-outline-secondary' onclick='updateExisting()'>Update Existing</button>
+    <button class='btn btn-outline-secondary' onclick='clearForm()'>Clear</button>
+    <button class='btn btn-outline-secondary' onclick='findLoad()'>Find/Load</button>
+    <button class='btn btn-outline-danger' onclick='softDelete()'>Delete</button>
+    <button class='btn btn-outline-secondary' onclick='listEmployeesFromHelper(false)'>List All</button>
+    <button class='btn btn-outline-secondary' onclick='listEmployeesFromHelper(true)'>List Active</button>
+    <button class='btn btn-outline-dark' onclick='clearEmployeeList()'>Clear Table (UI)</button>
+  </div>
+
+  <pre id='out' class='mt-3'></pre>
+  <div id='helper_emp_list' class='mt-3'></div>
+</div>
+
+<script>
+let META=[];
+let H_CSV_TEXT='';
+function val(id){return (document.getElementById(id)?.value||'').trim();}
+function setv(id,x){const e=document.getElementById(id); if(e) e.value=(x??'');}
+
+function payload(){
+  return {
+    CompanyID:val('f_CompanyID'), Name:val('f_Name'), "Father's Name":val('f_FathersName'), "CNIC_No.":val('f_CNIC'), "Mobile_No.":val('f_Mobile'),
+    Department:val('f_Department'), Section:val('f_Section'), "Sub Section":val('f_SubSection'), Designation:val('f_Designation'), "Employee Type":val('f_EmployeeType'),
+    "Colony Type":val('f_ColonyType'), "Block Floor":val('f_BlockFloor'), "Room No":val('f_RoomNo'), "Shared Room":val('f_SharedRoom'),
+    "Join Date":val('f_JoinDate'), "Leave Date":val('f_LeaveDate'), Active:val('f_Active')||'Yes',
+    "Iron Cot":val('f_IronCot'), "Single Bed":val('f_SingleBed'), "Double Bed":val('f_DoubleBed'), "Mattress":val('f_Mattress'),
+    "Sofa Set":val('f_SofaSet'), "Bed Sheet":val('f_BedSheet'), "Wardrobe":val('f_Wardrobe'), "Centre Table":val('f_CentreTable'), "Wooden Chair":val('f_WoodenChair'),
+    "Dinning Table":val('f_DinningTable'), "Dinning Chair":val('f_DinningChair'), "Side Table":val('f_SideTable'), "Fridge":val('f_Fridge'),
+    "Water Dispenser":val('f_WaterDispenser'), "Washing Machine":val('f_WashingMachine'), "Air Cooler":val('f_AirCooler'), "A/C":val('f_AC'),
+    "LED":val('f_LED'), "Gyser":val('f_Gyser'), "Electric Kettle":val('f_ElectricKettle'), "Wifi Rtr":val('f_WifiRtr'), "Water Bottle":val('f_WaterBottle'),
+    "LPG cylinder":val('f_LPG'), "Gas Stove":val('f_GasStove'), "Crockery":val('f_Crockery'), "Kitchen Cabinet":val('f_KitchenCabinet'),
+    "Mug":val('f_Mug'), "Bucket":val('f_Bucket'), "Mirror":val('f_Mirror'), "Dustbin":val('f_Dustbin'), "Remarks":val('f_Remarks'),
+    Unit_ID:val('f_UnitID')
+  };
+}
+
+function fill(r){
+  setv('f_CompanyID',r['CompanyID']); setv('f_Name',r['Name']); setv('f_FathersName',r["Father's Name"]); setv('f_CNIC',r['CNIC_No.']);
+  setv('f_Mobile',r['Mobile_No.']); setv('f_Department',r['Department']); setv('f_Section',r['Section']); setv('f_SubSection',r['Sub Section']);
+  setv('f_Designation',r['Designation']); setv('f_EmployeeType',r['Employee Type']); setv('f_ColonyType',r['Colony Type']); setv('f_BlockFloor',r['Block Floor']);
+  setv('f_RoomNo',r['Room No']); setv('f_SharedRoom',r['Shared Room']); setv('f_JoinDate',r['Join Date']); setv('f_LeaveDate',r['Leave Date']);
+  setv('f_Active',r['Active']||'Yes'); setv('f_UnitID',r['Unit_ID']); setv('f_Remarks',r['Remarks']);
+  ['IronCot','SingleBed','DoubleBed','Mattress','SofaSet','BedSheet','Wardrobe','CentreTable','WoodenChair','DinningTable','DinningChair','SideTable','Fridge','WaterDispenser','WashingMachine','AirCooler','AC','LED','Gyser','ElectricKettle','WifiRtr','WaterBottle','LPG','GasStove','Crockery','KitchenCabinet','Mug','Bucket','Mirror','Dustbin']
+    .forEach(k=>setv('f_'+k,r[k.replace('AC','A/C').replace('LPG','LPG cylinder').replace('IronCot','Iron Cot').replace('SingleBed','Single Bed').replace('DoubleBed','Double Bed').replace('SofaSet','Sofa Set').replace('BedSheet','Bed Sheet').replace('CentreTable','Centre Table').replace('WoodenChair','Wooden Chair').replace('DinningTable','Dinning Table').replace('DinningChair','Dinning Chair').replace('SideTable','Side Table').replace('WaterDispenser','Water Dispenser').replace('WashingMachine','Washing Machine').replace('AirCooler','Air Cooler').replace('ElectricKettle','Electric Kettle').replace('WifiRtr','Wifi Rtr').replace('WaterBottle','Water Bottle').replace('GasStove','Gas Stove').replace('KitchenCabinet','Kitchen Cabinet')]));
+}
+
+async function api(method,url,data,opts={}){
+  const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});
+  const j=await r.json();
+  if(!opts.silent){
+    document.getElementById('out').textContent=JSON.stringify(j,null,2);
+  }
+  return j;
+}
+async function addNew(){ await api('POST','/employees/upsert',payload()); }
+async function updateExisting(){ await api('POST','/employees/upsert',payload()); }
+async function softDelete(){ const id=val('f_CompanyID'); if(!id) return; await api('DELETE','/employees/'+encodeURIComponent(id)); }
+function clearForm(){ document.querySelectorAll('[id^="f_"]').forEach(x=>x.value=''); setv('f_Active','Yes'); }
+async function findLoad(){ const id=val('f_CompanyID')||val('s_q'); if(!id) return; const j=await api('GET','/employees/'+encodeURIComponent(id)); if(j.status==='ok') fill(j.row); }
+async function searchEmp(){ const q=val('s_q'); const j=await api('GET','/employees/search?q='+encodeURIComponent(q)); }
+
+async function helperLoadCsv(){
+  const f = document.getElementById('h_csv_file')?.files?.[0];
+  if(!f){ document.getElementById('out').textContent='Please select CSV file'; return; }
+  H_CSV_TEXT = await f.text();
+  const statusEl = document.getElementById('h_csv_status');
+  if(statusEl) statusEl.textContent = `Loaded: ${f.name} (${f.size} bytes)`;
+
+  const lines = (H_CSV_TEXT || '').split(/\r?\n/).filter(x => x.trim() !== '');
+  const header = lines[0] || '';
+  const dataRows = Math.max(0, lines.length - 1);
+  const sample = lines.slice(1, 4);
+  document.getElementById('h_csv_preview').innerHTML =
+    `<div>Rows detected: <b>${dataRows}</b></div>` +
+    (header ? `<div class='mt-1 text-muted'>Header: ${header}</div>` : '') +
+    (sample.length ? `<div class='mt-1'>Sample rows:<br>${sample.map(s=>`<code>${s}</code>`).join('<br>')}</div>` : '');
+
+  document.getElementById('out').textContent = JSON.stringify({status:'ok', loaded_file:f.name, size_bytes:f.size, rows_detected:dataRows}, null, 2);
+}
+async function helperPreviewCsv(){
+  const txt = H_CSV_TEXT || '';
+  if(!txt.trim()){ document.getElementById('out').textContent='Load CSV file first'; return; }
+  const r=await fetch('/employees/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_text:txt,commit:false})});
+  const j=await r.json(); document.getElementById('out').textContent=JSON.stringify(j,null,2);
+  const rows=j.preview||[];
+  document.getElementById('h_csv_preview').innerHTML = j.status==='ok' ? (`accepted=${j.accepted_rows||0}, rejected=${j.rejected_rows||0}` + (rows.length?"<table class='table table-sm mt-2'><tr><th>row</th><th>CompanyID</th><th>mode</th></tr>"+rows.map(x=>`<tr><td>${x.row_no}</td><td>${x.CompanyID||''}</td><td>${x.mode||''}</td></tr>`).join('')+"</table>":'')) : `<span class='text-danger'>${j.error||'Preview failed'}</span>`;
+}
+async function helperCommitCsv(){
+  const txt = H_CSV_TEXT || '';
+  if(!txt.trim()){ document.getElementById('out').textContent='Load CSV file first'; return; }
+  const r=await fetch('/employees/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({csv_text:txt,commit:true})});
+  const j=await r.json(); document.getElementById('out').textContent=JSON.stringify(j,null,2);
+}
+
+async function loadMeta(){
+  const j = await api('GET','/employees/meta/departments', null, {silent:true});
+  META = (j.rows||[]);
+  const deps=[...new Set(META.map(x=>x.Department).filter(Boolean))];
+  const d=document.getElementById('f_Department'); d.innerHTML='<option value=""></option>'+deps.map(x=>`<option>${x}</option>`).join('');
+}
+function applySectionFilters(){
+  const dep=val('f_Department');
+  const secs=[...new Set(META.filter(x=>x.Department===dep).map(x=>x.Section).filter(Boolean))];
+  const s=document.getElementById('f_Section'); s.innerHTML='<option value=""></option>'+secs.map(x=>`<option>${x}</option>`).join('');
+  applySubSectionFilters();
+}
+function applySubSectionFilters(){
+  const dep=val('f_Department'), sec=val('f_Section');
+  const subs=[...new Set(META.filter(x=>x.Department===dep && x.Section===sec).map(x=>x['Sub Section']).filter(Boolean))];
+  const s=document.getElementById('f_SubSection'); s.innerHTML='<option value=""></option>'+subs.map(x=>`<option>${x}</option>`).join('');
+}
+
+async function refreshUnitSuggest(){
+  const u='/units/suggest?colony_type='+encodeURIComponent(val('f_ColonyType'))+'&block_floor='+encodeURIComponent(val('f_BlockFloor'))+'&room_no='+encodeURIComponent(val('f_RoomNo'));
+  const j=await api('GET',u,null,{silent:true});
+  const dl=document.getElementById('unit_suggest'); dl.innerHTML='';
+  (j.rows||[]).forEach(r=>{const o=document.createElement('option');o.value=r['Unit_ID'];o.label=`${r['Colony Type']||''} ${r['Block Floor']||''} ${r['Room No']||''}`;dl.appendChild(o);});
+  if((j.rows||[]).length===1 && !val('f_UnitID')) setv('f_UnitID', j.rows[0]['Unit_ID']);
+}
+async function resolveUnit(){
+  const id=val('f_UnitID'); if(!id) return;
+  const j=await api('GET','/units/resolve/'+encodeURIComponent(id),null,{silent:true});
+  if(j.status==='ok'){ setv('f_ColonyType',j.row['Colony Type']); setv('f_BlockFloor',j.row['Block Floor']); setv('f_RoomNo',j.row['Room No']); }
+}
+
+function renderHelperEmployees(rows){
+  const box = document.getElementById('helper_emp_list');
+  if(!rows || !rows.length){ box.innerHTML = "<div class='text-muted small'>No employees found.</div>"; return; }
+
+  const cols = [
+    'CompanyID','Name',"Father's Name",'CNIC_No.','Mobile_No.','Department','Section','Sub Section','Designation','Employee Type',
+    'Colony Type','Block Floor','Room No','Shared Room','Join Date','Leave Date','Active','Iron Cot','Single Bed','Double Bed',
+    'Mattress','Sofa Set','Bed Sheet','Wardrobe','Centre Table','Wooden Chair','Dinning Table','Dinning Chair','Side Table','Fridge',
+    'Water Dispenser','Washing Machine','Air Cooler','A/C','LED','Gyser','Electric Kettle','Wifi Rtr','Water Bottle','LPG cylinder',
+    'Gas Stove','Crockery','Kitchen Cabinet','Mug','Bucket','Mirror','Dustbin','Remarks','Unit_ID'
+  ];
+
+  const thead = '<tr>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>';
+  const tbody = rows.map(r => '<tr>' + cols.map(c => `<td>${(r[c] ?? '')}</td>`).join('') + '</tr>').join('');
+  box.innerHTML = `<div class='table-responsive'><table class='table table-sm table-striped'><thead>${thead}</thead><tbody>${tbody}</tbody></table></div>`;
+}
+
+async function listEmployeesFromHelper(activeOnly){
+  const r = await fetch('/employees?active_only=' + (activeOnly ? '1' : '0'));
+  const data = await r.json();
+  document.getElementById('out').textContent = JSON.stringify({status:data.status, count:(data.rows||[]).length, active_only:!!activeOnly}, null, 2);
+  renderHelperEmployees(data.rows || []);
+}
+
+function clearEmployeeList(){
+  document.getElementById('helper_emp_list').innerHTML='';
+  document.getElementById('out').textContent = JSON.stringify({status:'ok', message:'Table cleared (UI only)'}, null, 2);
+}
+
+['f_ColonyType','f_BlockFloor','f_RoomNo'].forEach(id=>document.getElementById(id).addEventListener('change',refreshUnitSuggest));
+document.getElementById('f_UnitID').addEventListener('change',resolveUnit);
+loadMeta();
+</script>
+{% endblock %}

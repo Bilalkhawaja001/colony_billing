@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Occupancy (/occupancy)</h5>
+  <div class='grid'>
+    <div class='field'><label>Month</label><input id='oc_month' class='form-control' placeholder='Jan-2026'></div>
+    <div class='field'><label>Category</label><input id='oc_category' class='form-control' placeholder='Family A+'></div>
+    <div class='field'><label>Block/Floor</label><input id='oc_block' class='form-control'></div>
+    <div class='field'><label>Room No</label><input id='oc_room' class='form-control'></div>
+    <div class='field'><label>Unit_ID</label><input id='oc_unit' class='form-control'></div>
+    <div class='field'>
+      <label>CompanyID (search)</label>
+      <input id='oc_emp' class='form-control' list='emp_list' oninput='onCompanyInput()' placeholder='Type CompanyID or Name'>
+      <datalist id='emp_list'></datalist>
+    </div>
+    <div class='field'><label>Employee Name (RO)</label><input id='oc_name' class='form-control' readonly></div>
+    <div class='field'><label>Department (RO)</label><input id='oc_dept' class='form-control' readonly></div>
+    <div class='field'><label>Designation (RO)</label><input id='oc_desg' class='form-control' readonly></div>
+    <div class='field'><label>Attendance</label><input id='oc_att' class='form-control' type='number' min='0' step='1' value='0'></div>
+  </div>
+  <div class='toolbar'>
+    <button class='btn btn-outline-secondary' onclick='loadEmployees()'>Refresh Employees</button>
+    <button class='btn btn-primary' onclick="post('/occupancy/upsert',{month_cycle:v('oc_month'),category:v('oc_category'),block_floor:v('oc_block'),room_no:v('oc_room'),unit_id:v('oc_unit'),CompanyID:v('oc_emp').split(' ')[0],active_days:n('oc_att')})">Upsert</button>
+    <button class='btn btn-outline-secondary' onclick="get('/occupancy?month_cycle='+encodeURIComponent(v('oc_month')))">List</button>
+  </div>
+  <pre id='out' class='mt-3'></pre>
+</div>
+
+<script>
+let EMP_CACHE = [];
+
+async function loadEmployees(){
+  const r = await fetch('/employees?active_only=1');
+  const data = await r.json();
+  EMP_CACHE = data.rows || [];
+  const dl = document.getElementById('emp_list');
+  dl.innerHTML = '';
+  EMP_CACHE.forEach(e => {
+    const o = document.createElement('option');
+    o.value = `${e.CompanyID} - ${e.Name}`;
+    dl.appendChild(o);
+  });
+}
+
+function onCompanyInput(){
+  const raw = (document.getElementById('oc_emp').value || '').trim();
+  const cid = raw.split(' ')[0];
+  const e = EMP_CACHE.find(x => x.CompanyID === cid);
+  document.getElementById('oc_name').value = e ? (e.Name || '') : '';
+  document.getElementById('oc_dept').value = e ? (e.Department || '') : '';
+  document.getElementById('oc_desg').value = e ? (e.Designation || '') : '';
+}
+
+loadEmployees();
+</script>
+{% endblock %}

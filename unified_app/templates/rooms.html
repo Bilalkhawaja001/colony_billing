@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class='card'>
+  <h5>Rooms Snapshot (/rooms)</h5>
+  <div class='grid'>
+    <div class='field'><label>Month</label><input id='rm_month' class='form-control' placeholder='Jan-2026'></div>
+    <div class='field'><label>Category</label><input id='rm_category' class='form-control' placeholder='Family A+'></div>
+    <div class='field'><label>Block/Floor</label><input id='rm_block' class='form-control'></div>
+    <div class='field'><label>Room No</label><input id='rm_room' class='form-control'></div>
+    <div class='field'><label>Unit_ID</label><input id='rm_unit' class='form-control'></div>
+  </div>
+  <div class='toolbar'>
+    <button class='btn btn-primary' onclick="post('/rooms/upsert',{month_cycle:v('rm_month'),category:v('rm_category'),block_floor:v('rm_block'),room_no:v('rm_room'),unit_id:v('rm_unit')})">Upsert</button>
+    <button class='btn btn-outline-secondary' onclick="get('/rooms?month_cycle='+encodeURIComponent(v('rm_month')))">List</button>
+  </div>
+  <pre id='out' class='mt-3'></pre>
+</div>
+{% endblock %}
