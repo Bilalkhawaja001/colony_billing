@@ -45,13 +45,13 @@
         <button class="btn" type="button" onclick="loadCsvFile()">Load Selected File</button>
         <button class="btn" type="button" onclick="previewBulk()">Import Preview</button>
         <button class="btn btn-success" type="button" onclick="commitBulk()">Commit Valid Rows</button>
-      </div>
-      <div class="banner small" style="margin-top:8px">
-        <div><b>Expected header order</b></div>
-        <code id="bulk_header_line"></code>
-        <div style="margin-top:6px"><b>Sample row</b></div>
-        <code id="bulk_sample_line"></code>
-      </div>
+        </div>
+        <div class="banner small" style="margin-top:8px">
+          <div><b>Expected header order</b></div>
+          <code id="bulk_header_line"></code>
+          <div style="margin-top:6px"><b>Sample row</b></div>
+          <code id="bulk_sample_line"></code>
+        </div>
 
       <div class="grid" style="margin-top:12px">
         <div class="col-3 card">
