@@ -3,8 +3,16 @@
 @section('page_subtitle','Flask-parity Employee Master + Family + Occupancy in one workspace.')
 @section('content')
 <div class="card">
+  <div class="module-intro">
+    <div>
+      <h3>People & Residency Workspace</h3>
+      <p>Unified employee, family, and occupancy operations in one operator-focused shell. All existing actions and API calls stay intact.</p>
+    </div>
+    <span class="badge">Parity Workspace</span>
+  </div>
+
   <div class="toolbar sticky-actions" style="margin-bottom:12px">
-    <div class="btn-group" role="group" aria-label="People Residency tabs">
+    <div class="segmented" role="group" aria-label="People Residency tabs">
       <button id="tab_btn_employee" class="btn btn-primary" type="button" onclick="setPeopleTab('employee')">Employee</button>
       <button id="tab_btn_family" class="btn" type="button" onclick="setPeopleTab('family')">Family</button>
       <button id="tab_btn_occupancy" class="btn" type="button" onclick="setPeopleTab('occupancy')">Occupancy</button>
@@ -14,13 +22,16 @@
   {{-- EMPLOYEE TAB --}}
   <div id="people_tab_employee" style="margin-top:8px">
     <div class="toolbar sticky-actions" style="margin-bottom:12px">
-      <button id="mode_quick" class="btn btn-primary" type="button" onclick="setMode('quick')">Quick Add/Edit</button>
-      <button id="mode_bulk" class="btn" type="button" onclick="setMode('bulk')">Bulk Upload</button>
-      <button id="mode_manage" class="btn" type="button" onclick="setMode('manage')">Manage/List</button>
+      <div class="segmented">
+        <button id="mode_quick" class="btn btn-primary" type="button" onclick="setMode('quick')">Quick Add/Edit</button>
+        <button id="mode_bulk" class="btn" type="button" onclick="setMode('bulk')">Bulk Upload</button>
+        <button id="mode_manage" class="btn" type="button" onclick="setMode('manage')">Manage/List</button>
+      </div>
     </div>
 
     <div id="quick_panel" class="banner" style="margin-bottom:10px">
       <div class="toolbar">
+        <span class="badge">Quick Mode</span>
         <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
         <button class="btn" type="button" onclick="fetchById()">Fetch by ID</button>
         <button class="btn" type="button" onclick="saveToRegistry()">Save Draft Registry</button>
@@ -34,6 +45,12 @@
         <button class="btn" type="button" onclick="loadCsvFile()">Load Selected File</button>
         <button class="btn" type="button" onclick="previewBulk()">Import Preview</button>
         <button class="btn btn-success" type="button" onclick="commitBulk()">Commit Valid Rows</button>
+      </div>
+      <div class="banner small" style="margin-top:8px">
+        <div><b>Expected header order</b></div>
+        <code id="bulk_header_line"></code>
+        <div style="margin-top:6px"><b>Sample row</b></div>
+        <code id="bulk_sample_line"></code>
       </div>
 
       <div class="grid" style="margin-top:12px">
@@ -94,9 +111,11 @@
 
     <div id="quick_form_panel">
       <div class="toolbar" style="margin-bottom:8px">
-        <button class="btn" type="button" onclick="showTab('basic')">Basic Info</button>
-        <button class="btn" type="button" onclick="showTab('res')">Residence</button>
-        <button class="btn" type="button" onclick="showTab('assets')">Assets</button>
+        <div class="segmented">
+          <button class="btn" type="button" onclick="showTab('basic')">Basic Info</button>
+          <button class="btn" type="button" onclick="showTab('res')">Residence</button>
+          <button class="btn" type="button" onclick="showTab('assets')">Assets</button>
+        </div>
       </div>
 
       <div id="tab-basic" class="form-grid">
@@ -172,7 +191,13 @@
 
   {{-- FAMILY TAB --}}
   <div id="people_tab_family" style="display:none;margin-top:16px">
-    <h4>Family</h4>
+    <div class="module-intro">
+      <div>
+        <h4>Family</h4>
+        <p>Household-level details, school-going counts, and van usage remain on the same endpoints.</p>
+      </div>
+      <span class="badge success">Family Data</span>
+    </div>
     <div class="banner small" id="family_header">Select an employee to load family details.</div>
     <div class="toolbar" style="margin:8px 0">
       <button class="btn" type="button" onclick="reloadFamily()">Reload Family</button>
@@ -197,7 +222,13 @@
 
   {{-- OCCUPANCY TAB --}}
   <div id="people_tab_occupancy" style="display:none;margin-top:16px">
-    <h4>Occupancy</h4>
+    <div class="module-intro">
+      <div>
+        <h4>Occupancy</h4>
+        <p>Occupancy context, room linkage, and related workspace launch remain functionally unchanged.</p>
+      </div>
+      <span class="badge warn">Occupancy</span>
+    </div>
     <div class="banner small" id="occupancy_header">Select an employee to load occupancy context.</div>
     <div class="toolbar" style="margin:8px 0">
       <button class="btn" type="button" onclick="reloadOccupancy()">Reload Occupancy</button>
@@ -212,8 +243,33 @@
 const csrf=@json(csrf_token());
 let BULK_CSV_TEXT='';
 let EMP_ROWS=[]; let EMP_FILTERED=[]; let EMP_PAGE=1; const PAGE_SIZE=25;
+const BULK_COLUMNS=['CompanyID','Name',"Father's Name",'CNIC_No.','Mobile_No.','Department','Section','Sub Section','Designation','Employee Type','Colony Type','Block Floor','Room No','Shared Room','Join Date','Unit_ID'];
+const BULK_SAMPLE_ROW=['E1001','Ali Khan','Muhammad Ashraf','42101-1234567-1','03001234567','Admin','HR','Payroll','Officer','Staff','Family','Block A','R-12','No','2024-01-15','U-001'];
 
 function v(id){ return (document.getElementById(id)?.value||'').trim(); }
+function empVal(r,key){
+ const map={
+ 'CompanyID':['CompanyID','company_id'],
+ 'Name':['Name','name'],
+ "Father's Name":["Father's Name",'father_name'],
+ 'CNIC_No.':['CNIC_No.','cnic_no'],
+ 'Mobile_No.':['Mobile_No.','mobile_no'],
+ 'Department':['Department','department'],
+ 'Section':['Section','section'],
+ 'Sub Section':['Sub Section','sub_section'],
+ 'Designation':['Designation','designation'],
+ 'Employee Type':['Employee Type','employee_type'],
+ 'Colony Type':['Colony Type','colony_type'],
+ 'Block Floor':['Block Floor','block_floor'],
+ 'Room No':['Room No','room_no'],
+ 'Shared Room':['Shared Room','shared_room'],
+ 'Join Date':['Join Date','join_date'],
+ 'Unit_ID':['Unit_ID','unit_id'],
+ 'Active':['Active','active']
+ };
+ for(const k of (map[key]||[key])){ if(r && r[k]!==undefined && r[k]!==null) return r[k]; }
+ return '';
+}
 let SELECTED_EMPLOYEE_STATE = null;
 function normalizedRowId(source=null){
   return String(
@@ -628,11 +684,11 @@ async function commitBulk(){
 function applyFilters(){
   const q=v('mf_q').toLowerCase(), d=v('mf_dept').toLowerCase(), g=v('mf_desg').toLowerCase(), a=v('mf_active');
   EMP_FILTERED=EMP_ROWS.filter(r=>{
-    const any=[r.CompanyID,r.Name,r['CNIC_No.'],r.Department,r.Designation,r.Unit_ID].join(' ').toLowerCase();
+    const any=[empVal(r,'CompanyID'),empVal(r,'Name'),empVal(r,'CNIC_No.'),empVal(r,'Department'),empVal(r,'Designation'),empVal(r,'Unit_ID')].join(' ').toLowerCase();
     if(q && !any.includes(q)) return false;
-    if(d && !(r.Department||'').toLowerCase().includes(d)) return false;
-    if(g && !(r.Designation||'').toLowerCase().includes(g)) return false;
-    if(a && (r.Active||'')!==a) return false;
+    if(d && !String(empVal(r,'Department')||'').toLowerCase().includes(d)) return false;
+    if(g && !String(empVal(r,'Designation')||'').toLowerCase().includes(g)) return false;
+    if(a && String(empVal(r,'Active')||'')!==a) return false;
     return true;
   });
   EMP_PAGE=1; renderRows();
@@ -649,7 +705,7 @@ function renderRows(){
   const total=EMP_FILTERED.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE)); if(EMP_PAGE>pages) EMP_PAGE=pages;
   const s=(EMP_PAGE-1)*PAGE_SIZE, e=Math.min(total,s+PAGE_SIZE), rows=EMP_FILTERED.slice(s,e);
   document.getElementById('emp_page_info').textContent=`Showing ${s+1}-${e} of ${total} (page ${EMP_PAGE}/${pages})`;
-  box.innerHTML='<table><thead><tr><th>CompanyID</th><th>Name</th><th>Department</th><th>Designation</th><th>Unit_ID</th><th>Active</th><th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr><td>${r.CompanyID||''}</td><td>${r.Name||''}</td><td>${r.Department||''}</td><td>${r.Designation||''}</td><td>${r.Unit_ID||''}</td><td>${r.Active||''}</td><td><button class="btn" onclick='editRow(${JSON.stringify(r.CompanyID)})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
+  box.innerHTML='<table><thead><tr>'+BULK_COLUMNS.map(c=>`<th>${c}</th>`).join('')+'<th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr>${BULK_COLUMNS.map(c=>`<td>${empVal(r,c)||''}</td>`).join('')}<td><button class="btn" onclick='editRow(${JSON.stringify(empVal(r,'CompanyID'))})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
 }
 async function editRow(id){
   const targetId=String(id ?? '').trim();
@@ -666,6 +722,8 @@ async function editRow(id){
 function prevEmpPage(){ if(EMP_PAGE>1){EMP_PAGE--; renderRows();} }
 function nextEmpPage(){ const p=Math.max(1,Math.ceil(EMP_FILTERED.length/PAGE_SIZE)); if(EMP_PAGE<p){EMP_PAGE++; renderRows();} }
 
+document.getElementById('bulk_header_line').textContent=BULK_COLUMNS.join(',');
+document.getElementById('bulk_sample_line').textContent=BULK_SAMPLE_ROW.join(',');
 showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref();
 </script>
 @endsection
