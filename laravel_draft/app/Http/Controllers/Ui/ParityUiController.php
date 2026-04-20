@@ -90,6 +90,14 @@ class ParityUiController extends Controller
         ]);
     }
 
+    public function monthlyActiveDays(Request $request)
+    {
+        return view('ui.monthly-active-days', [
+            'billingMonthDate' => (string) ($request->query('billing_month_date') ?? now()->format('Y-m-01')),
+            'rows' => [],
+        ]);
+    }
+
     public function elecSummary(Request $request)
     {
         return view('ui.elec-summary', [

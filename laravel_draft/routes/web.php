@@ -8,6 +8,7 @@ use App\Http\Controllers\Billing\MasterDataDraftController;
 use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Billing\FamilyRegistryResultsController;
 use App\Http\Controllers\Billing\EmployeesMeterParityController;
+use App\Http\Controllers\Billing\MonthlyActiveDaysController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
@@ -36,6 +37,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
+    Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
         return view('ui.transport', [
@@ -63,6 +65,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/results/unit-wise', fn () => redirect('/reporting'));
     Route::get('/ui/logs', fn () => redirect('/reporting'));
     Route::get('/ui/employee-master', fn () => redirect('/people-residency'));
+    Route::get('/ui/monthly-active-days', fn () => redirect('/active-days-monthly'));
     Route::get('/ui/employees', fn () => redirect('/people-residency'));
     Route::get('/ui/employee-helper', fn () => redirect('/people-residency'));
     Route::get('/ui/inputs/hr', fn () => redirect('/people-residency'));
@@ -184,6 +187,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/water/occupancy-snapshot', [BillingDraftController::class, 'waterOccupancySnapshot']);
     Route::get('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsGet']);
     Route::get('/api/water/allocation-preview', [BillingDraftController::class, 'waterAllocationPreview']);
+    Route::get('/active-days-monthly/template', [MonthlyActiveDaysController::class, 'template']);
+    Route::get('/active-days-monthly/rows', [MonthlyActiveDaysController::class, 'rows']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
@@ -208,6 +213,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsUpsert']);
 
     Route::post('/employees/import', [EmployeesMeterParityController::class, 'employeesImport']);
+    Route::post('/active-days-monthly/preview', [MonthlyActiveDaysController::class, 'preview']);
+    Route::post('/active-days-monthly/import', [MonthlyActiveDaysController::class, 'import']);
     Route::post('/employees/upsert', [EmployeesMeterParityController::class, 'employeesUpsert']);
     Route::post('/employees/add', [EmployeesMeterParityController::class, 'employeesAdd']);
     Route::patch('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeePatch']);

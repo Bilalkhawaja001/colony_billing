@@ -4,6 +4,7 @@ namespace App\Services\ElectricV1;
 
 use App\Repositories\ElectricV1\{AllowanceRepository, ReadingsRepository, AttendanceRepository, OccupancyRepository, AdjustmentsRepository, OutputRepository, AuditRepository, MasterRepository, ControlRepository};
 use App\Services\ElectricV1\Domain\{Validators, ConsumptionEngine, ExplicitElectricBillingCalculator};
+use App\Models\ElectricActiveDaysMonthly;
 use Illuminate\Support\Facades\DB;
 
 class OrchestrationService
@@ -38,6 +39,11 @@ class OrchestrationService
         $runId = 'RUN-'.substr(bin2hex(random_bytes(8)), 0, 12);
         $runStart = gmdate('c');
         $billingMonthDays = ExplicitElectricBillingCalculator::billingMonthDays($billingMonthDate);
+        $monthlyActiveDays = ElectricActiveDaysMonthly::query()
+            ->whereDate('billing_month_date', $billingMonthDate)
+            ->pluck('active_days', 'company_id')
+            ->map(fn ($value) => (float) $value)
+            ->all();
 
         $empRows = $this->master->listEmployees();
         $allowRows = $this->allowance->listAllowances();
@@ -124,12 +130,13 @@ class OrchestrationService
                     $issues[] = ['code' => 'E_EMP_NOT_ELIGIBLE', 'message' => 'Employee missing in master', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
                     continue;
                 }
+                $hasMonthlyOverride = $resType !== 'HOUSE' && array_key_exists($companyId, $monthlyActiveDays);
                 $attRow = $attByCompany[$companyId] ?? null;
-                if (!$attRow || !is_numeric($attRow['attendance_days'] ?? null)) {
+                if (!$hasMonthlyOverride && (!$attRow || !is_numeric($attRow['attendance_days'] ?? null))) {
                     $issues[] = ['code' => 'E_ACTIVE_DAYS_MISSING', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
                     continue;
                 }
-                $attendanceDays = (float)$attRow['attendance_days'];
+                $attendanceDays = $hasMonthlyOverride ? (float) $monthlyActiveDays[$companyId] : (float)$attRow['attendance_days'];
                 if ($attendanceDays < 0) {
                     $issues[] = ['code' => 'E_ACTIVE_DAYS_INVALID', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
                     continue;
