@@ -123,6 +123,7 @@ class OrchestrationService
                 }
             }
 
+            $attendanceByEmployee = [];
             $activeDaysByEmployee = [];
             $unitActiveDays = 0.0;
             foreach ($employeeIds as $companyId) {
@@ -142,6 +143,7 @@ class OrchestrationService
                     continue;
                 }
 
+                $attendanceByEmployee[$companyId] = $attendanceDays;
                 $employeeUnitRows = $occByCompanyUnit[$companyId.'|'.$unitId] ?? [];
                 $employeeActiveDays = ExplicitElectricBillingCalculator::employeeActiveDaysInUnit($employeeUnitRows, $cycleStart, $cycleEnd, $attendanceDays);
                 $activeDaysByEmployee[$companyId] = $employeeActiveDays;
@@ -154,17 +156,20 @@ class OrchestrationService
                 continue;
             }
 
-            $runningAllocated = 0.0;
             $grossUnits = (float)$cons['result']['gross_units'];
             $employeeIds = array_values(array_filter($employeeIds, fn($cid) => array_key_exists($cid, $activeDaysByEmployee)));
+            $roomShared = $resType === 'HOUSE'
+                ? ['presence' => [], 'gross' => [], 'allowance' => []]
+                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays);
+
             foreach ($employeeIds as $index => $companyId) {
                 $employeeActiveDays = (float)($activeDaysByEmployee[$companyId] ?? 0.0);
                 $empUsedElec = $resType === 'HOUSE'
                     ? round($grossUnits, 4)
-                    : ExplicitElectricBillingCalculator::allocateUsageShare($grossUnits, $employeeActiveDays, $unitActiveDays, $index === count($employeeIds) - 1, $runningAllocated);
+                    : round((float)($roomShared['gross'][$companyId] ?? 0.0), 4);
                 $eligibleUnits = $resType === 'HOUSE'
                     ? round($unitFreeElectric, 4)
-                    : ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, $roomPersons, $billingMonthDays, $employeeActiveDays);
+                    : ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, 1, $billingMonthDays, $employeeActiveDays);
                 $billableUnits = ExplicitElectricBillingCalculator::billableUnits($empUsedElec, $eligibleUnits);
                 $adj = (float)($adjMap[$companyId.'|'.$unitId] ?? 0.0);
                 $netAfterAdj = round(max(0.0, $billableUnits + $adj), 4);
