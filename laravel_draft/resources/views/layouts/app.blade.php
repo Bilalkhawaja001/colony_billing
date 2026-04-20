@@ -207,6 +207,7 @@
             <div class="nav-section">
                 <div class="nav-head">Operations</div>
                 <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency"><span class="nav-ico">P</span>People & Residency</a>
+                <a class="{{ request()->is('active-days-monthly') || request()->is('ui/monthly-active-days') ? 'active' : '' }}" href="/active-days-monthly"><span class="nav-ico">AD</span>Active Days Monthly</a>
                 <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">T</span>Transport</a>
                 <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meters & Readings</a>
                 <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory"><span class="nav-ico">U</span>Unit Directory</a>
