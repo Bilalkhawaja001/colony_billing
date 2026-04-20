@@ -4,10 +4,10 @@
     "cycle_end_date": "2026-03-31",
     "company_id": "E1",
     "name": "E1",
-    "total_net_billable_units": 44.1804,
+    "total_net_billable_units": 52.9213,
     "flat_rate": 2.5,
-    "final_amount_before_rounding": 110.451,
-    "final_amount_rounded": 110.0,
+    "final_amount_before_rounding": 132.3033,
+    "final_amount_rounded": 132.0,
     "has_estimated_units": "N"
   },
   {
