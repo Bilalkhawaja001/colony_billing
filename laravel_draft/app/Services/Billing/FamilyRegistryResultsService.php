@@ -398,13 +398,35 @@ class FamilyRegistryResultsService
             }
         }
 
+        $promote = $this->promoteRegistryRowsToMaster(array_map(fn ($item) => (string) ($item['CompanyID'] ?? ''), $accepted), true);
         $rejected = max(0, $this->csvDataRowCount($csvText) - count($accepted));
-        return ['status' => 'ok', 'inserted' => $inserted, 'updated' => $updated, 'rejected' => $rejected];
+        return [
+            'status' => 'ok',
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'rejected' => $rejected,
+            'auto_promote' => [
+                'promoted' => (int) ($promote['promoted'] ?? 0),
+                'skipped_existing' => (int) ($promote['skipped_existing'] ?? 0),
+                'rejected' => (int) ($promote['rejected'] ?? 0),
+                'upsert' => true,
+            ],
+        ];
     }
 
     public function registryEmployeesPromoteToMaster(bool $upsert): array
     {
-        $rows = DB::table('employees_registry')->orderBy('company_id')->get();
+        return $this->promoteRegistryRowsToMaster(null, $upsert);
+    }
+
+    private function promoteRegistryRowsToMaster(?array $companyIds, bool $upsert): array
+    {
+        $rowsQuery = DB::table('employees_registry')->orderBy('company_id');
+        if (is_array($companyIds) && $companyIds !== []) {
+            $companyIds = array_values(array_filter(array_unique(array_map(fn ($value) => trim((string) $value), $companyIds))));
+            $rowsQuery->whereIn('company_id', $companyIds);
+        }
+        $rows = $rowsQuery->get();
 
         $promoted = 0;
         $skipped = 0;

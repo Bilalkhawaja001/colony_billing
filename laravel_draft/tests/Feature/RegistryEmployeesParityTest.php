@@ -31,12 +31,36 @@ class RegistryEmployeesParityTest extends TestCase
             ->assertOk()->assertJsonPath('accepted_rows', 1);
 
         $this->postJson('/registry/employees/import-commit', ['csv_text' => $csv])
-            ->assertOk()->assertJsonPath('inserted', 1);
+            ->assertOk()
+            ->assertJsonPath('inserted', 1)
+            ->assertJsonPath('auto_promote.promoted', 1);
 
         $this->postJson('/registry/employees/promote-to-master', ['upsert' => true])
             ->assertOk()->assertJsonPath('promoted', 2);
 
         $this->assertTrue(DB::table('employees_master')->where('company_id', 'R001')->exists());
         $this->assertTrue(DB::table('employees_master')->where('company_id', 'R002')->exists());
+    }
+
+    public function test_people_residency_bulk_commit_makes_employee_visible_in_master_list(): void
+    {
+        $this->authDataEntry();
+
+        DB::table('util_unit')->insert([
+            'unit_id' => 'WA-21', 'is_active' => 1, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $csv = "CompanyID,Name,CNIC_No.,Department,Designation,Unit_ID\n222090,Trace Emp,11111-1111111-1,Ops,Officer,WA-21\n";
+
+        $this->postJson('/registry/employees/import-commit', ['csv_text' => $csv])
+            ->assertOk()
+            ->assertJsonPath('inserted', 1)
+            ->assertJsonPath('auto_promote.promoted', 1);
+
+        $this->assertTrue(DB::table('employees_master')->where('company_id', '222090')->exists());
+
+        $this->getJson('/employees')
+            ->assertOk()
+            ->assertJsonPath('rows.0.CompanyID', '222090');
     }
 }
