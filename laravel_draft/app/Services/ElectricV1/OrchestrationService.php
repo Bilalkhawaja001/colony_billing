@@ -109,6 +109,13 @@ class OrchestrationService
                 $skipped++;
                 continue;
             }
+            if ($resType === 'HOUSE') {
+                if (count($employeeIds) !== 1) {
+                    $issues[] = ['code' => 'E_HOUSE_RESP_NOT_SINGLE', 'message' => 'HOUSE unit must resolve to exactly one responsible employee', 'severity' => 'ERROR', 'unit_id' => $unitId];
+                    $skipped++;
+                    continue;
+                }
+            }
 
             $activeDaysByEmployee = [];
             $unitActiveDays = 0.0;
@@ -148,7 +155,9 @@ class OrchestrationService
                 $empUsedElec = $resType === 'HOUSE'
                     ? round($grossUnits, 4)
                     : ExplicitElectricBillingCalculator::allocateUsageShare($grossUnits, $employeeActiveDays, $unitActiveDays, $index === count($employeeIds) - 1, $runningAllocated);
-                $eligibleUnits = ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, $roomPersons, $billingMonthDays, $employeeActiveDays);
+                $eligibleUnits = $resType === 'HOUSE'
+                    ? round($unitFreeElectric, 4)
+                    : ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, $roomPersons, $billingMonthDays, $employeeActiveDays);
                 $billableUnits = ExplicitElectricBillingCalculator::billableUnits($empUsedElec, $eligibleUnits);
                 $adj = (float)($adjMap[$companyId.'|'.$unitId] ?? 0.0);
                 $netAfterAdj = round(max(0.0, $billableUnits + $adj), 4);
