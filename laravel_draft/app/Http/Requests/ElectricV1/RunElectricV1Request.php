@@ -10,6 +10,7 @@ class RunElectricV1Request extends FormRequest
     public function rules(): array
     {
         return [
+            'billing_month_date' => ['nullable','date_format:Y-m-d'],
             'cycle_start' => ['required','date_format:Y-m-d'],
             'cycle_end' => ['required','date_format:Y-m-d','after_or_equal:cycle_start'],
             'flat_rate' => ['required','numeric','gt:0'],

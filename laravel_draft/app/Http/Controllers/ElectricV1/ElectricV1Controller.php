@@ -15,7 +15,8 @@ class ElectricV1Controller extends Controller
     public function run(RunElectricV1Request $request)
     {
         $v = $request->validated();
-        return response()->json(['status' => 'ok', 'data' => $this->orchestrator->run($v['cycle_start'], $v['cycle_end'], (float)$v['flat_rate'])]);
+        $billingMonthDate = (string)($v['billing_month_date'] ?? $v['cycle_start']);
+        return response()->json(['status' => 'ok', 'data' => $this->orchestrator->run($billingMonthDate, $v['cycle_start'], $v['cycle_end'], (float)$v['flat_rate'])]);
     }
 
     public function outputs(GetOutputsBundleRequest $request)

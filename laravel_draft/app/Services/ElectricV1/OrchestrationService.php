@@ -3,7 +3,7 @@
 namespace App\Services\ElectricV1;
 
 use App\Repositories\ElectricV1\{AllowanceRepository, ReadingsRepository, AttendanceRepository, OccupancyRepository, AdjustmentsRepository, OutputRepository, AuditRepository, MasterRepository, ControlRepository};
-use App\Services\ElectricV1\Domain\{Validators, AttendanceAllocator, ConsumptionEngine, AllocationEngine, AdjustmentsEngine};
+use App\Services\ElectricV1\Domain\{Validators, ConsumptionEngine, ExplicitElectricBillingCalculator};
 use Illuminate\Support\Facades\DB;
 
 class OrchestrationService
@@ -20,14 +20,24 @@ class OrchestrationService
         private readonly AuditRepository $audit,
     ) {}
 
-    public function run(string $cycleStart, string $cycleEnd, float $flatRate): array
+    public function run(string $billingMonthDate, string $cycleStart, string $cycleEnd, float $flatRate): array
     {
         if (!$this->control->validateCycleExists($cycleStart, $cycleEnd)) {
             throw new \InvalidArgumentException('Invalid cycle');
         }
+        if ($billingMonthDate === '') {
+            throw new \InvalidArgumentException('billing_month_date is required');
+        }
+        if (strtotime($cycleStart) === false || strtotime($cycleEnd) === false || strtotime($cycleStart) > strtotime($cycleEnd)) {
+            throw new \InvalidArgumentException('reading_from must be before or equal to reading_to');
+        }
+        if ($flatRate <= 0) {
+            throw new \InvalidArgumentException('rate missing');
+        }
 
         $runId = 'RUN-'.substr(bin2hex(random_bytes(8)), 0, 12);
         $runStart = gmdate('c');
+        $billingMonthDays = ExplicitElectricBillingCalculator::billingMonthDays($billingMonthDate);
 
         $empRows = $this->master->listEmployees();
         $allowRows = $this->allowance->listAllowances();
@@ -44,11 +54,18 @@ class OrchestrationService
         $allowByUnit=[]; foreach ($allowRows as $r) { $allowByUnit[(string)$r['unit_id']] = $r; }
         $readByUnit=[]; foreach ($readRows as $r) { $readByUnit[(string)$r['unit_id']] = $r; }
         $empByCompany=[]; foreach ($empRows as $r) { $empByCompany[(string)$r['company_id']] = $r; }
-
-        $attPack = AttendanceAllocator::buildEligible($attRows, $empByCompany, $cycleStart, $cycleEnd);
-        $issues = array_merge($issues, $attPack['issues']);
-        $roomPack = AttendanceAllocator::allocateRoom($attPack['eligible'], $occRows, $attPack['room_skip']);
-        $issues = array_merge($issues, $roomPack['issues']);
+        $attByCompany=[]; foreach ($attRows as $r) { $attByCompany[(string)$r['company_id']] = $r; }
+        $occByUnit=[]; $occByCompanyUnit=[];
+        foreach ($occRows as $r) {
+            $unitId = (string)($r['unit_id'] ?? '');
+            $companyId = (string)($r['company_id'] ?? '');
+            if ($unitId !== '') {
+                $occByUnit[$unitId][] = $r;
+            }
+            if ($unitId !== '' && $companyId !== '') {
+                $occByCompanyUnit[$companyId.'|'.$unitId][] = $r;
+            }
+        }
 
         $adjMap=[]; foreach ($adjRows as $r) { $k = ($r['company_id'] ?? '').'|'.($r['unit_id'] ?? ''); $adjMap[$k] = ($adjMap[$k] ?? 0.0) + (float)($r['adjustment_units'] ?? 0); }
 
@@ -57,42 +74,101 @@ class OrchestrationService
 
         foreach ($units as $unitId) {
             $allow = $allowByUnit[$unitId];
-            $resType = strtoupper(trim((string)($allow['residence_type'] ?? '')));
-            $freeElectric = (float)($allow['free_electric'] ?? 0);
+            $resType = strtoupper(trim((string)($allow['residence_type'] ?? 'ROOM')));
+
+            if (!array_key_exists('free_electric', $allow) || $allow['free_electric'] === null || $allow['free_electric'] === '') {
+                $issues[] = ['code' => 'E_ALLOW_MISSING', 'message' => 'Unit_Free_Elec missing', 'severity' => 'ERROR', 'unit_id' => $unitId];
+                $skipped++;
+                continue;
+            }
+            $unitFreeElectric = (float)$allow['free_electric'];
 
             $cons = ConsumptionEngine::compute($unitId, $readByUnit[$unitId] ?? null, $this->readings->listUnitHistory($unitId, $cycleStart));
             $issues = array_merge($issues, $cons['issues']);
             if (!$cons['result']) { $skipped++; continue; }
 
-            $houseResp = [];
-            foreach ($occRows as $o) if (($o['unit_id'] ?? '') === $unitId && !empty($o['company_id'])) $houseResp[] = $o['company_id'];
+            $unitOccupancy = $occByUnit[$unitId] ?? [];
+            $roomPersons = $resType === 'HOUSE' ? 1 : ExplicitElectricBillingCalculator::roomPersons($unitOccupancy);
+            if ($roomPersons <= 0) {
+                $issues[] = ['code' => 'E_ROOM_PERSONS_INVALID', 'message' => 'Room_Persons must be greater than zero', 'severity' => 'ERROR', 'unit_id' => $unitId];
+                $skipped++;
+                continue;
+            }
 
-            $alloc = AllocationEngine::allocate($unitId, $resType, (float)$cons['result']['gross_units'], $roomPack['allocations'], $houseResp);
-            $issues = array_merge($issues, $alloc['issues']);
-            if (count($alloc['allocations']) === 0) { $skipped++; continue; }
+            $employeeIds = [];
+            foreach ($unitOccupancy as $o) {
+                $companyId = trim((string)($o['company_id'] ?? ''));
+                if ($companyId !== '') {
+                    $employeeIds[$companyId] = true;
+                }
+            }
+            $employeeIds = array_keys($employeeIds);
+            sort($employeeIds);
+            if (count($employeeIds) === 0) {
+                $issues[] = ['code' => 'E_EMP_NO_VALID_ROOM', 'message' => 'No valid room mapping', 'severity' => 'ERROR', 'unit_id' => $unitId];
+                $skipped++;
+                continue;
+            }
 
-            $totalAtt = 0.0; foreach ($alloc['allocations'] as $a) $totalAtt += (float)$a['employee_attendance_in_unit'];
+            $activeDaysByEmployee = [];
+            $unitActiveDays = 0.0;
+            foreach ($employeeIds as $companyId) {
+                if (!isset($empByCompany[$companyId])) {
+                    $issues[] = ['code' => 'E_EMP_NOT_ELIGIBLE', 'message' => 'Employee missing in master', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
+                    continue;
+                }
+                $attRow = $attByCompany[$companyId] ?? null;
+                if (!$attRow || !is_numeric($attRow['attendance_days'] ?? null)) {
+                    $issues[] = ['code' => 'E_ACTIVE_DAYS_MISSING', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
+                    continue;
+                }
+                $attendanceDays = (float)$attRow['attendance_days'];
+                if ($attendanceDays < 0) {
+                    $issues[] = ['code' => 'E_ACTIVE_DAYS_INVALID', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
+                    continue;
+                }
 
-            foreach ($alloc['allocations'] as $a) {
-                $freeShare = $resType === 'HOUSE' ? $freeElectric : (($totalAtt > 0) ? $freeElectric * ((float)$a['employee_attendance_in_unit'] / $totalAtt) : 0.0);
-                $adj = $adjMap[$a['company_id'].'|'.$unitId] ?? 0.0;
-                $comp = AdjustmentsEngine::compute((float)$a['allocated_gross_units'], $freeShare, $adj, $flatRate);
+                $employeeUnitRows = $occByCompanyUnit[$companyId.'|'.$unitId] ?? [];
+                $employeeActiveDays = ExplicitElectricBillingCalculator::employeeActiveDaysInUnit($employeeUnitRows, $cycleStart, $cycleEnd, $attendanceDays);
+                $activeDaysByEmployee[$companyId] = $employeeActiveDays;
+                $unitActiveDays += $employeeActiveDays;
+            }
+
+            if ($unitActiveDays <= 0.0) {
+                $issues[] = ['code' => 'E_UNIT_ZERO_ATT_WITH_CONS', 'message' => 'ROOM unit has consumption but zero attendance; unit skipped', 'severity' => 'ERROR', 'unit_id' => $unitId];
+                $skipped++;
+                continue;
+            }
+
+            $runningAllocated = 0.0;
+            $grossUnits = (float)$cons['result']['gross_units'];
+            $employeeIds = array_values(array_filter($employeeIds, fn($cid) => array_key_exists($cid, $activeDaysByEmployee)));
+            foreach ($employeeIds as $index => $companyId) {
+                $employeeActiveDays = (float)($activeDaysByEmployee[$companyId] ?? 0.0);
+                $empUsedElec = $resType === 'HOUSE'
+                    ? round($grossUnits, 4)
+                    : ExplicitElectricBillingCalculator::allocateUsageShare($grossUnits, $employeeActiveDays, $unitActiveDays, $index === count($employeeIds) - 1, $runningAllocated);
+                $eligibleUnits = ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, $roomPersons, $billingMonthDays, $employeeActiveDays);
+                $billableUnits = ExplicitElectricBillingCalculator::billableUnits($empUsedElec, $eligibleUnits);
+                $adj = (float)($adjMap[$companyId.'|'.$unitId] ?? 0.0);
+                $netAfterAdj = round(max(0.0, $billableUnits + $adj), 4);
+                $amountBefore = ExplicitElectricBillingCalculator::amount($netAfterAdj, $flatRate);
 
                 $drill[] = [
-                    'cycle_start_date'=>$cycleStart,'cycle_end_date'=>$cycleEnd,'run_id'=>$runId,'company_id'=>$a['company_id'],'unit_id'=>$unitId,
-                    'residence_type'=>$resType,'employee_attendance_in_unit'=>(float)$a['employee_attendance_in_unit'],'gross_units'=>(float)$comp['gross_units'],
-                    'free_allowance_units'=>(float)$comp['free_allowance_units'],'net_units_before_adj'=>(float)$comp['net_units_before_adj'],'adjustment_units'=>(float)$comp['adjustment_units'],
-                    'net_units_after_adj'=>(float)$comp['net_units_after_adj'],'amount_before_rounding'=>(float)$comp['amount_before_rounding'],'is_estimated'=>!empty($cons['result']['is_estimated']) ? 'Y':'N',
+                    'cycle_start_date'=>$cycleStart,'cycle_end_date'=>$cycleEnd,'run_id'=>$runId,'company_id'=>$companyId,'unit_id'=>$unitId,
+                    'residence_type'=>$resType,'employee_attendance_in_unit'=>$employeeActiveDays,'gross_units'=>$empUsedElec,
+                    'free_allowance_units'=>$eligibleUnits,'net_units_before_adj'=>$billableUnits,'adjustment_units'=>$adj,
+                    'net_units_after_adj'=>$netAfterAdj,'amount_before_rounding'=>$amountBefore,'is_estimated'=>!empty($cons['result']['is_estimated']) ? 'Y':'N',
                     'estimate_source_cycle1'=>$cons['result']['estimate_source_cycle1'] ?? null,'estimate_source_cycle2'=>$cons['result']['estimate_source_cycle2'] ?? null,
                     'estimate_source_cycle3'=>$cons['result']['estimate_source_cycle3'] ?? null,'estimated_from_valid_cycle_count'=>$cons['result']['estimated_from_valid_cycle_count'] ?? 0
                 ];
 
-                if (!isset($finalMap[$a['company_id']])) {
-                    $finalMap[$a['company_id']] = ['cycle_start_date'=>$cycleStart,'cycle_end_date'=>$cycleEnd,'run_id'=>$runId,'company_id'=>$a['company_id'],'name'=>$empByCompany[$a['company_id']]['name'] ?? $a['company_id'],'total_net_billable_units'=>0.0,'flat_rate'=>$flatRate,'final_amount_before_rounding'=>0.0,'has_estimated_units'=>'N'];
+                if (!isset($finalMap[$companyId])) {
+                    $finalMap[$companyId] = ['cycle_start_date'=>$cycleStart,'cycle_end_date'=>$cycleEnd,'run_id'=>$runId,'company_id'=>$companyId,'name'=>$empByCompany[$companyId]['name'] ?? $companyId,'total_net_billable_units'=>0.0,'flat_rate'=>$flatRate,'final_amount_before_rounding'=>0.0,'has_estimated_units'=>'N'];
                 }
-                $finalMap[$a['company_id']]['total_net_billable_units'] += (float)$comp['net_units_after_adj'];
-                $finalMap[$a['company_id']]['final_amount_before_rounding'] += (float)$comp['amount_before_rounding'];
-                if (!empty($cons['result']['is_estimated'])) $finalMap[$a['company_id']]['has_estimated_units'] = 'Y';
+                $finalMap[$companyId]['total_net_billable_units'] += $netAfterAdj;
+                $finalMap[$companyId]['final_amount_before_rounding'] += $amountBefore;
+                if (!empty($cons['result']['is_estimated'])) $finalMap[$companyId]['has_estimated_units'] = 'Y';
             }
             $processed++;
         }
