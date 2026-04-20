@@ -12,7 +12,6 @@ use App\Http\Controllers\Billing\MonthlyActiveDaysController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
-use App\Http\Controllers\Transport\TransportController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -102,14 +101,15 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
-    Route::get('/api/transport/summary', [TransportController::class, 'summary']);
-    Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
-    Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
-    Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
-    Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
-    Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
-    Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
-    Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
+    // TEMP deploy-unblock: transport API routes disabled because TransportController is missing on target server.
+    // Route::get('/api/transport/summary', [TransportController::class, 'summary']);
+    // Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
+    // Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
+    // Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
+    // Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
+    // Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
+    // Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
+    // Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
