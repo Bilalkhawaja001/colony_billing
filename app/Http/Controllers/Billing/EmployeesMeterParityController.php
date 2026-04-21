@@ -42,6 +42,11 @@ class EmployeesMeterParityController extends Controller
         return $this->jsonFromService($this->service->employeesImport($request->all()));
     }
 
+    public function activeDaysImport(Request $request)
+    {
+        return $this->jsonFromService($this->service->activeDaysImport($request->all()));
+    }
+
     public function employeesUpsert(Request $request)
     {
         return $this->jsonFromService($this->service->employeesUpsert($request->all()));

@@ -11,6 +11,7 @@ use App\Http\Controllers\Billing\EmployeesMeterParityController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
+use App\Http\Controllers\Transport\TransportController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -36,6 +37,11 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    Route::get('/transport', function (\Illuminate\Http\Request $request) {
+        return view('ui.transport', [
+            'monthCycle' => (string) ($request->query('month_cycle') ?? ''),
+        ]);
+    });
     // Hub: Meters & Readings (single sidebar entry)
     Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
@@ -78,6 +84,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/family-details', fn () => redirect('/reporting'));
     Route::get('/ui/elec-summary', fn () => redirect('/reporting'));
     Route::get('/ui/van', fn () => redirect('/reporting'));
+    Route::get('/ui/transport', fn () => redirect('/transport'));
     Route::get('/ui/rates', fn () => redirect('/rates'));
 
     // Legacy shell aliases now point to canonical modules
@@ -92,6 +99,14 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
+    Route::get('/api/transport/summary', [TransportController::class, 'summary']);
+    Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
+    Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
+    Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
+    Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
+    Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
+    Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
+    Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
@@ -148,13 +163,12 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/units/resolve/{unit_id}', [UnitReferenceParityController::class, 'resolve']);
     Route::get('/units/resolve/<unit_id>', [UnitReferenceParityController::class, 'resolve']);
     Route::get('/api/units/reference', [UnitReferenceParityController::class, 'index']);
-    Route::get('/api/units/reference/{unit_id}', [UnitReferenceParityController::class, 'show']);
+    Route::get('/api/units/reference/{unit_id>', [UnitReferenceParityController::class, 'show']);
     Route::get('/api/units/reference/<unit_id>', [UnitReferenceParityController::class, 'show']);
     Route::get('/api/units/reference/cascade', [UnitReferenceParityController::class, 'cascade']);
     Route::get('/rooms', [MasterDataDraftController::class, 'rooms']);
     Route::get('/occupancy/context', [MasterDataDraftController::class, 'occupancyContext']);
     Route::get('/occupancy', [MasterDataDraftController::class, 'occupancy']);
-    Route::get('/occupancy/by-employee/{company_id}', [MasterDataDraftController::class, 'occupancyByEmployee']);
 
     Route::get('/employees', [EmployeesMeterParityController::class, 'employees']);
     Route::get('/employees/search', [EmployeesMeterParityController::class, 'employeesSearch']);
@@ -163,7 +177,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/employees/{company_id}', [EmployeesMeterParityController::class, 'employeeGetCompat']);
     Route::get('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeeGetCompat']);
     Route::get('/meter-reading/latest/{unitId}', [EmployeesMeterParityController::class, 'meterReadingLatest']);
-    Route::get('/meter-reading/latest/{unit_id}', [EmployeesMeterParityController::class, 'meterReadingLatestCompat']);
+    Route::get('/meter-reading/latest/{unit_id>', [EmployeesMeterParityController::class, 'meterReadingLatestCompat']);
     Route::get('/meter-reading/latest/<unit_id>', [EmployeesMeterParityController::class, 'meterReadingLatestCompat']);
     Route::get('/meter-unit', [EmployeesMeterParityController::class, 'meterUnit']);
 
@@ -187,20 +201,21 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::post('/occupancy/upsert', [MasterDataDraftController::class, 'occupancyUpsert']);
     Route::delete('/occupancy/{id}', [MasterDataDraftController::class, 'occupancyDelete']);
-    Route::delete('/occupancy/{row_id}', [MasterDataDraftController::class, 'occupancyDeleteCompat']);
+    Route::delete('/occupancy/{row_id>', [MasterDataDraftController::class, 'occupancyDeleteCompat']);
     Route::delete('/occupancy/<row_id>', [MasterDataDraftController::class, 'occupancyDeleteCompat']);
     Route::delete('/occupancy/<int:row_id>', [MasterDataDraftController::class, 'occupancyDeleteCompat']);
     Route::post('/api/occupancy/autofill', [MasterDataDraftController::class, 'occupancyAutofill']);
     Route::post('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsUpsert']);
 
     Route::post('/employees/import', [EmployeesMeterParityController::class, 'employeesImport']);
+    Route::post('/imports/active-days/import', [EmployeesMeterParityController::class, 'activeDaysImport']);
     Route::post('/employees/upsert', [EmployeesMeterParityController::class, 'employeesUpsert']);
     Route::post('/employees/add', [EmployeesMeterParityController::class, 'employeesAdd']);
-    Route::patch('/employees/{companyId}', [EmployeesMeterParityController::class, 'employeePatch']);
-    Route::patch('/employees/{company_id}', [EmployeesMeterParityController::class, 'employeePatchCompat']);
+    Route::patch('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeePatch']);
+    Route::patch('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
     Route::patch('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
-    Route::delete('/employees/{companyId}', [EmployeesMeterParityController::class, 'employeeDelete']);
-    Route::delete('/employees/{company_id}', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
+    Route::delete('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeeDelete']);
+    Route::delete('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
     Route::delete('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
 
     Route::post('/meter-reading/upsert', [EmployeesMeterParityController::class, 'meterReadingUpsert']);
@@ -228,8 +243,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::get('/family/details/context', [FamilyRegistryResultsController::class, 'familyDetailsContext']);
     Route::get('/family/details', [FamilyRegistryResultsController::class, 'familyDetails']);
-    Route::get('/family/details/by-employee/{company_id}', [FamilyRegistryResultsController::class, 'familyDetailsByEmployee']);
-    Route::get('/registry/employees/{company_id}', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
+    Route::get('/registry/employees/{companyId}', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
+    Route::get('/registry/employees/{company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
     Route::get('/registry/employees/<company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGetLiteral']);
     Route::get('/api/results/employee-wise', [FamilyRegistryResultsController::class, 'resultsEmployeeWise']);
     Route::get('/api/results/unit-wise', [FamilyRegistryResultsController::class, 'resultsUnitWise']);

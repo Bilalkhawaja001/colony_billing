@@ -69,6 +69,7 @@ class FamilyRegistryResultsService
             $byPair[$key] = [];
         }
 
+        $profileMap = [];
         if ($byPair !== []) {
             $childrenRows = DB::table('family_child_details')
                 ->where(function ($q) use ($rows) {
@@ -85,9 +86,36 @@ class FamilyRegistryResultsService
                 ->orderBy('id')
                 ->get();
 
+            $companyIds = array_values(array_unique(array_map(fn ($row) => $row['company_id'], $rows)));
+            if ($companyIds !== []) {
+                $profiles = DB::table('family_child_profiles')
+                    ->whereIn('company_id', $companyIds)
+                    ->orderBy('company_id')
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->get();
+
+                foreach ($profiles as $profile) {
+                    $profileMap[$profile->company_id.'|'.mb_strtolower(trim((string) $profile->child_name))] = (array) $profile;
+                }
+            }
+
             foreach ($childrenRows as $child) {
+                $row = (array) $child;
+                $profileKey = $child->company_id.'|'.mb_strtolower(trim((string) $child->child_name));
+                $profile = $profileMap[$profileKey] ?? null;
+                if ($profile) {
+                    $row['child_profile_id'] = $profile['id'] ?? null;
+                    $row['class_grade'] = $profile['class_grade'] ?? null;
+                    $row['van_using'] = $profile['van_using'] ?? null;
+                    $row['transport_join_date'] = $profile['transport_join_date'] ?? null;
+                    $row['transport_leave_date'] = $profile['transport_leave_date'] ?? null;
+                    $row['default_route_label'] = $profile['default_route_label'] ?? null;
+                    $row['profile_notes'] = $profile['notes'] ?? null;
+                    $row['profile_is_active'] = $profile['is_active'] ?? null;
+                }
                 $key = $child->month_cycle.'|'.$child->company_id;
-                $byPair[$key][] = (array) $child;
+                $byPair[$key][] = $row;
             }
         }
 
@@ -130,6 +158,11 @@ class FamilyRegistryResultsService
             $schoolName = $this->nullableTrim($item['school_name'] ?? null);
             $className = $this->nullableTrim($item['class_name'] ?? null);
             $vanUsingChild = $this->truthy($item['van_using_child'] ?? false);
+            $transportJoinDate = $this->nullableTrim($item['transport_join_date'] ?? null);
+            $transportLeaveDate = $this->nullableTrim($item['transport_leave_date'] ?? null);
+            $defaultRouteLabel = $this->nullableTrim($item['default_route_label'] ?? null);
+            $profileNotes = $this->nullableTrim($item['notes'] ?? null);
+            $profileId = isset($item['child_profile_id']) && $item['child_profile_id'] !== '' ? (int) $item['child_profile_id'] : null;
 
             if ($schoolGoing && (!$schoolName || !$className)) {
                 return ['_http' => 400, 'status' => 'error', 'error' => 'school_name and class_name required when school_going=Yes (child row '.($idx + 1).')'];
@@ -140,12 +173,19 @@ class FamilyRegistryResultsService
             $vanUsingChildren += $vanUsingChild ? 1 : 0;
 
             $parsedChildren[] = [
+                'child_profile_id' => $profileId,
                 'child_name' => $name,
                 'age' => $age,
                 'school_going' => $schoolGoing ? 1 : 0,
                 'school_name' => $schoolName,
                 'class_name' => $className,
                 'van_using_child' => $vanUsingChild ? 1 : 0,
+                'class_grade' => $className,
+                'van_using' => $vanUsingChild ? 1 : 0,
+                'transport_join_date' => $transportJoinDate,
+                'transport_leave_date' => $transportLeaveDate,
+                'default_route_label' => $defaultRouteLabel,
+                'notes' => $profileNotes,
                 'sort_order' => $idx + 1,
             ];
         }
@@ -187,9 +227,51 @@ class FamilyRegistryResultsService
 
             DB::table('family_child_details')->where('month_cycle', $monthCycle)->where('company_id', $companyId)->delete();
             foreach ($parsedChildren as $child) {
-                DB::table('family_child_details')->insert($child + [
+                $profilePayload = [
+                    'company_id' => $companyId,
+                    'child_name' => $child['child_name'],
+                    'school_name' => $child['school_name'],
+                    'class_grade' => $child['class_grade'],
+                    'school_going' => $child['school_going'],
+                    'van_using' => $child['van_using'],
+                    'transport_join_date' => $child['transport_join_date'],
+                    'transport_leave_date' => $child['transport_leave_date'],
+                    'default_route_label' => $child['default_route_label'],
+                    'is_active' => 1,
+                    'sort_order' => $child['sort_order'],
+                    'notes' => $child['notes'],
+                    'updated_at' => now(),
+                ];
+
+                if (!empty($child['child_profile_id'])) {
+                    DB::table('family_child_profiles')->where('id', $child['child_profile_id'])->update($profilePayload);
+                    $profileId = (int) $child['child_profile_id'];
+                } else {
+                    $matchedProfileId = DB::table('family_child_profiles')
+                        ->where('company_id', $companyId)
+                        ->whereRaw('LOWER(TRIM(child_name)) = ?', [mb_strtolower(trim((string) $child['child_name']))])
+                        ->value('id');
+
+                    if ($matchedProfileId) {
+                        DB::table('family_child_profiles')->where('id', $matchedProfileId)->update($profilePayload);
+                        $profileId = (int) $matchedProfileId;
+                    } else {
+                        $profileId = DB::table('family_child_profiles')->insertGetId($profilePayload + [
+                            'created_at' => now(),
+                        ]);
+                    }
+                }
+
+                DB::table('family_child_details')->insert([
                     'month_cycle' => $monthCycle,
                     'company_id' => $companyId,
+                    'child_name' => $child['child_name'],
+                    'age' => $child['age'],
+                    'school_going' => $child['school_going'],
+                    'school_name' => $child['school_name'],
+                    'class_name' => $child['class_name'],
+                    'van_using_child' => $child['van_using_child'],
+                    'sort_order' => $child['sort_order'],
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -212,15 +294,51 @@ class FamilyRegistryResultsService
                 'name' => $this->nullableTrim($data['Name'] ?? null),
                 'cnic_no' => $this->nullableTrim($data['CNIC_No.'] ?? null),
                 'department' => $this->nullableTrim($data['Department'] ?? null),
+                'section' => $this->nullableTrim($data['Section'] ?? null),
+                'sub_section' => $this->nullableTrim($data['Sub Section'] ?? null),
                 'designation' => $this->nullableTrim($data['Designation'] ?? null),
+                'employee_type' => $this->nullableTrim($data['Employee Type'] ?? null),
+                'join_date' => $this->nullableTrim($data['Join Date'] ?? null),
+                'leave_date' => $this->nullableTrim($data['Leave Date'] ?? null),
                 'unit_id' => $this->nullableTrim($data['Unit_ID'] ?? null),
                 'father_name' => $this->nullableTrim($data["Father's Name"] ?? null),
                 'mobile_no' => $this->nullableTrim($data['Mobile_No.'] ?? null),
                 'colony_type' => $this->nullableTrim($data['Colony Type'] ?? null),
                 'block_floor' => $this->nullableTrim($data['Block Floor'] ?? null),
                 'room_no' => $this->nullableTrim($data['Room No'] ?? null),
+                'shared_room' => $this->nullableTrim($data['Shared Room'] ?? null),
                 'active' => $this->nullableTrim($data['Active'] ?? 'Yes') ?? 'Yes',
                 'remarks' => $this->nullableTrim($data['Remarks'] ?? null),
+                'iron_cot' => $this->nullableTrim($data['Iron Cot'] ?? null),
+                'single_bed' => $this->nullableTrim($data['Single Bed'] ?? null),
+                'double_bed' => $this->nullableTrim($data['Double Bed'] ?? null),
+                'mattress' => $this->nullableTrim($data['Mattress'] ?? null),
+                'sofa_set' => $this->nullableTrim($data['Sofa Set'] ?? null),
+                'bed_sheet' => $this->nullableTrim($data['Bed Sheet'] ?? null),
+                'wardrobe' => $this->nullableTrim($data['Wardrobe'] ?? null),
+                'centre_table' => $this->nullableTrim($data['Centre Table'] ?? null),
+                'wooden_chair' => $this->nullableTrim($data['Wooden Chair'] ?? null),
+                'dinning_table' => $this->nullableTrim($data['Dinning Table'] ?? null),
+                'dinning_chair' => $this->nullableTrim($data['Dinning Chair'] ?? null),
+                'side_table' => $this->nullableTrim($data['Side Table'] ?? null),
+                'fridge' => $this->nullableTrim($data['Fridge'] ?? null),
+                'water_dispenser' => $this->nullableTrim($data['Water Dispenser'] ?? null),
+                'washing_machine' => $this->nullableTrim($data['Washing Machine'] ?? null),
+                'air_cooler' => $this->nullableTrim($data['Air Cooler'] ?? null),
+                'ac' => $this->nullableTrim($data['A/C'] ?? null),
+                'led' => $this->nullableTrim($data['LED'] ?? null),
+                'gyser' => $this->nullableTrim($data['Gyser'] ?? null),
+                'electric_kettle' => $this->nullableTrim($data['Electric Kettle'] ?? null),
+                'wifi_rtr' => $this->nullableTrim($data['Wifi Rtr'] ?? null),
+                'water_bottle' => $this->nullableTrim($data['Water Bottle'] ?? null),
+                'lpg_cylinder' => $this->nullableTrim($data['LPG cylinder'] ?? null),
+                'gas_stove' => $this->nullableTrim($data['Gas Stove'] ?? null),
+                'crockery' => $this->nullableTrim($data['Crockery'] ?? null),
+                'kitchen_cabinet' => $this->nullableTrim($data['Kitchen Cabinet'] ?? null),
+                'mug' => $this->nullableTrim($data['Mug'] ?? null),
+                'bucket' => $this->nullableTrim($data['Bucket'] ?? null),
+                'mirror' => $this->nullableTrim($data['Mirror'] ?? null),
+                'dustbin' => $this->nullableTrim($data['Dustbin'] ?? null),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]
@@ -244,15 +362,22 @@ class FamilyRegistryResultsService
             return ['_http' => 400, 'status' => 'error', 'error' => 'csv_text is required'];
         }
 
-        [$accepted, $errors] = $this->parseRegistryCsv($csvText, false);
+        [$accepted, $errors, $meta] = $this->parseRegistryCsv($csvText, false);
 
         return [
             'status' => 'ok',
-            'total_rows' => count($accepted) + count($errors),
-            'accepted_rows' => count($accepted),
+            'mode' => 'preview',
+            'total_rows' => $meta['total_rows'],
+            'valid_rows' => count($accepted),
+            'invalid_rows' => count($errors),
+            'skipped_rows' => count($errors),
+            'inserted_rows' => 0,
+            'updated_rows' => 0,
             'rejected_rows' => count($errors),
-            'accepted_preview' => array_slice($accepted, 0, 20),
-            'errors_preview' => array_slice($errors, 0, 50),
+            'accepted_rows' => count($accepted),
+            'accepted_preview' => array_slice($accepted, 0, 100),
+            'errors_preview' => array_slice($errors, 0, 100),
+            'reject_report' => array_slice($errors, 0, 1000),
             'error_report_download' => null,
         ];
     }
@@ -263,7 +388,7 @@ class FamilyRegistryResultsService
             return ['_http' => 400, 'status' => 'error', 'error' => 'csv_text is required'];
         }
 
-        [$accepted] = $this->parseRegistryCsv($csvText, true);
+        [$accepted, $errors, $meta] = $this->parseRegistryCsv($csvText, true);
 
         $inserted = 0;
         $updated = 0;
@@ -280,8 +405,23 @@ class FamilyRegistryResultsService
             }
         }
 
-        $rejected = max(0, $this->csvDataRowCount($csvText) - count($accepted));
-        return ['status' => 'ok', 'inserted' => $inserted, 'updated' => $updated, 'rejected' => $rejected];
+        return [
+            'status' => 'ok',
+            'mode' => 'commit',
+            'total_rows' => $meta['total_rows'],
+            'valid_rows' => count($accepted),
+            'invalid_rows' => count($errors),
+            'skipped_rows' => count($errors),
+            'inserted_rows' => $inserted,
+            'updated_rows' => $updated,
+            'rejected_rows' => count($errors),
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'rejected' => count($errors),
+            'accepted_rows' => count($accepted),
+            'errors_preview' => array_slice($errors, 0, 100),
+            'reject_report' => array_slice($errors, 0, 1000),
+        ];
     }
 
     public function registryEmployeesPromoteToMaster(bool $upsert): array
@@ -318,13 +458,53 @@ class FamilyRegistryResultsService
                 ['company_id' => $r['company_id']],
                 [
                     'name' => $r['name'],
+                    'father_name' => $r['father_name'] ?? null,
+                    'cnic_no' => $r['cnic_no'] ?? null,
+                    'mobile_no' => $r['mobile_no'] ?? null,
                     'department' => $r['department'],
+                    'section' => $r['section'] ?? null,
+                    'sub_section' => $r['sub_section'] ?? null,
                     'designation' => $r['designation'],
+                    'employee_type' => $r['employee_type'] ?? null,
+                    'join_date' => $r['join_date'] ?? null,
+                    'leave_date' => $r['leave_date'] ?? null,
                     'unit_id' => $r['unit_id'],
                     'colony_type' => $r['colony_type'],
                     'block_floor' => $r['block_floor'],
                     'room_no' => $r['room_no'],
+                    'shared_room' => $r['shared_room'] ?? null,
                     'active' => $r['active'] ?: 'Yes',
+                    'remarks' => $r['remarks'] ?? null,
+                    'iron_cot' => $r['iron_cot'] ?? null,
+                    'single_bed' => $r['single_bed'] ?? null,
+                    'double_bed' => $r['double_bed'] ?? null,
+                    'mattress' => $r['mattress'] ?? null,
+                    'sofa_set' => $r['sofa_set'] ?? null,
+                    'bed_sheet' => $r['bed_sheet'] ?? null,
+                    'wardrobe' => $r['wardrobe'] ?? null,
+                    'centre_table' => $r['centre_table'] ?? null,
+                    'wooden_chair' => $r['wooden_chair'] ?? null,
+                    'dinning_table' => $r['dinning_table'] ?? null,
+                    'dinning_chair' => $r['dinning_chair'] ?? null,
+                    'side_table' => $r['side_table'] ?? null,
+                    'fridge' => $r['fridge'] ?? null,
+                    'water_dispenser' => $r['water_dispenser'] ?? null,
+                    'washing_machine' => $r['washing_machine'] ?? null,
+                    'air_cooler' => $r['air_cooler'] ?? null,
+                    'ac' => $r['ac'] ?? null,
+                    'led' => $r['led'] ?? null,
+                    'gyser' => $r['gyser'] ?? null,
+                    'electric_kettle' => $r['electric_kettle'] ?? null,
+                    'wifi_rtr' => $r['wifi_rtr'] ?? null,
+                    'water_bottle' => $r['water_bottle'] ?? null,
+                    'lpg_cylinder' => $r['lpg_cylinder'] ?? null,
+                    'gas_stove' => $r['gas_stove'] ?? null,
+                    'crockery' => $r['crockery'] ?? null,
+                    'kitchen_cabinet' => $r['kitchen_cabinet'] ?? null,
+                    'mug' => $r['mug'] ?? null,
+                    'bucket' => $r['bucket'] ?? null,
+                    'mirror' => $r['mirror'] ?? null,
+                    'dustbin' => $r['dustbin'] ?? null,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]
@@ -387,29 +567,43 @@ class FamilyRegistryResultsService
 
         foreach ($rows as $idx => $row) {
             $rowNo = $idx + 2;
+            if ($this->isBlankCsvRow($row)) {
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => '', 'error_code' => 'BLANK_ROW', 'error_message' => 'blank row'];
+                continue;
+            }
+
             $miss = array_values(array_filter(self::REGISTRY_REQUIRED, fn ($f) => trim((string) ($row[$f] ?? '')) === ''));
             if ($miss !== []) {
-                $errors[] = ['row_no' => $rowNo, 'error_code' => 'MISSING_REQUIRED', 'error_message' => 'Missing: '.implode(', ', $miss)];
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => trim((string) ($row['CompanyID'] ?? '')), 'error_code' => 'MISSING_REQUIRED', 'error_message' => 'Missing: '.implode(', ', $miss)];
                 continue;
             }
 
             $cid = trim((string) $row['CompanyID']);
+            if ($cid === '') {
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => '', 'error_code' => 'MISSING_COMPANY_ID', 'error_message' => 'missing company_id'];
+                continue;
+            }
             if (isset($seen[$cid])) {
-                $errors[] = ['row_no' => $rowNo, 'error_code' => 'DUPLICATE_IN_FILE', 'error_message' => 'Duplicate CompanyID in file: '.$cid];
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => $cid, 'error_code' => 'DUPLICATE_COMPANY_ID_IN_FILE', 'error_message' => 'duplicate company_id in uploaded file'];
                 continue;
             }
             $seen[$cid] = true;
 
-            if (!DB::table('util_unit')->where('unit_id', trim((string) $row['Unit_ID']))->exists()) {
-                $errors[] = ['row_no' => $rowNo, 'error_code' => 'INVALID_UNIT_ID', 'error_message' => 'Unit_ID not found: '.trim((string) $row['Unit_ID'])];
+            if (DB::table('employees_registry')->where('company_id', $cid)->exists() || DB::table('employees_master')->where('company_id', $cid)->exists()) {
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => $cid, 'error_code' => 'COMPANY_ID_ALREADY_EXISTS', 'error_message' => 'company_id already exists'];
                 continue;
             }
 
-            $entry = ['row_no' => $rowNo, 'CompanyID' => $cid, 'exists_in_master' => DB::table('employees_master')->where('company_id', $cid)->exists(), 'row' => $row];
+            if (!DB::table('util_unit')->where('unit_id', trim((string) $row['Unit_ID']))->exists()) {
+                $errors[] = ['row_no' => $rowNo, 'CompanyID' => $cid, 'error_code' => 'INVALID_UNIT_ID', 'error_message' => 'invalid format'];
+                continue;
+            }
+
+            $entry = ['row_no' => $rowNo, 'CompanyID' => $cid, 'exists_in_master' => false, 'row' => $row];
             $accepted[] = $entry;
         }
 
-        return [$accepted, $errors];
+        return [$accepted, $errors, ['total_rows' => count($rows)]];
     }
 
     private function csvToAssoc(string $csvText): array
@@ -444,6 +638,17 @@ class FamilyRegistryResultsService
     private function csvDataRowCount(string $csvText): int
     {
         return count($this->csvToAssoc($csvText));
+    }
+
+    private function isBlankCsvRow(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (trim((string) $value) !== '') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function nullableTrim(mixed $value): ?string

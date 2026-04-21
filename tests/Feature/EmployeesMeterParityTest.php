@@ -23,6 +23,7 @@ class EmployeesMeterParityTest extends TestCase
         $this->postJson('/employees/add', [
             'company_id' => 'E900',
             'name' => 'Zara',
+            'cnic_no' => '11111-1111111-1',
             'department' => 'HR',
             'designation' => 'Officer',
             'unit_id' => 'UA-1',
@@ -31,6 +32,10 @@ class EmployeesMeterParityTest extends TestCase
         $this->postJson('/employees/add', [
             'company_id' => 'E900',
             'name' => 'Duplicate',
+            'cnic_no' => '22222-2222222-2',
+            'department' => 'HR',
+            'designation' => 'Officer',
+            'unit_id' => 'UA-1',
         ])->assertStatus(409);
 
         $this->postJson('/employees/upsert', [
@@ -60,20 +65,20 @@ class EmployeesMeterParityTest extends TestCase
         $this->patchJson('/employees/E900', [
             'designation' => 'Sr Officer',
             'active' => 'Yes',
-        ])->assertOk();
+        ])->assertStatus(405);
 
-        $this->assertSame('Sr Officer', DB::table('employees_master')->where('company_id', 'E900')->value('designation'));
+        $this->assertSame('Officer', DB::table('employees_master')->where('company_id', 'E900')->value('designation'));
 
         $csv = "company_id,name,department,designation\nE902,Ali,Ops,Engineer\nE903,Sara,Ops,Manager";
         $this->postJson('/employees/import', ['csv_text' => $csv])
             ->assertOk()
-            ->assertJsonPath('inserted', 2);
+            ->assertJsonPath('inserted_rows', 2)
+            ->assertJsonPath('rejected_rows', 0);
 
         $this->deleteJson('/employees/E901')
-            ->assertOk()
-            ->assertJsonPath('policy', 'soft-delete');
+            ->assertStatus(405);
 
-        $this->assertSame('No', DB::table('employees_master')->where('company_id', 'E901')->value('active'));
+        $this->assertSame('Yes', DB::table('employees_master')->where('company_id', 'E901')->value('active'));
     }
 
     public function test_employees_search_validation_error(): void
@@ -117,6 +122,85 @@ class EmployeesMeterParityTest extends TestCase
             ->assertOk()
             ->assertJsonPath('row.reading_value', 44.2)
             ->assertJsonPath('row.reading_date', '2026-03-10');
+    }
+
+    public function test_employee_bulk_import_partial_success_rejects_duplicates_and_keeps_valid_rows(): void
+    {
+        $this->authAsDataEntry();
+
+        DB::table('employees_master')->insert([
+            'company_id' => 'E950',
+            'name' => 'Existing',
+            'department' => 'Ops',
+            'designation' => 'Lead',
+            'active' => 'Yes',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $csv = "company_id,name,department,designation\nE951,New One,Ops,Engineer\nE951,Dupe In File,Ops,Engineer\nE950,Already Exists,Ops,Manager\n,Missing Id,Ops,Staff";
+
+        $response = $this->postJson('/employees/import', ['csv_text' => $csv])
+            ->assertOk()
+            ->assertJsonPath('total_rows', 4)
+            ->assertJsonPath('valid_rows', 1)
+            ->assertJsonPath('inserted_rows', 1)
+            ->assertJsonPath('updated_rows', 0)
+            ->assertJsonPath('rejected_rows', 3);
+
+        $errors = $response->json('errors_preview');
+        $this->assertSame('DUPLICATE_COMPANY_ID_IN_FILE', $errors[0]['error_code']);
+        $this->assertSame('COMPANY_ID_ALREADY_EXISTS', $errors[1]['error_code']);
+        $this->assertSame('MISSING_REQUIRED', $errors[2]['error_code']);
+        $this->assertTrue(DB::table('employees_master')->where('company_id', 'E951')->exists());
+    }
+
+    public function test_active_days_import_partial_success_rejects_unknown_and_invalid_rows(): void
+    {
+        $this->authAsDataEntry();
+
+        DB::table('employees_master')->insert([
+            [
+                'company_id' => 'AD100',
+                'name' => 'Worker One',
+                'department' => 'Ops',
+                'designation' => 'Tech',
+                'active' => 'Yes',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'company_id' => 'AD200',
+                'name' => 'Worker Two',
+                'department' => 'Ops',
+                'designation' => 'Tech',
+                'active' => 'Yes',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $csv = "company_id,active_days\nAD100,30\nZZ999,12\nAD200,abc\nAD200,32";
+
+        $preview = $this->postJson('/imports/active-days/import', ['month_cycle' => '04-2026', 'csv_text' => $csv, 'commit' => false])
+            ->assertOk()
+            ->assertJsonPath('mode', 'preview')
+            ->assertJsonPath('total_rows', 4)
+            ->assertJsonPath('valid_rows', 1)
+            ->assertJsonPath('rejected_rows', 3);
+
+        $commit = $this->postJson('/imports/active-days/import', ['month_cycle' => '04-2026', 'csv_text' => $csv, 'commit' => true])
+            ->assertOk()
+            ->assertJsonPath('mode', 'commit')
+            ->assertJsonPath('valid_rows', 1)
+            ->assertJsonPath('inserted_rows', 1)
+            ->assertJsonPath('updated_rows', 0)
+            ->assertJsonPath('rejected_rows', 3);
+
+        $this->assertSame(1, DB::table('hr_input')->where('month_cycle', '04-2026')->count());
+        $this->assertEquals(30.0, (float) DB::table('hr_input')->where('month_cycle', '04-2026')->where('company_id', 'AD100')->value('active_days'));
+        $this->assertSame($preview->json('valid_rows'), $commit->json('valid_rows'));
+        $this->assertSame($preview->json('rejected_rows'), $commit->json('rejected_rows'));
     }
 
     public function test_rooms_cascade_deletes_rooms_and_occupancy_for_unit_month(): void
