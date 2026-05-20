@@ -44,7 +44,7 @@
 
     <div class="col-12 card soft">
         <h3 class="section-title">Execution Status</h3>
-        <div id="monthStatus" class="banner">Ready.</div>
+        <div id="monthStatus" class="banner">Ready for month lifecycle action.</div>
         <details style="margin-top:10px">
             <summary class="muted">Technical response</summary>
             <pre id="monthCycleResult" style="margin-top:8px">{}</pre>

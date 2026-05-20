@@ -1,6 +1,6 @@
 ﻿@extends('layouts.app')
-@section('page_title','Dashboard')
-@section('page_subtitle','Operational control center for month-cycle billing, reporting and reconciliation health.')
+@section('page_title','Billing Command Dashboard')
+@section('page_subtitle','Enterprise operational control center for month-cycle billing, transport data, reports and reconciliation health.')
 @section('content')
 <div class="grid">
     <div class="col-3 card">
@@ -10,7 +10,7 @@
     </div>
     <div class="col-3 card">
         <div class="muted">Total Billed</div>
-        <div class="kpi">{{ number_format((float)($kpis['total_billed'] ?? 0), 2) }}</div>
+        <div class="kpi">PKR {{ number_format((float)($kpis['total_billed'] ?? 0), 2) }}</div>
         <span class="badge">Financial</span>
     </div>
     <div class="col-3 card">

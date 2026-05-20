@@ -1,4 +1,4 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('page_title','Reconciliation')
 @section('page_subtitle','Track billed, recovered and outstanding positions with export-ready reconciliation controls.')
 @section('content')
@@ -15,6 +15,7 @@
     </div>
     <div class="col-12 card">
         <h3 class="section-title">Employee Reconciliation</h3>
+        <div class="table-wrap">
         <table>
             <thead><tr><th>Employee ID</th><th>Billed</th><th>Recovered</th><th>Outstanding</th></tr></thead>
             <tbody>
@@ -30,6 +31,7 @@
             @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 @endsection

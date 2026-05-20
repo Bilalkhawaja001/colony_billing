@@ -2,12 +2,10 @@
 @section('page_title','Billing Run & Lock')
 @section('page_subtitle','Run billing cycles, lock approved runs, and open downstream report exports from one control surface.')
 @section('content')
-<style>
-  .local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}
-</style>
+
 <div class="grid">
   <div class="col-12 card soft">
-    <div class="toolbar local-sticky">
+    <div class="toolbar sticky-actions">
       <span class="badge">Run + Lock Control</span>
       <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Open Reporting Center</a>
     </div>
@@ -41,9 +39,9 @@
     </div>
   </div>
 
-  <div class="col-12 card">
+  <div class="col-12 card soft">
     <h3 class="section-title">Execution Status</h3>
-    <div id="billingStatus" class="banner">Ready.</div>
+    <div id="billingStatus" class="banner">Ready for controlled billing run.</div>
     <details style="margin-top:10px">
       <summary class="muted">Technical response</summary>
       <pre id="billingResult" style="margin-top:8px">{}</pre>
