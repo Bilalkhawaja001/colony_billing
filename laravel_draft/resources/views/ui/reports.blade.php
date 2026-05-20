@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿@extends('layouts.app')
 @section('page_title','Reporting Center')
 @section('page_subtitle','Consolidated reporting center for monthly summary, recovery and employee bill analysis.')
 @section('content')
@@ -23,7 +23,7 @@
                 <thead><tr><th>Utility Type</th><th>Total Amount</th></tr></thead>
                 <tbody>
                 @forelse($rows as $row)
-                    <tr><td>{{ $row->utility_type ?? '' }}</td><td>PKR {{ number_format((float)($row->total_amount ?? 0), 2) }}</td></tr>
+                    <tr><td>{{ $row->utility_type ?? '' }}</td><td>{{ number_format((float)($row->total_amount ?? 0), 2) }}</td></tr>
                 @empty
                     <tr><td colspan="2"><div class="empty">No report rows found for selected month.</div></td></tr>
                 @endforelse
@@ -32,4 +32,6 @@
         </div>
     </div>
 </div>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="billingPreview"></div><div class="col-12" data-grid="statement"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

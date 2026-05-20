@@ -726,4 +726,6 @@ document.getElementById('bulk_header_line').textContent=BULK_COLUMNS.join(',');
 document.getElementById('bulk_sample_line').textContent=BULK_SAMPLE_ROW.join(',');
 showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref();
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="employees"></div><div class="col-12" data-grid="family"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

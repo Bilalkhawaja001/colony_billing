@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Billing\FamilyRegistryResultsController;
 use App\Http\Controllers\Billing\EmployeesMeterParityController;
 use App\Http\Controllers\Billing\MonthlyActiveDaysController;
+use App\Http\Controllers\Billing\DataGridController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
@@ -255,7 +256,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/results/unit-wise', [FamilyRegistryResultsController::class, 'resultsUnitWise']);
 });
 
-Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,VIEWER'])->group(function () {
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
     Route::get('/reports/reconciliation', [BillingDraftController::class, 'reconciliationReport']);
     Route::get('/reports/monthly-summary', [BillingDraftController::class, 'monthlySummary']);
     Route::get('/reports/recovery', [BillingDraftController::class, 'recoveryReport']);
@@ -265,6 +266,20 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/export/excel/reconciliation', [BillingDraftController::class, 'exportExcelReconciliation']);
     Route::get('/export/excel/monthly-summary', [BillingDraftController::class, 'exportExcelMonthlySummary']);
     Route::get('/export/pdf/monthly-summary', [BillingDraftController::class, 'exportPdfMonthlySummary']);
+    Route::get('/billing/electric/export', [BillingDraftController::class, 'exportElectricBillExcel']);
+    Route::get('/billing/electric/export-complete', [BillingDraftController::class, 'exportCompleteElectricBillExcel']);
+    Route::get('/billing/electric/alerts-audit', [BillingDraftController::class, 'exportElectricAlertsAuditExcel']);
+    Route::get('/billing/electric/missing-skipped-audit', [BillingDraftController::class, 'exportElectricMissingSkippedAuditExcel']);
+    Route::get('/api/grids/{module}', [DataGridController::class, 'list']);
+    Route::get('/meter-reading/list', [DataGridController::class, 'list'])->defaults('module', 'meter-readings');
+    Route::get('/export/{module}', [DataGridController::class, 'export']);
+    Route::get('/reports/employee-statement', [DataGridController::class, 'employeeStatement']);
+    Route::get('/reports/employee-statement/export', [DataGridController::class, 'employeeStatementExport']);
+    Route::get('/reports/employee-statements/export-all', [DataGridController::class, 'employeeStatementsExportAll']);
+});
+
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
+    Route::post('/api/grids/{module}/upsert', [DataGridController::class, 'upsert']);
 });
 
 require __DIR__.'/electric_v1.php';

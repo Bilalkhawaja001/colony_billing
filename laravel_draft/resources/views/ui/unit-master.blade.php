@@ -51,4 +51,6 @@ document.getElementById('downloadUnitTemplate').onclick=()=>download('unit_maste
 document.getElementById('importUnitCsv').onclick=async()=>{const f=document.getElementById('unitCsvFile').files[0]; if(!f)return show({status:400,error:'Select CSV file'}); const rows=parseCsv(await f.text()); if(rows.length===0)return show({status:400,error:'No data rows'}); let ok=0,fail=0,errors=[]; for(let i=0;i<rows.length;i++){const r=await req('/units/upsert','POST',{unit_id:rows[i].unit_id,unit_name:rows[i].unit_name}); if(r.status>=200&&r.status<300)ok++; else {fail++;errors.push({line:i+2,row:rows[i],response:r});}} show({status:'done',processed:rows.length,ok,fail,errors});};
 document.getElementById('loadUnitsBtn').onclick=async()=>{const r=await req('/units'); render(r.body?.rows||[]);};
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="units"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

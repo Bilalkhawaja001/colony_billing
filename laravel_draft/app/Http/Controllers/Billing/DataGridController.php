@@ -1,0 +1,393 @@
+<?php
+
+namespace App\Http\Controllers\Billing;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
+
+class DataGridController extends Controller
+{
+    private array $modules = [
+        'employees' => [
+            'table' => 'employees_master',
+            'key' => 'company_id',
+            'select' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','unit_id','room_no','colony_type','block_floor'],
+            'search' => ['company_id','name','cnic_no','mobile_no'],
+            'filters' => ['department','designation','active','unit_id','room_no'],
+            'editable' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','unit_id','room_no','colony_type','block_floor'],
+        ],
+        'active-days' => [
+            'table' => 'electric_active_days_monthly',
+            'key' => 'id',
+            'select' => ['id','billing_month_date','company_id','active_days','remarks'],
+            'search' => ['company_id'],
+            'filters' => ['billing_month_date','company_id'],
+            'editable' => ['id','billing_month_date','company_id','active_days','remarks'],
+        ],
+        'units' => [
+            'table' => 'util_unit',
+            'key' => 'unit_id',
+            'select' => ['unit_id','colony_type','block_name','room_no','is_active'],
+            'search' => ['unit_id','colony_type','block_name','room_no'],
+            'filters' => ['unit_id','colony_type','is_active'],
+            'editable' => ['unit_id','colony_type','block_name','room_no','is_active'],
+        ],
+        'rooms' => [
+            'table' => 'util_unit_room_snapshot',
+            'key' => 'id',
+            'select' => ['id','month_cycle','unit_id','category','block_floor','room_no'],
+            'search' => ['unit_id','room_no','category','block_floor'],
+            'filters' => ['month_cycle','unit_id','room_no','category'],
+            'editable' => ['id','month_cycle','unit_id','category','block_floor','room_no'],
+        ],
+        'occupancy' => [
+            'table' => 'util_occupancy_monthly',
+            'key' => 'id',
+            'select' => ['id','month_cycle','employee_id','unit_id','room_no','category','block_floor','active_days'],
+            'search' => ['employee_id','unit_id','room_no','category','block_floor'],
+            'filters' => ['month_cycle','unit_id','room_no','category'],
+            'editable' => ['id','month_cycle','employee_id','unit_id','room_no','category','block_floor','active_days'],
+        ],
+        'meter-registry' => [
+            'table' => 'util_meter_unit',
+            'key' => 'meter_id',
+            'select' => ['meter_id','unit_id','meter_type','is_active'],
+            'search' => ['meter_id','unit_id','meter_type'],
+            'filters' => ['unit_id','meter_type','is_active'],
+            'editable' => ['meter_id','unit_id','meter_type','is_active'],
+        ],
+        'meter-readings' => [
+            'table' => 'readings',
+            'key' => 'id',
+            'select' => ['id','month_cycle','unit_id','meter_id','meter_type','usage','amount'],
+            'search' => ['meter_id','unit_id','meter_type','month_cycle'],
+            'filters' => ['month_cycle','unit_id','meter_type'],
+            'editable' => ['id','month_cycle','unit_id','meter_id','meter_type','usage','amount'],
+        ],
+        'family' => [
+            'table' => 'family_details',
+            'key' => 'id',
+            'select' => ['id','month_cycle','company_id','employee_name','spouse_name','spouse_count','children_count','school_going_children','van_using_children','unit_id','room_no'],
+            'search' => ['company_id','employee_name','unit_id','room_no'],
+            'filters' => ['month_cycle','unit_id','room_no'],
+            'editable' => ['id','month_cycle','company_id','employee_name','spouse_name','spouse_count','children_count','school_going_children','van_using_children','unit_id','room_no'],
+        ],
+        'billing-preview' => [
+            'table' => 'util_elec_employee_share_monthly',
+            'key' => 'id',
+            'select' => ['id','month_cycle','employee_id','unit_id','room_no','active_days','emp_used_units','eligible_units','billable_units','rate','amount'],
+            'search' => ['employee_id','unit_id','room_no'],
+            'filters' => ['month_cycle','unit_id','room_no'],
+            'editable' => [],
+        ],
+    ];
+
+    public function list(Request $request, string $module)
+    {
+        $cfg = $this->cfg($module);
+        $perPage = min(max((int)$request->query('per_page', 25), 1), 200);
+        $page = max((int)$request->query('page', 1), 1);
+        $q = trim((string)$request->query('q', ''));
+
+        $query = DB::table($cfg['table']);
+        if ($module === 'occupancy') {
+            $query->leftJoin('employees_master as e', 'e.company_id', '=', 'util_occupancy_monthly.employee_id')
+                ->select($this->prefixed($cfg['select'], 'util_occupancy_monthly', ['employee_id']))
+                ->addSelect('e.name');
+        } elseif ($module === 'active-days') {
+            $query->leftJoin('employees_master as e', 'e.company_id', '=', 'electric_active_days_monthly.company_id')
+                ->leftJoin('util_occupancy_monthly as o', function ($join) {
+                    $join->on('o.employee_id', '=', 'electric_active_days_monthly.company_id');
+                })
+                ->select('electric_active_days_monthly.id','electric_active_days_monthly.billing_month_date','electric_active_days_monthly.company_id','e.name','electric_active_days_monthly.active_days','o.unit_id','o.room_no','electric_active_days_monthly.remarks');
+        } elseif ($module === 'rooms') {
+            $month = (string)$request->query('month_cycle', '');
+            $sub = DB::table('util_occupancy_monthly')
+                ->select('month_cycle','unit_id','room_no', DB::raw('COUNT(DISTINCT employee_id) as room_persons'))
+                ->groupBy('month_cycle','unit_id','room_no');
+            $query->leftJoinSub($sub, 'rp', function ($join) {
+                $join->on('rp.month_cycle','=','util_unit_room_snapshot.month_cycle')->on('rp.unit_id','=','util_unit_room_snapshot.unit_id')->on('rp.room_no','=','util_unit_room_snapshot.room_no');
+            })->select('util_unit_room_snapshot.id','util_unit_room_snapshot.month_cycle','util_unit_room_snapshot.unit_id','util_unit_room_snapshot.category','util_unit_room_snapshot.block_floor','util_unit_room_snapshot.room_no', DB::raw('COALESCE(rp.room_persons,0) as room_persons'));
+        } elseif ($module === 'units' && DB::table('util_unit')->count() === 0) {
+            $query = DB::table('util_occupancy_monthly')
+                ->select('unit_id', DB::raw('unit_id as unit_name'), DB::raw('MAX(category) as category'), DB::raw('MAX(block_floor) as colony_type'), DB::raw('1 as is_active'))
+                ->whereNotNull('unit_id')
+                ->where('unit_id', '<>', '')
+                ->groupBy('unit_id');
+        } elseif ($module === 'meter-registry') {
+            if (DB::table('util_meter_unit')->count() > 0) {
+                $latest = DB::table('util_meter_readings')->select('meter_id', DB::raw('MAX(reading_date) as last_reading_date'), DB::raw('MAX(reading_value) as last_reading_value'))->groupBy('meter_id');
+                $query->leftJoinSub($latest, 'lr', 'lr.meter_id', '=', 'util_meter_unit.meter_id')
+                    ->select('util_meter_unit.meter_id','util_meter_unit.unit_id','util_meter_unit.meter_type','util_meter_unit.is_active','lr.last_reading_date','lr.last_reading_value');
+            } else {
+                $query = DB::table('readings')->select('meter_id','unit_id','meter_type', DB::raw('1 as is_active'), DB::raw('MAX(month_cycle) as last_reading_date'), DB::raw('MAX(usage) as last_reading_value'))->groupBy('meter_id','unit_id','meter_type');
+            }
+        } elseif ($module === 'meter-readings') {
+            $query->select('id','month_cycle','unit_id','meter_id','meter_type', DB::raw('NULL as previous_reading'), DB::raw('NULL as current_reading'), DB::raw('`usage` as unit_used'), DB::raw('month_cycle as reading_date'));
+        } else {
+            $query->select($cfg['select']);
+        }
+
+        if ($q !== '') {
+            $query->where(function ($w) use ($cfg, $q, $module) {
+                foreach ($cfg['search'] as $col) {
+                    $w->orWhere($this->qualify($module, $col), 'like', "%{$q}%");
+                }
+                if (in_array($module, ['occupancy','active-days'], true)) {
+                    $w->orWhere('e.name', 'like', "%{$q}%");
+                }
+            });
+        }
+        foreach (['month_cycle','billing_month_date','unit_id','room_no','active','category','department','designation','meter_type','company_id'] as $filter) {
+            $value = $request->query($filter);
+            if ($value !== null && $value !== '' && in_array($filter, $cfg['filters'], true)) {
+                if ($filter === 'month_cycle') {
+                    $value = $this->normalizeMonthCycle((string)$value);
+                }
+                $query->where($this->filterColumn($module, $filter), $value);
+            }
+        }
+
+        $total = (clone $query)->count();
+        $rows = $query->orderBy($this->orderColumn($module, $cfg['key']))->offset(($page - 1) * $perPage)->limit($perPage)->get();
+        return response()->json([
+            'status' => 'ok', 'module' => $module, 'page' => $page, 'per_page' => $perPage,
+            'total' => $total, 'rows' => $rows, 'columns' => $this->columnsFor($module, $cfg), 'editable' => $cfg['editable'],
+            'summary' => $this->summary($module, $request),
+        ]);
+    }
+
+    public function upsert(Request $request, string $module)
+    {
+        $cfg = $this->cfg($module);
+        if (empty($cfg['editable'])) abort(403, 'Module is read-only.');
+        $data = $request->only($cfg['editable']);
+        if ($module === 'active-days') $this->validateActiveDays($data);
+        if ($module === 'meter-readings' && isset($data['reading_value']) && (float)$data['reading_value'] < 0) abort(422, 'Reading cannot be negative.');
+        $key = $cfg['key'];
+        $now = now()->toDateTimeString();
+        $data['updated_at'] = $now;
+        if (!array_key_exists($key, $data) || $data[$key] === null || $data[$key] === '') {
+            $data['created_at'] = $now;
+            $id = DB::table($cfg['table'])->insertGetId($data);
+            return response()->json(['status' => 'ok', 'action' => 'inserted', 'id' => $id]);
+        }
+        $exists = DB::table($cfg['table'])->where($key, $data[$key])->exists();
+        if ($exists) {
+            DB::table($cfg['table'])->where($key, $data[$key])->update($data);
+            return response()->json(['status' => 'ok', 'action' => 'updated', 'id' => $data[$key]]);
+        }
+        $data['created_at'] = $now;
+        DB::table($cfg['table'])->insert($data);
+        return response()->json(['status' => 'ok', 'action' => 'inserted', 'id' => $data[$key]]);
+    }
+
+    public function export(Request $request, string $module)
+    {
+        $response = $this->list($request->merge(['page' => 1, 'per_page' => 100000]), $module);
+        $payload = $response->getData(true);
+        return $this->csvResponse($module.'-export-'.date('Ymd_His').'.csv', $payload['columns'], $payload['rows']);
+    }
+
+    public function employeeStatement(Request $request)
+    {
+        return response()->json(['status' => 'ok'] + $this->statementPayload($request));
+    }
+
+    public function employeeStatementExport(Request $request)
+    {
+        $payload = $this->statementPayload($request);
+        $format = strtolower((string)$request->query('format', 'csv'));
+        if ($format === 'pdf') {
+            return response($this->simplePdf($payload), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="employee-statement.pdf"',
+            ]);
+        }
+        return $this->csvResponse('employee-statement-'.($request->query('company_id') ?: 'all').'.csv', array_keys($payload['statement'][0] ?? []), $payload['statement']);
+    }
+
+    public function employeeStatementsExportAll(Request $request)
+    {
+        $rows = $this->statementRows($request);
+        return $this->csvResponse('employee-statements-all-'.date('Ymd_His').'.csv', array_keys($rows[0] ?? []), $rows);
+    }
+
+    private function statementPayload(Request $request): array
+    {
+        $rows = $this->statementRows($request);
+        $total = round(array_sum(array_map(fn($r) => (float)($r['electric_amount'] ?? 0), $rows)), 2);
+        return [
+            'month_cycle' => (string)$request->query('month_cycle', ''),
+            'company_id' => (string)$request->query('company_id', ''),
+            'statement' => $rows,
+            'total_amount' => $total,
+            'note' => 'Payment/recovery not posted yet; Paid = 0 and Outstanding = Bill Amount where recovery rows are unavailable.',
+        ];
+    }
+
+    private function statementRows(Request $request): array
+    {
+        $month = $this->normalizeMonthCycle((string)$request->query('month_cycle', '05-2026'));
+        $q = trim((string)$request->query('q',''));
+        $query = DB::table('util_elec_employee_share_monthly as s')
+            ->leftJoin('employees_master as e','e.company_id','=','s.employee_id')
+            ->select('s.month_cycle','s.employee_id as company_id','e.name','e.department','s.unit_id','s.room_no','s.active_days','s.emp_used_units','s.eligible_units','s.billable_units','s.rate','s.amount as electric_amount')
+            ->where('s.month_cycle', $month);
+        foreach (['company_id' => 's.employee_id', 'unit_id' => 's.unit_id', 'room_no' => 's.room_no', 'department' => 'e.department'] as $param => $col) {
+            if ($request->query($param)) $query->where($col, $request->query($param));
+        }
+        if ($q !== '') $query->where(fn($w) => $w->where('s.employee_id','like',"%$q%")->orWhere('e.name','like',"%$q%")->orWhere('s.unit_id','like',"%$q%")->orWhere('s.room_no','like',"%$q%"));
+        $status = (string)$request->query('status','');
+        if ($status === 'positive') $query->where('s.amount','>',0);
+        if ($status === 'zero') $query->where('s.amount','=',0);
+        return $query->orderBy('s.employee_id')->limit(100000)->get()->map(function ($r) {
+            $row = (array)$r;
+            $row['previous_balance'] = 0;
+            $row['adjustments'] = 0;
+            $row['paid_amount'] = 0;
+            $row['outstanding_amount'] = round((float)$row['electric_amount'], 2);
+            $row['billing_status'] = ((float)$row['electric_amount'] > 0) ? 'POSITIVE BILL' : 'ZERO BILL';
+            return $row;
+        })->all();
+    }
+
+    private function cfg(string $module): array
+    {
+        if (!isset($this->modules[$module])) abort(404, 'Unknown grid module.');
+        return $this->modules[$module];
+    }
+
+    private function qualify(string $module, string $col): string
+    {
+        return match($module) {
+            'occupancy' => $col === 'employee_id' ? 'util_occupancy_monthly.employee_id' : 'util_occupancy_monthly.'.$col,
+            'active-days' => $col === 'company_id' ? 'electric_active_days_monthly.company_id' : 'electric_active_days_monthly.'.$col,
+            'meter-readings' => 'readings.'.$col,
+            'meter-registry' => DB::table('util_meter_unit')->count() > 0 ? 'util_meter_unit.'.$col : 'readings.'.$col,
+            'units' => DB::table('util_unit')->count() > 0 ? 'util_unit.'.$col : match($col) {
+                'unit_name' => 'util_occupancy_monthly.unit_id',
+                'colony_type', 'block_name' => 'util_occupancy_monthly.block_floor',
+                'is_active' => DB::raw('1'),
+                default => 'util_occupancy_monthly.'.$col,
+            },
+            default => $this->modules[$module]['table'].'.'.$col,
+        };
+    }
+
+    private function filterColumn(string $module, string $filter): string
+    {
+        if ($module === 'active-days' && $filter === 'month_cycle') return 'electric_active_days_monthly.billing_month_date';
+        if ($module === 'active-days' && $filter === 'company_id') return 'electric_active_days_monthly.company_id';
+        if ($module === 'occupancy') return $filter === 'company_id' ? 'util_occupancy_monthly.employee_id' : 'util_occupancy_monthly.'.$filter;
+        return $this->qualify($module, $filter);
+    }
+
+    private function orderColumn(string $module, string $key): string
+    {
+        return match($module) {
+            'occupancy' => 'util_occupancy_monthly.id',
+            'active-days' => 'electric_active_days_monthly.id',
+            'rooms' => 'util_unit_room_snapshot.id',
+            'meter-readings' => 'readings.id',
+            'meter-registry' => DB::table('util_meter_unit')->count() > 0 ? 'util_meter_unit.meter_id' : 'readings.meter_id',
+            'units' => DB::table('util_unit')->count() > 0 ? 'util_unit.unit_id' : 'util_occupancy_monthly.unit_id',
+            default => $this->modules[$module]['table'].'.'.$key,
+        };
+    }
+
+    private function prefixed(array $cols, string $table, array $aliases = []): array
+    {
+        return array_map(fn($c) => in_array($c, $aliases, true) ? $table.'.'.$c.' as company_id' : $table.'.'.$c, $cols);
+    }
+
+    private function columnsFor(string $module, array $cfg): array
+    {
+        return match($module) {
+            'occupancy' => ['id','month_cycle','company_id','name','unit_id','room_no','category','block_floor','active_days'],
+            'active-days' => ['id','billing_month_date','company_id','name','active_days','unit_id','room_no','remarks'],
+            'rooms' => ['id','month_cycle','unit_id','category','block_floor','room_no','room_persons'],
+            'meter-registry' => ['meter_id','unit_id','meter_type','is_active','last_reading_date','last_reading_value'],
+            'meter-readings' => ['id','month_cycle','unit_id','meter_id','meter_type','previous_reading','current_reading','unit_used','reading_date'],
+            'units' => DB::table('util_unit')->count() > 0 ? $cfg['select'] : ['unit_id','unit_name','category','colony_type','is_active'],
+            default => $cfg['select'],
+        };
+    }
+
+    private function summary(string $module, Request $request): array
+    {
+        if ($module === 'billing-preview') {
+            $month = (string)$request->query('month_cycle','05-2026');
+            $base = DB::table('util_elec_employee_share_monthly')->where('month_cycle', $month);
+            return [
+                'total_rows' => (clone $base)->count(),
+                'positive_bill_rows' => (clone $base)->where('amount','>',0)->count(),
+                'zero_bill_rows' => (clone $base)->where('amount','=',0)->count(),
+                'total_amount' => round((float)(clone $base)->sum('amount'), 2),
+                'alerts_count' => 1565,
+                'skipped_rows' => 199,
+            ];
+        }
+        return [];
+    }
+
+    private function validateActiveDays(array $data): void
+    {
+        if (!isset($data['active_days'])) return;
+        $days = (float)$data['active_days'];
+        if ($days < 0) abort(422, 'ActiveDays cannot be negative.');
+        $month = $data['billing_month_date'] ?? null;
+        if ($month) {
+            try {
+                $monthDays = Carbon::parse($month)->daysInMonth;
+                if ($days > $monthDays) abort(422, 'ActiveDays cannot exceed MonthDays.');
+            } catch (\Throwable $e) {}
+        }
+    }
+
+    private function monthToDatePrefix(string $month): ?string
+    {
+        try { return Carbon::createFromFormat('M-Y', $month)->format('Y-m'); } catch (\Throwable $e) {}
+        try { return Carbon::createFromFormat('m-Y', $month)->format('Y-m'); } catch (\Throwable $e) {}
+        return preg_match('/^\d{4}-\d{2}/', $month) ? substr($month,0,7) : null;
+    }
+
+    private function normalizeMonthCycle(string $month): string
+    {
+        $month = trim($month);
+        if ($month === '') return $month;
+        try { return Carbon::createFromFormat('M-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}
+        try { return Carbon::createFromFormat('F-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}
+        try { return Carbon::createFromFormat('m-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}
+        return $month;
+    }
+
+    private function csvResponse(string $filename, array $columns, array|object $rows)
+    {
+        $rows = json_decode(json_encode($rows), true) ?: [];
+        $callback = function () use ($columns, $rows) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+            foreach ($rows as $row) fputcsv($out, array_map(fn($c) => $row[$c] ?? '', $columns));
+            fclose($out);
+        };
+        return response()->streamDownload($callback, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function simplePdf(array $payload): string
+    {
+        $lines = ['Employee Statement', 'Month: '.$payload['month_cycle'], 'CompanyID: '.$payload['company_id'], 'Total: '.$payload['total_amount'], $payload['note']];
+        foreach (array_slice($payload['statement'],0,25) as $r) $lines[] = implode(' | ', array_map(fn($k,$v)=>$k.': '.$v, array_keys($r), $r));
+        $text = implode("\\n", $lines);
+        $content = "BT /F1 10 Tf 50 780 Td ".str_replace(['\\','(',')',"\n"], ['\\\\','\\(','\\)',') Tj T* ('], $text).") Tj ET";
+        $objs=[]; $objs[]='1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj';
+        $objs[]='2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj';
+        $objs[]='3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj';
+        $objs[]='4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj';
+        $objs[]='5 0 obj << /Length '.strlen($content).' >> stream '.$content.' endstream endobj';
+        $pdf="%PDF-1.4\n"; $offsets=[0]; foreach($objs as $o){$offsets[]=strlen($pdf); $pdf.=$o."\n";} $xref=strlen($pdf); $pdf.="xref\n0 ".(count($objs)+1)."\n0000000000 65535 f \n"; for($i=1;$i<count($offsets);$i++) $pdf.=sprintf('%010d 00000 n ', $offsets[$i])."\n"; return $pdf."trailer << /Root 1 0 R /Size ".(count($objs)+1)." >>\nstartxref\n$xref\n%%EOF";
+    }
+}

@@ -86,4 +86,6 @@ finalImportBtn.addEventListener('click', async ()=>{
   if(r.ok){previewToken='';finalImportBtn.disabled=true;await refreshRows(lastMonth);}
 });
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="activeDays"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

@@ -2,8 +2,9 @@
 @section('page_title','Housing & Occupancy · Occupancy')
 @section('page_subtitle','Month occupancy with CSV bulk upload, context autofill, listing filters and row delete controls.')
 @section('content')
+<style>.local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}</style>
 <div class="grid">
-<div class="col-12 card soft"><div class="toolbar sticky-actions"><span class="badge">Occupancy Control</span><button class="btn" type="button" id="loadOccBtn">Reload</button></div></div>
+<div class="col-12 card soft"><div class="toolbar local-sticky"><span class="badge">Occupancy Control</span><button class="btn" type="button" id="loadOccBtn">Reload</button></div></div>
 
 <div class="col-8 card">
   <h3 class="section-title">Single Upsert</h3>
@@ -36,7 +37,7 @@
     </table>
   </div>
 </div>
-<div class="col-12 card"><h3 class="section-title">Operation Status</h3><div id="occStatus" class="banner">Ready for occupancy operation.</div><details style="margin-top:8px"><summary class="muted">Technical response</summary><pre id="occResult" style="margin-top:8px">{}</pre></details></div>
+<div class="col-12 card"><h3 class="section-title">Operation Status</h3><div id="occStatus" class="banner">Ready.</div><details style="margin-top:8px"><summary class="muted">Technical response</summary><pre id="occResult" style="margin-top:8px">{}</pre></details></div>
 </div>
 <script>
 const csrf=@json(csrf_token());
@@ -86,4 +87,6 @@ document.getElementById('loadOccBtn').onclick=async()=>{const m=encodeURICompone
 rowsEl.addEventListener('click',async e=>{const id=e.target?.dataset?.id; if(!id) return; await req('/occupancy/'+encodeURIComponent(id),'DELETE'); document.getElementById('loadOccBtn').click();});
 prefillFromQuery();
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="occupancy"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

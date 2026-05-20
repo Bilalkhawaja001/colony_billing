@@ -60,4 +60,6 @@ document.getElementById('importRoomsCsv').onclick=async()=>{const f=document.get
 document.getElementById('loadRoomsBtn').onclick=async()=>{const m=encodeURIComponent(document.getElementById('roomsMonth').value||''); const u=encodeURIComponent(document.getElementById('roomsUnit').value||''); const r=await req('/rooms?month_cycle='+m+'&unit_id='+u); render(r.body?.rows||[]);};
 rowsEl.addEventListener('click',async e=>{const id=e.target?.dataset?.id; if(!id) return; await req('/rooms/'+encodeURIComponent(id),'DELETE'); document.getElementById('loadRoomsBtn').click();});
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="rooms"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection

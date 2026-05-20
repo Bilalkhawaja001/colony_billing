@@ -31,4 +31,6 @@ async function req(url,method='GET',payload=null){const o={method,headers:{'X-CS
 document.getElementById('latestBtn').onclick=()=>req('/meter-reading/latest/'+encodeURIComponent(document.getElementById('latestUnit').value||''));
 document.getElementById('quickReadingForm').addEventListener('submit',e=>{e.preventDefault();req('/meter-reading/upsert','POST',Object.fromEntries(new FormData(e.target)));});
 </script>
+<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="meterReadings"></div></div>
+<script src="/js/crud-grids.js"></script>
 @endsection
