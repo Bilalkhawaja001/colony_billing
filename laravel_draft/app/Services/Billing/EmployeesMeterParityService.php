@@ -192,29 +192,39 @@ class EmployeesMeterParityService
         }
 
         $inserted = 0;
-        $updated = 0;
-        DB::transaction(function () use ($normalizedRows, &$inserted, &$updated) {
+        $skippedDuplicates = 0;
+
+        DB::transaction(function () use ($normalizedRows, &$inserted, &$skippedDuplicates, &$errors) {
+            $seen = [];
+
             foreach ($normalizedRows as $item) {
+                $rowNo = $item['row_no'];
                 $row = $item['row'];
-                $exists = DB::table('employees_master')->where('company_id', $row['company_id'])->exists();
+                $companyId = (string) $row['company_id'];
 
-                DB::table('employees_master')->updateOrInsert(
-                    ['company_id' => $row['company_id']],
-                    $this->buildUpsertData($row)
-                );
-
-                if ($exists) {
-                    $updated++;
-                } else {
-                    $inserted++;
+                if (isset($seen[$companyId])) {
+                    $skippedDuplicates++;
+                    $errors[] = ['row_no' => $rowNo, 'company_id' => $companyId, 'error' => 'Duplicate CompanyID in upload'];
+                    continue;
                 }
+                $seen[$companyId] = true;
+
+                if (DB::table('employees_master')->where('company_id', $companyId)->exists()) {
+                    $skippedDuplicates++;
+                    $errors[] = ['row_no' => $rowNo, 'company_id' => $companyId, 'error' => 'CompanyID already exists'];
+                    continue;
+                }
+
+                DB::table('employees_master')->insert($this->buildUpsertData($row));
+                $inserted++;
             }
         });
 
         return [
             'status' => 'ok',
             'inserted' => $inserted,
-            'updated' => $updated,
+            'updated' => 0,
+            'skipped_duplicates' => $skippedDuplicates,
             'rejected' => count($errors),
             'errors_preview' => array_slice($errors, 0, 50),
         ];
@@ -334,17 +344,31 @@ class EmployeesMeterParityService
             return ['status' => 'error', 'error' => 'meter_id, unit_id, reading_value are required', '_http' => 400];
         }
 
-        DB::table('util_meter_readings')->updateOrInsert(
-            ['meter_id' => $meterId, 'reading_date' => $readingDate],
-            [
-                'unit_id' => $unitId,
-                'reading_value' => (float) $readingValue,
-                'updated_at' => now(),
-                'created_at' => now(),
-            ]
-        );
+        $exists = DB::table('util_meter_readings')
+            ->where('meter_id', $meterId)
+            ->where('reading_date', $readingDate)
+            ->exists();
 
-        return ['status' => 'ok', 'meter_id' => $meterId, 'reading_date' => $readingDate];
+        if ($exists) {
+            return [
+                'status' => 'duplicate',
+                'error' => 'Meter reading already exists',
+                'meter_id' => $meterId,
+                'reading_date' => $readingDate,
+                '_http' => 409,
+            ];
+        }
+
+        DB::table('util_meter_readings')->insert([
+            'meter_id' => $meterId,
+            'unit_id' => $unitId,
+            'reading_value' => (float) $readingValue,
+            'reading_date' => $readingDate,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return ['status' => 'ok', 'inserted' => 1, 'meter_id' => $meterId, 'reading_date' => $readingDate];
     }
 
     public function meterUnit(array $query): array

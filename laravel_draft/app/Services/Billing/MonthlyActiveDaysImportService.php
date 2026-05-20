@@ -121,8 +121,9 @@ class MonthlyActiveDaysImportService
 
         $inserted = 0;
         $updated = 0;
+        $skippedDuplicates = 0;
 
-        DB::transaction(function () use ($billingMonthDate, $replaceExisting, $validRows, $sourceFile, $uploadedBy, &$inserted, &$updated) {
+        DB::transaction(function () use ($billingMonthDate, $replaceExisting, $validRows, $sourceFile, $uploadedBy, &$inserted, &$updated, &$skippedDuplicates) {
             if ($replaceExisting) {
                 ElectricActiveDaysMonthly::query()->whereDate('billing_month_date', $billingMonthDate)->delete();
             }
@@ -131,23 +132,23 @@ class MonthlyActiveDaysImportService
                 $existing = ElectricActiveDaysMonthly::query()
                     ->whereDate('billing_month_date', $billingMonthDate)
                     ->where('company_id', $row['company_id'])
-                    ->first();
-
-                ElectricActiveDaysMonthly::query()->updateOrCreate(
-                    ['billing_month_date' => $billingMonthDate, 'company_id' => $row['company_id']],
-                    [
-                        'active_days' => $row['active_days'],
-                        'remarks' => $row['remarks'] ?? null,
-                        'source_file' => $sourceFile !== '' ? $sourceFile : null,
-                        'uploaded_by' => $uploadedBy !== '' ? $uploadedBy : null,
-                    ]
-                );
+                    ->exists();
 
                 if ($existing) {
-                    $updated++;
-                } else {
-                    $inserted++;
+                    $skippedDuplicates++;
+                    continue;
                 }
+
+                ElectricActiveDaysMonthly::query()->create([
+                    'billing_month_date' => $billingMonthDate,
+                    'company_id' => $row['company_id'],
+                    'active_days' => $row['active_days'],
+                    'remarks' => $row['remarks'] ?? null,
+                    'source_file' => $sourceFile !== '' ? $sourceFile : null,
+                    'uploaded_by' => $uploadedBy !== '' ? $uploadedBy : null,
+                ]);
+
+                $inserted++;
             }
         });
 
@@ -159,6 +160,7 @@ class MonthlyActiveDaysImportService
                 'valid_rows' => count($validRows),
                 'inserted' => $inserted,
                 'updated' => $updated,
+                'skipped_duplicates' => $skippedDuplicates,
                 'skipped_rows' => (int) ($preview['summary']['skipped_rows'] ?? 0),
                 'invalid_rows' => (int) ($preview['summary']['invalid_rows'] ?? 0),
                 'replace_existing' => $replaceExisting,
