@@ -217,6 +217,11 @@ class DataGridController extends Controller
         return view('ui.employee-statement', $payload);
     }
 
+    public function employeeStatementPrint(Request $request)
+    {
+        return view('ui.employee-statement-print', ['status' => 'ok'] + $this->statementPayload($request));
+    }
+
     public function employeeStatementExport(Request $request)
     {
         $payload = $this->statementPayload($request);
@@ -239,11 +244,34 @@ class DataGridController extends Controller
     private function statementPayload(Request $request): array
     {
         $rows = $this->statementRows($request);
+
         $total = round(array_sum(array_map(fn($r) => (float)($r['electric_amount'] ?? 0), $rows)), 2);
+        $totalUsed = round(array_sum(array_map(fn($r) => (float)($r['emp_used_units'] ?? 0), $rows)), 4);
+        $totalEligible = round(array_sum(array_map(fn($r) => (float)($r['eligible_units'] ?? 0), $rows)), 4);
+        $totalBillable = round(array_sum(array_map(fn($r) => (float)($r['billable_units'] ?? 0), $rows)), 4);
+        $totalActiveDays = round(array_sum(array_map(fn($r) => (float)($r['active_days'] ?? 0), $rows)), 2);
+        $months = array_values(array_unique(array_map(fn($r) => (string)($r['month_cycle'] ?? ''), $rows)));
+
+        $fromMonth = $this->normalizeMonthCycle((string)$request->query('from_month', $request->query('month_cycle', '05-2026')));
+        $toMonth = $this->normalizeMonthCycle((string)$request->query('to_month', $request->query('month_cycle', $fromMonth)));
+
         return [
             'month_cycle' => (string)$request->query('month_cycle', ''),
+            'from_month' => $fromMonth,
+            'to_month' => $toMonth,
             'company_id' => (string)$request->query('company_id', ''),
+            'unit_id' => (string)$request->query('unit_id', ''),
+            'room_no' => (string)$request->query('room_no', ''),
             'statement' => $rows,
+            'summary' => [
+                'rows' => count($rows),
+                'months_count' => count(array_filter($months)),
+                'total_active_days' => $totalActiveDays,
+                'total_used_units' => $totalUsed,
+                'total_eligible_units' => $totalEligible,
+                'total_billable_units' => $totalBillable,
+                'total_amount' => $total,
+            ],
             'total_amount' => $total,
             'note' => 'Payment/recovery not posted yet; Paid = 0 and Outstanding = Bill Amount where recovery rows are unavailable.',
         ];
@@ -251,28 +279,51 @@ class DataGridController extends Controller
 
     private function statementRows(Request $request): array
     {
-        $month = $this->normalizeMonthCycle((string)$request->query('month_cycle', '05-2026'));
+        $fromMonth = $this->normalizeMonthCycle((string)$request->query('from_month', $request->query('month_cycle', '05-2026')));
+        $toMonth = $this->normalizeMonthCycle((string)$request->query('to_month', $request->query('month_cycle', $fromMonth)));
+
+        if ($fromMonth === '') $fromMonth = '05-2026';
+        if ($toMonth === '') $toMonth = $fromMonth;
+
         $q = trim((string)$request->query('q',''));
+
         $query = DB::table('util_elec_employee_share_monthly as s')
             ->leftJoin('employees_master as e','e.company_id','=','s.employee_id')
-            ->select('s.month_cycle','s.employee_id as company_id','e.name','e.department','s.unit_id','s.room_no','s.active_days','s.emp_used_units','s.eligible_units','s.billable_units','s.rate','s.amount as electric_amount')
-            ->where('s.month_cycle', $month);
+            ->select('s.month_cycle','s.employee_id as company_id','e.name','e.department','e.designation','e.colony_type','e.block_floor','s.unit_id','s.room_no','s.active_days','s.emp_used_units','s.eligible_units','s.billable_units','s.rate','s.amount as electric_amount')
+            ->whereRaw("STR_TO_DATE(CONCAT('01-', s.month_cycle), '%d-%m-%Y') >= STR_TO_DATE(?, '%d-%m-%Y')", ['01-'.$fromMonth])
+            ->whereRaw("STR_TO_DATE(CONCAT('01-', s.month_cycle), '%d-%m-%Y') <= STR_TO_DATE(?, '%d-%m-%Y')", ['01-'.$toMonth]);
+
         foreach (['company_id' => 's.employee_id', 'unit_id' => 's.unit_id', 'room_no' => 's.room_no', 'department' => 'e.department'] as $param => $col) {
             if ($request->query($param)) $query->where($col, $request->query($param));
         }
-        if ($q !== '') $query->where(fn($w) => $w->where('s.employee_id','like',"%$q%")->orWhere('e.name','like',"%$q%")->orWhere('s.unit_id','like',"%$q%")->orWhere('s.room_no','like',"%$q%"));
+
+        if ($q !== '') {
+            $query->where(fn($w) => $w
+                ->where('s.employee_id','like',"%$q%")
+                ->orWhere('e.name','like',"%$q%")
+                ->orWhere('s.unit_id','like',"%$q%")
+                ->orWhere('s.room_no','like',"%$q%")
+            );
+        }
+
         $status = (string)$request->query('status','');
         if ($status === 'positive') $query->where('s.amount','>',0);
         if ($status === 'zero') $query->where('s.amount','=',0);
-        return $query->orderBy('s.employee_id')->limit(100000)->get()->map(function ($r) {
-            $row = (array)$r;
-            $row['previous_balance'] = 0;
-            $row['adjustments'] = 0;
-            $row['paid_amount'] = 0;
-            $row['outstanding_amount'] = round((float)$row['electric_amount'], 2);
-            $row['billing_status'] = ((float)$row['electric_amount'] > 0) ? 'POSITIVE BILL' : 'ZERO BILL';
-            return $row;
-        })->all();
+
+        return $query
+            ->orderByRaw("STR_TO_DATE(CONCAT('01-', s.month_cycle), '%d-%m-%Y')")
+            ->orderBy('s.employee_id')
+            ->limit(100000)
+            ->get()
+            ->map(function ($r) {
+                $row = (array)$r;
+                $row['previous_balance'] = 0;
+                $row['adjustments'] = 0;
+                $row['paid_amount'] = 0;
+                $row['outstanding_amount'] = round((float)$row['electric_amount'], 2);
+                $row['billing_status'] = ((float)$row['electric_amount'] > 0) ? 'POSITIVE BILL' : 'ZERO BILL';
+                return $row;
+            })->all();
     }
 
     private function cfg(string $module): array
@@ -379,6 +430,7 @@ class DataGridController extends Controller
     {
         $month = trim($month);
         if ($month === '') return $month;
+        try { return Carbon::createFromFormat('Y-m', $month)->format('m-Y'); } catch (\Throwable $e) {}
         try { return Carbon::createFromFormat('M-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}
         try { return Carbon::createFromFormat('F-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}
         try { return Carbon::createFromFormat('m-Y', $month)->format('m-Y'); } catch (\Throwable $e) {}

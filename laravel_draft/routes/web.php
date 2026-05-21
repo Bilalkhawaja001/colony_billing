@@ -274,6 +274,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/meter-reading/list', [DataGridController::class, 'list'])->defaults('module', 'meter-readings');
     Route::get('/export/{module}', [DataGridController::class, 'export']);
     Route::get('/reports/employee-statement', [DataGridController::class, 'employeeStatement']);
+    Route::get('/reports/employee-statement/print', [DataGridController::class, 'employeeStatementPrint']);
     Route::get('/reports/employee-statement/export', [DataGridController::class, 'employeeStatementExport']);
     Route::get('/reports/employee-statements/export-all', [DataGridController::class, 'employeeStatementsExportAll']);
 });
