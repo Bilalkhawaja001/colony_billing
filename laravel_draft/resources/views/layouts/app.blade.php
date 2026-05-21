@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('page_title', 'Colony Billing Admin')</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root{
             --bg:#eef4fb;
@@ -38,7 +41,7 @@
                 linear-gradient(180deg, #f8fbff 0%, var(--bg) 46%, #edf3fa 100%);
             background-attachment:fixed;
             color:var(--text);
-            font-family:Inter,Segoe UI,Arial,sans-serif;
+            font-family:"Inter","Manrope",Segoe UI,Arial,sans-serif;
         }
         .app{display:flex;min-height:100vh}
         .sidebar{
@@ -187,12 +190,604 @@
         .empty{padding:20px;border:1px dashed rgba(170,190,216,.52);border-radius:14px;background:rgba(250,252,255,.8);color:var(--muted);font-size:13px;text-align:center;box-shadow:var(--shadow-soft)}
         .split{display:flex;gap:10px;flex-wrap:wrap}
         @media (max-width:1200px){.sidebar{display:none}.col-3,.col-4,.col-5,.col-6,.col-7,.col-8,.col-12{grid-column:span 12}.container{padding:16px}.sticky-actions{position:static;padding:6px}}
+
+        /* Enterprise Top Navigation Shell */
+        body{
+            background:#f6f8fb !important;
+            font-family:"Inter","Manrope",Segoe UI,Arial,sans-serif !important;
+        }
+        .app{
+            display:block !important;
+            min-height:100vh;
+        }
+        .sidebar{
+            display:none !important;
+        }
+        .main{
+            display:block !important;
+            min-height:100vh;
+            width:100%;
+        }
+        .top{
+            display:none !important;
+        }
+        .container{
+            padding:22px 28px !important;
+            max-width:1480px;
+            margin:0 auto;
+        }
+        .cb-shell{
+            position:sticky;
+            top:0;
+            z-index:100;
+            background:rgba(246,248,251,.92);
+            backdrop-filter:blur(18px);
+            border-bottom:1px solid rgba(203,213,225,.82);
+        }
+        .cb-topline{
+            max-width:1480px;
+            margin:0 auto;
+            padding:10px 28px 0;
+        }
+        .cb-promo{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:22px;
+            min-height:42px;
+            padding:8px 18px;
+            border-radius:999px;
+            color:#dbeafe;
+            background:linear-gradient(90deg,#111827,#0f3b34,#052e1a);
+            box-shadow:0 12px 28px rgba(15,23,42,.10);
+            font-size:13px;
+            font-weight:650;
+        }
+        .cb-promo b{
+            color:#bef264;
+            font-family:"Manrope","Inter",sans-serif;
+            font-size:18px;
+            font-style:italic;
+            letter-spacing:-.04em;
+        }
+        .cb-promo a{
+            color:#bef264;
+            text-decoration:none;
+            font-weight:800;
+        }
+        .cb-nav{
+            max-width:1480px;
+            margin:0 auto;
+            min-height:74px;
+            padding:0 28px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:18px;
+        }
+        .cb-brand{
+            display:flex;
+            align-items:center;
+            gap:12px;
+            text-decoration:none;
+            color:#0f172a;
+            min-width:230px;
+        }
+        .cb-brand-mark{
+            width:34px;
+            height:34px;
+            border-radius:10px;
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            color:#ffffff;
+            background:linear-gradient(135deg,#fb3b22,#ff7a1a);
+            font-size:15px;
+            font-weight:900;
+            letter-spacing:-.04em;
+        }
+        .cb-brand-text{
+            display:flex;
+            flex-direction:column;
+            line-height:1.05;
+        }
+        .cb-brand-title{
+            font-size:18px;
+            font-weight:900;
+            letter-spacing:-.035em;
+        }
+        .cb-brand-sub{
+            margin-top:3px;
+            color:#64748b;
+            font-size:11px;
+            font-weight:700;
+            letter-spacing:.08em;
+            text-transform:uppercase;
+        }
+        .cb-menu{
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            gap:2px;
+            flex:1;
+        }
+        .cb-menu-item{
+            position:relative;
+        }
+        .cb-menu-btn{
+            min-height:38px;
+            padding:8px 13px;
+            border:0;
+            background:transparent;
+            color:#0f172a;
+            font-size:14px;
+            font-weight:750;
+            cursor:pointer;
+            border-radius:999px;
+            font-family:inherit;
+        }
+        .cb-menu-btn:hover{
+            background:#eef4fb;
+        }
+        .cb-menu-btn:after{
+            content:"";
+            display:inline-block;
+            width:6px;
+            height:6px;
+            margin-left:7px;
+            border-right:1.5px solid currentColor;
+            border-bottom:1.5px solid currentColor;
+            transform:rotate(45deg) translateY(-2px);
+        }
+        .cb-dropdown{
+            position:absolute;
+            top:calc(100% + 10px);
+            left:50%;
+            transform:translateX(-50%);
+            width:720px;
+            display:none;
+            grid-template-columns:repeat(3,minmax(0,1fr));
+            gap:20px;
+            padding:22px;
+            background:rgba(255,255,255,.96);
+            border:1px solid #dce5f2;
+            border-radius:20px;
+            box-shadow:0 24px 60px rgba(15,23,42,.16);
+            backdrop-filter:blur(16px);
+        }
+        .cb-menu-item:hover .cb-dropdown{
+            display:grid;
+        }
+        .cb-drop-col h4{
+            margin:0 0 12px;
+            color:#94a3b8;
+            font-size:11px;
+            font-weight:900;
+            letter-spacing:.13em;
+            text-transform:uppercase;
+        }
+        .cb-drop-col a{
+            display:block;
+            padding:8px 0;
+            color:#334155;
+            text-decoration:none;
+            font-size:14px;
+            font-weight:650;
+        }
+        .cb-drop-col a:hover{
+            color:#0f172a;
+        }
+        .cb-actions{
+            min-width:280px;
+            display:flex;
+            align-items:center;
+            justify-content:flex-end;
+            gap:10px;
+        }
+        .cb-action-primary{
+            min-height:38px;
+            padding:9px 18px;
+            border-radius:999px;
+            border:1px solid #0f172a;
+            color:#0f172a;
+            background:#ffffff;
+            text-decoration:none;
+            font-size:13px;
+            font-weight:850;
+        }
+        .cb-action-hot{
+            min-height:38px;
+            padding:9px 18px;
+            border-radius:999px;
+            border:0;
+            color:#ffffff;
+            background:linear-gradient(135deg,#fb3b22,#ff6b2c);
+            text-decoration:none;
+            font-size:13px;
+            font-weight:850;
+        }
+        .cb-user-chip{
+            color:#64748b;
+            font-size:12px;
+            font-weight:700;
+            white-space:nowrap;
+        }
+        .page-head{
+            background:#ffffff !important;
+            box-shadow:0 10px 24px rgba(15,23,42,.045) !important;
+            border:1px solid #dce5f2 !important;
+            border-radius:16px !important;
+        }
+        .card{
+            box-shadow:0 10px 24px rgba(15,23,42,.045) !important;
+            border-color:#dce5f2 !important;
+        }
+        @media(max-width:1120px){
+            .cb-promo{display:none}
+            .cb-nav{
+                min-height:auto;
+                padding:14px 18px;
+                align-items:flex-start;
+                flex-direction:column;
+            }
+            .cb-menu{
+                justify-content:flex-start;
+                flex-wrap:wrap;
+                width:100%;
+            }
+            .cb-dropdown{
+                left:0;
+                transform:none;
+                width:min(92vw,720px);
+            }
+            .cb-actions{
+                justify-content:flex-start;
+                min-width:0;
+                flex-wrap:wrap;
+            }
+            .container{
+                padding:16px !important;
+            }
+        }
+
+
+        /* Topbar dropdown stability + compact colorful KPI cards */
+        .cb-menu-item{
+            padding:14px 0;
+            margin:-14px 0;
+        }
+
+        .cb-dropdown{
+            top:100% !important;
+            margin-top:0 !important;
+        }
+
+        .cb-menu-item:hover .cb-dropdown,
+        .cb-menu-item:focus-within .cb-dropdown,
+        .cb-menu-item.is-open .cb-dropdown{
+            display:grid !important;
+        }
+
+        .cb-dropdown:before{
+            content:"";
+            position:absolute;
+            left:0;
+            right:0;
+            top:-14px;
+            height:14px;
+        }
+
+        /* Compact KPI cards across pages */
+        .grid > .col-3.card:has(.kpi),
+        .grid > .col-4.card:has(.kpi),
+        .grid > .col-6.card:has(.kpi){
+            position:relative;
+            overflow:hidden;
+            min-height:96px !important;
+            padding:16px 18px !important;
+            border:1px solid #dbe5f3 !important;
+            border-radius:16px !important;
+            background:#ffffff !important;
+            box-shadow:0 8px 22px rgba(15,23,42,.055) !important;
+        }
+
+        .grid > .col-3.card:has(.kpi):before,
+        .grid > .col-4.card:has(.kpi):before,
+        .grid > .col-6.card:has(.kpi):before{
+            content:"";
+            position:absolute;
+            left:0;
+            top:0;
+            bottom:0;
+            width:4px;
+            background:#2563eb;
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(2):before,
+        .grid > .col-4.card:has(.kpi):nth-child(2):before,
+        .grid > .col-6.card:has(.kpi):nth-child(2):before{
+            background:#16a34a;
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(3):before,
+        .grid > .col-4.card:has(.kpi):nth-child(3):before,
+        .grid > .col-6.card:has(.kpi):nth-child(3):before{
+            background:#dc2626;
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(4):before,
+        .grid > .col-4.card:has(.kpi):nth-child(4):before,
+        .grid > .col-6.card:has(.kpi):nth-child(4):before{
+            background:#d97706;
+        }
+
+        .grid > .col-3.card:has(.kpi):after,
+        .grid > .col-4.card:has(.kpi):after,
+        .grid > .col-6.card:has(.kpi):after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:linear-gradient(135deg,rgba(37,99,235,.055),transparent 45%);
+            pointer-events:none;
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(2):after,
+        .grid > .col-4.card:has(.kpi):nth-child(2):after,
+        .grid > .col-6.card:has(.kpi):nth-child(2):after{
+            background:linear-gradient(135deg,rgba(22,163,74,.06),transparent 45%);
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(3):after,
+        .grid > .col-4.card:has(.kpi):nth-child(3):after,
+        .grid > .col-6.card:has(.kpi):nth-child(3):after{
+            background:linear-gradient(135deg,rgba(220,38,38,.055),transparent 45%);
+        }
+
+        .grid > .col-3.card:has(.kpi):nth-child(4):after,
+        .grid > .col-4.card:has(.kpi):nth-child(4):after,
+        .grid > .col-6.card:has(.kpi):nth-child(4):after{
+            background:linear-gradient(135deg,rgba(217,119,6,.07),transparent 45%);
+        }
+
+        .grid > .col-3.card:has(.kpi) .muted,
+        .grid > .col-4.card:has(.kpi) .muted,
+        .grid > .col-6.card:has(.kpi) .muted,
+        .grid > .col-3.card:has(.kpi) .kpi,
+        .grid > .col-4.card:has(.kpi) .kpi,
+        .grid > .col-6.card:has(.kpi) .kpi,
+        .grid > .col-3.card:has(.kpi) .badge,
+        .grid > .col-4.card:has(.kpi) .badge,
+        .grid > .col-6.card:has(.kpi) .badge{
+            position:relative;
+            z-index:1;
+        }
+
+        .grid > .col-3.card:has(.kpi) .kpi,
+        .grid > .col-4.card:has(.kpi) .kpi,
+        .grid > .col-6.card:has(.kpi) .kpi{
+            font-size:26px !important;
+            line-height:1.05 !important;
+            margin:7px 0 6px !important;
+            letter-spacing:-.045em;
+        }
+
+
+        /* Final compact colorful KPI cards */
+        .people-kpi-grid{
+            display:grid !important;
+            grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+            gap:12px !important;
+            margin-bottom:14px !important;
+        }
+
+        .people-kpi-grid > .people-kpi-card,
+        .grid > .card:has(.kpi){
+            position:relative !important;
+            overflow:hidden !important;
+            min-height:88px !important;
+            padding:14px 16px !important;
+            border:1px solid #dbe5f3 !important;
+            border-radius:14px !important;
+            background:#ffffff !important;
+            box-shadow:0 6px 16px rgba(15,23,42,.045) !important;
+            text-align:left !important;
+        }
+
+        .people-kpi-grid > .people-kpi-card{
+            grid-column:auto !important;
+            width:auto !important;
+            max-width:none !important;
+        }
+
+        .people-kpi-grid > .people-kpi-card:before,
+        .grid > .card:has(.kpi):before{
+            content:"";
+            position:absolute;
+            left:0;
+            top:0;
+            bottom:0;
+            width:4px;
+            background:#2563eb;
+        }
+
+        .people-kpi-grid > .people-kpi-card:nth-child(2):before,
+        .grid > .card:has(.kpi):nth-child(2):before{background:#16a34a}
+
+        .people-kpi-grid > .people-kpi-card:nth-child(3):before,
+        .grid > .card:has(.kpi):nth-child(3):before{background:#dc2626}
+
+        .people-kpi-grid > .people-kpi-card:nth-child(4):before,
+        .grid > .card:has(.kpi):nth-child(4):before{background:#d97706}
+
+        .people-kpi-grid > .people-kpi-card:after,
+        .grid > .card:has(.kpi):after{
+            content:"";
+            position:absolute;
+            inset:0;
+            background:linear-gradient(135deg,rgba(37,99,235,.055),transparent 46%);
+            pointer-events:none;
+        }
+
+        .people-kpi-grid > .people-kpi-card:nth-child(2):after,
+        .grid > .card:has(.kpi):nth-child(2):after{background:linear-gradient(135deg,rgba(22,163,74,.06),transparent 46%)}
+
+        .people-kpi-grid > .people-kpi-card:nth-child(3):after,
+        .grid > .card:has(.kpi):nth-child(3):after{background:linear-gradient(135deg,rgba(220,38,38,.055),transparent 46%)}
+
+        .people-kpi-grid > .people-kpi-card:nth-child(4):after,
+        .grid > .card:has(.kpi):nth-child(4):after{background:linear-gradient(135deg,rgba(217,119,6,.07),transparent 46%)}
+
+        .people-kpi-card .muted,
+        .people-kpi-card .kpi,
+        .people-kpi-card .people-help,
+        .grid > .card:has(.kpi) .muted,
+        .grid > .card:has(.kpi) .kpi,
+        .grid > .card:has(.kpi) .badge{
+            position:relative;
+            z-index:1;
+        }
+
+        .people-kpi-card .kpi,
+        .grid > .card:has(.kpi) .kpi{
+            font-size:25px !important;
+            line-height:1.05 !important;
+            margin:6px 0 4px !important;
+            letter-spacing:-.04em !important;
+        }
+
+        .people-kpi-card .muted,
+        .grid > .card:has(.kpi) .muted{
+            font-size:12px !important;
+            font-weight:750 !important;
+            color:#64748b !important;
+        }
+
+        .people-help{
+            font-size:12px !important;
+            color:#64748b !important;
+            margin-top:4px !important;
+        }
+
+        .people-kpi-card:hover,
+        .grid > .card:has(.kpi):hover{
+            transform:none !important;
+            box-shadow:0 8px 20px rgba(37,99,235,.07) !important;
+            border-color:#bfdbfe !important;
+        }
+
+        @media(max-width:1200px){
+            .people-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+        }
+
+        @media(max-width:720px){
+            .people-kpi-grid{grid-template-columns:1fr !important}
+        }
+
     </style>
     <script defer src="/js/crud-grids.js?v=20260520-1611"></script>
     <link rel="stylesheet" href="{{ asset('css/enterprise-shell.css') }}?v={{ filemtime(public_path('css/enterprise-shell.css')) }}">
 </head>
 <body>
 <div class="app">
+
+    @if(session('user_id'))
+    <header class="cb-shell">
+        <div class="cb-topline">
+            <div class="cb-promo">
+                <b>Colony Billing</b>
+                <span>Enterprise billing, residency and utility operations workspace.</span>
+                <a href="/billing-run-lock">Run Billing →</a>
+            </div>
+        </div>
+        <div class="cb-nav">
+            <a class="cb-brand" href="/dashboard">
+                <span class="cb-brand-mark">CB</span>
+                <span class="cb-brand-text">
+                    <span class="cb-brand-title">Colony Billing</span>
+                    <span class="cb-brand-sub">Operations Console</span>
+                </span>
+            </a>
+
+            <nav class="cb-menu" aria-label="Main navigation">
+                <div class="cb-menu-item">
+                    <button class="cb-menu-btn" type="button">Core</button>
+                    <div class="cb-dropdown">
+                        <div class="cb-drop-col">
+                            <h4>Workspace</h4>
+                            <a href="/dashboard">Dashboard</a>
+                            <a href="/month-lifecycle">Month Lifecycle</a>
+                            <a href="/imports-validation">Imports & Validation</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Billing</h4>
+                            <a href="/billing-run-lock">Billing Run & Lock</a>
+                            <a href="/reporting">Reporting Center</a>
+                            <a href="/rates">Rates</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Controls</h4>
+                            <a href="/active-days-monthly">Active Days Monthly</a>
+                            <a href="/meters-readings">Meters & Readings</a>
+                            <a href="/unit-directory">Unit Directory</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cb-menu-item">
+                    <button class="cb-menu-btn" type="button">Operations</button>
+                    <div class="cb-dropdown">
+                        <div class="cb-drop-col">
+                            <h4>People</h4>
+                            <a href="/people-residency">People & Residency</a>
+                            <a href="/housing-occupancy">Housing & Occupancy</a>
+                            <a href="/transport">Transport</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Utilities</h4>
+                            <a href="/meters-readings">Meters & Readings</a>
+                            <a href="/water-tools">Water Tools</a>
+                            <a href="/electric-v1-lab">Electric V1 Lab</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Data</h4>
+                            <a href="/unit-directory">Unit Directory</a>
+                            <a href="/active-days-monthly">Active Days Monthly</a>
+                            <a href="/imports-validation">Import Validation</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cb-menu-item">
+                    <button class="cb-menu-btn" type="button">Reports</button>
+                    <div class="cb-dropdown">
+                        <div class="cb-drop-col">
+                            <h4>Billing Reports</h4>
+                            <a href="/reporting">Reporting Center</a>
+                            <a href="/reports/employee-statement">Employee Statement</a>
+                            <a href="/finalized-months">Finalized Months</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Utilities</h4>
+                            <a href="/elec-summary">Electric Summary</a>
+                            <a href="/water-tools">Water Tools</a>
+                        </div>
+                        <div class="cb-drop-col">
+                            <h4>Audit</h4>
+                            <a href="/billing-run-lock">Billing Run</a>
+                            <a href="/imports-validation">Validation Tokens</a>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="cb-actions">
+                <a class="cb-action-hot" href="/people-residency">People</a>
+                <span class="cb-user-chip">User #{{ session('user_id', 'N/A') }} · {{ session('role', 'N/A') }}</span>
+            </div>
+        </div>
+    </header>
+    @endif
+
     @if(session('user_id'))
     <aside class="sidebar">
         <div class="brand">Colony Billing</div>
@@ -248,5 +843,29 @@
         </section>
     </main>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.cb-menu-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const item = btn.closest('.cb-menu-item');
+      document.querySelectorAll('.cb-menu-item.is-open').forEach(function (openItem) {
+        if (openItem !== item) openItem.classList.remove('is-open');
+      });
+      item.classList.toggle('is-open');
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.cb-menu-item')) {
+      document.querySelectorAll('.cb-menu-item.is-open').forEach(function (item) {
+        item.classList.remove('is-open');
+      });
+    }
+  });
+});
+</script>
+
 </body>
 </html>
