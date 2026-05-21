@@ -51,10 +51,14 @@ class MonthlyActiveDaysController extends Controller
 
     public function preview(MonthlyActiveDaysPreviewRequest $request)
     {
+        $validated = $request->validated();
+
         $result = $this->service->preview(
-            $request->validated()['billing_month_date'],
+            $validated['billing_month_date'],
+            $validated['cycle_start_date'],
+            $validated['cycle_end_date'],
             $request->file('upload_file'),
-            (bool) ($request->validated()['replace_existing'] ?? false),
+            (bool) ($validated['replace_existing'] ?? false),
         );
 
         if (($result['_http'] ?? null) !== null) {
@@ -79,6 +83,10 @@ class MonthlyActiveDaysController extends Controller
 
         if (($preview['billing_month_date'] ?? null) !== $validated['billing_month_date']) {
             return response()->json(['status' => 'error', 'error' => 'Preview month mismatch'], 422);
+        }
+
+        if (($preview['cycle_start_date'] ?? null) !== $validated['cycle_start_date'] || ($preview['cycle_end_date'] ?? null) !== $validated['cycle_end_date']) {
+            return response()->json(['status' => 'error', 'error' => 'Preview billing cycle mismatch'], 422);
         }
 
         $preview['summary']['replace_existing'] = (bool) ($validated['replace_existing'] ?? false);

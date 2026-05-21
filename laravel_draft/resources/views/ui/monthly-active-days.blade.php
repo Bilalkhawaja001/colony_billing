@@ -13,8 +13,10 @@
   <div class="col-6 card">
     <h3 class="section-title">Upload & Preview</h3>
     <form id="activeDaysForm" class="form-grid">
-      <div class="field col-6"><label class="label">Billing Month</label><input type="month" name="billing_month_date" value="{{ substr((string)$billingMonthDate, 0, 7) }}"></div>
-      <div class="field col-6"><label class="label">CSV File</label><input type="file" name="upload_file" accept=".csv,.txt"></div>
+      <div class="field col-4"><label class="label">Billing Month</label><input type="month" name="billing_month_date" value="{{ substr((string)$billingMonthDate, 0, 7) }}" required></div>
+      <div class="field col-4"><label class="label">Cycle Start Date</label><input type="date" name="cycle_start_date" required></div>
+      <div class="field col-4"><label class="label">Cycle End Date</label><input type="date" name="cycle_end_date" required></div>
+      <div class="field col-12"><label class="label">CSV File</label><input type="file" name="upload_file" accept=".csv,.txt" required></div>
       <div class="field col-12"><label><input type="checkbox" name="replace_existing" value="1"> Replace existing selected month data</label></div>
       <div class="col-12">
         <button class="btn btn-primary" type="submit">Preview Import</button>
@@ -63,6 +65,18 @@ document.getElementById('activeDaysForm').addEventListener('submit', async (e)=>
   const form=e.target;
   const fd=new FormData(form);
   const month=payloadMonth((fd.get('billing_month_date')||'').toString());
+  const cycleStart=(fd.get('cycle_start_date')||'').toString();
+  const cycleEnd=(fd.get('cycle_end_date')||'').toString();
+
+  if(!cycleStart || !cycleEnd){
+    setStatus(false,'Cycle Start Date and Cycle End Date are required.');
+    return;
+  }
+
+  if(cycleEnd < cycleStart){
+    setStatus(false,'Cycle End Date cannot be before Cycle Start Date.');
+    return;
+  }
   fd.set('billing_month_date', month);
   replaceExisting=fd.get('replace_existing')==='1';
   lastMonth=month;
@@ -77,7 +91,15 @@ document.getElementById('activeDaysForm').addEventListener('submit', async (e)=>
 
 finalImportBtn.addEventListener('click', async ()=>{
   if(!previewToken){return;}
-  const payload={billing_month_date:lastMonth,preview_token:previewToken,replace_existing:replaceExisting};
+  const form=document.getElementById('activeDaysForm');
+  const fd=new FormData(form);
+  const payload={
+    billing_month_date:lastMonth,
+    cycle_start_date:(fd.get('cycle_start_date')||'').toString(),
+    cycle_end_date:(fd.get('cycle_end_date')||'').toString(),
+    preview_token:previewToken,
+    replace_existing:replaceExisting
+  };
   const r=await fetch('/active-days-monthly/import',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-TOKEN':csrf},body:JSON.stringify(payload)});
   const j=await r.json().catch(()=>({status:'error',error:'non-json response'}));
   summaryBox.textContent=JSON.stringify(j.summary??j,null,2);

@@ -10,8 +10,17 @@ use Illuminate\Support\Str;
 
 class MonthlyActiveDaysImportService
 {
-    public function preview(string $billingMonthDate, UploadedFile $file, bool $replaceExisting = false): array
+    public function preview(string $billingMonthDate, string $cycleStartDate, string $cycleEndDate, UploadedFile $file, bool $replaceExisting = false): array
     {
+        $cycleStart = new DateTimeImmutable($cycleStartDate);
+        $cycleEnd = new DateTimeImmutable($cycleEndDate);
+
+        if ($cycleEnd < $cycleStart) {
+            return ['status' => 'error', 'error' => 'cycle_end_date cannot be before cycle_start_date', '_http' => 422];
+        }
+
+        $cycleDays = $cycleStart->diff($cycleEnd)->days + 1;
+
         $content = (string) file_get_contents($file->getRealPath());
         if (trim($content) === '') {
             return ['status' => 'error', 'error' => 'Uploaded file is empty', '_http' => 400];
@@ -22,9 +31,14 @@ class MonthlyActiveDaysImportService
             return ['status' => 'error', 'error' => 'Template header is required', '_http' => 400];
         }
 
-        $daysInMonth = (int) (new DateTimeImmutable($billingMonthDate))->format('t');
-        $employeeIds = DB::table('employees_master')->pluck('company_id')->map(fn ($v) => (string) $v)->all();
-        $employeeLookup = array_fill_keys($employeeIds, true);
+        $employees = DB::table('employees_master')
+            ->get(['company_id', 'join_date', 'leave_date'])
+            ->mapWithKeys(fn ($row) => [(string) $row->company_id => [
+                'join_date' => $row->join_date ? new DateTimeImmutable((string) $row->join_date) : null,
+                'leave_date' => $row->leave_date ? new DateTimeImmutable((string) $row->leave_date) : null,
+            ]])
+            ->all();
+        $employeeLookup = array_fill_keys(array_keys($employees), true);
 
         $validRows = [];
         $invalidRows = [];
@@ -58,8 +72,13 @@ class MonthlyActiveDaysImportService
                 if ($activeDays < 0) {
                     $errors[] = 'active_days must be at least 0';
                 }
-                if ($activeDays > $daysInMonth) {
-                    $errors[] = 'active_days cannot exceed '.$daysInMonth.' for selected billing month';
+                if (isset($employeeLookup[$normalized['company_id']])) {
+                    $maxActiveDays = $this->maxActiveDaysForCycle($employees[$normalized['company_id']], $cycleStart, $cycleEnd);
+                    if ($activeDays > $maxActiveDays) {
+                        $errors[] = 'active_days cannot exceed '.$maxActiveDays.' for selected billing cycle';
+                    }
+                } elseif ($activeDays > $cycleDays) {
+                    $errors[] = 'active_days cannot exceed '.$cycleDays.' for selected billing cycle';
                 }
             }
 
@@ -99,12 +118,14 @@ class MonthlyActiveDaysImportService
             'would_insert' => count(array_filter($validRows, fn ($row) => !isset($existingLookup[$row['company_id']]))),
             'would_update' => count(array_filter($validRows, fn ($row) => isset($existingLookup[$row['company_id']]))),
             'existing_rows_for_month' => count($existingCompanyIds),
-            'days_in_month' => $daysInMonth,
+            'cycle_days' => $cycleDays,
         ];
 
         return [
             'status' => 'ok',
             'billing_month_date' => $billingMonthDate,
+            'cycle_start_date' => $cycleStartDate,
+            'cycle_end_date' => $cycleEndDate,
             'source_file' => $file->getClientOriginalName(),
             'summary' => $summary,
             'valid_rows' => $validRows,
@@ -175,6 +196,26 @@ class MonthlyActiveDaysImportService
             ->orderBy('company_id')
             ->get(['billing_month_date', 'company_id', 'active_days', 'remarks', 'source_file', 'uploaded_by', 'updated_at'])
             ->toArray();
+    }
+
+    private function maxActiveDaysForCycle(array $employee, DateTimeImmutable $cycleStart, DateTimeImmutable $cycleEnd): int
+    {
+        $start = $cycleStart;
+        $end = $cycleEnd;
+
+        if (($employee['join_date'] ?? null) instanceof DateTimeImmutable && $employee['join_date'] > $start) {
+            $start = $employee['join_date'];
+        }
+
+        if (($employee['leave_date'] ?? null) instanceof DateTimeImmutable && $employee['leave_date'] < $end) {
+            $end = $employee['leave_date'];
+        }
+
+        if ($end < $start) {
+            return 0;
+        }
+
+        return $start->diff($end)->days + 1;
     }
 
     private function csvToAssoc(string $csvText): array

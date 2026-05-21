@@ -28,6 +28,8 @@ class MonthlyActiveDaysPreviewRequest extends FormRequest
     {
         return [
             'billing_month_date' => ['required', 'date_format:Y-m-d'],
+            'cycle_start_date' => ['required', 'date'],
+            'cycle_end_date' => ['required', 'date', 'after_or_equal:cycle_start_date'],
             'replace_existing' => ['nullable', 'boolean'],
             'upload_file' => ['required', 'file', 'mimes:csv,txt'],
         ];
