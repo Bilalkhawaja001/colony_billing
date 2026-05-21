@@ -40,6 +40,17 @@ class DashboardParityService
     {
         $month = $this->resolveMonthCycle($monthCycle);
 
+        $resident = $this->qOne(
+            "SELECT
+                COUNT(*) AS total_units,
+                SUM(CASE WHEN colony_type LIKE '%Family%' OR colony_type LIKE '%House%' THEN 1 ELSE 0 END) AS house_units,
+                SUM(CASE WHEN colony_type LIKE '%Bachelor%' THEN 1 ELSE 0 END) AS bachelor_units,
+                SUM(CASE WHEN colony_type LIKE '%Hostel%' OR colony_type LIKE '%Guest%' THEN 1 ELSE 0 END) AS hostel_units,
+                SUM(CASE WHEN colony_type LIKE '%Container%' OR colony_type LIKE '%Admin Block%' THEN 1 ELSE 0 END) AS container_units,
+                SUM(CASE WHEN colony_type IS NULL OR colony_type = '' THEN 1 ELSE 0 END) AS uncategorized_units
+             FROM util_unit"
+        );
+
         if (!$month) {
             return [
                 'status' => 'ok',
@@ -49,6 +60,12 @@ class DashboardParityService
                     'total_billed' => 0.0,
                     'family_members' => 0,
                     'van_kids' => 0,
+                    'total_units' => (int) ($resident->total_units ?? 0),
+                    'house_units' => (int) ($resident->house_units ?? 0),
+                    'bachelor_units' => (int) ($resident->bachelor_units ?? 0),
+                    'hostel_units' => (int) ($resident->hostel_units ?? 0),
+                    'container_units' => (int) ($resident->container_units ?? 0),
+                    'uncategorized_units' => (int) ($resident->uncategorized_units ?? 0),
                 ],
             ];
         }
@@ -60,17 +77,6 @@ class DashboardParityService
 
         $families = $this->qOne('SELECT COUNT(*) AS family_members FROM family_details WHERE month_cycle=?', [$month]);
         $vanKids = $this->qOne('SELECT COUNT(*) AS van_kids FROM util_school_van_monthly_charge WHERE month_cycle=?', [$month]);
-
-        $resident = $this->qOne(
-            "SELECT
-                COUNT(*) AS total_units,
-                SUM(CASE WHEN colony_type LIKE '%Family%' OR colony_type LIKE '%House%' THEN 1 ELSE 0 END) AS house_units,
-                SUM(CASE WHEN colony_type LIKE '%Bachelor%' THEN 1 ELSE 0 END) AS bachelor_units,
-                SUM(CASE WHEN colony_type LIKE '%Hostel%' OR colony_type LIKE '%Guest%' THEN 1 ELSE 0 END) AS hostel_units,
-                SUM(CASE WHEN colony_type LIKE '%Container%' OR colony_type LIKE '%Admin Block%' THEN 1 ELSE 0 END) AS container_units,
-                SUM(CASE WHEN colony_type IS NULL OR colony_type = '' THEN 1 ELSE 0 END) AS uncategorized_units
-             FROM util_unit"
-        );
 
         return [
             'status' => 'ok',
