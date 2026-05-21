@@ -208,7 +208,13 @@ class DataGridController extends Controller
 
     public function employeeStatement(Request $request)
     {
-        return response()->json(['status' => 'ok'] + $this->statementPayload($request));
+        $payload = ['status' => 'ok'] + $this->statementPayload($request);
+
+        if ($request->query('format') === 'json' || $request->expectsJson()) {
+            return response()->json($payload);
+        }
+
+        return view('ui.employee-statement', $payload);
     }
 
     public function employeeStatementExport(Request $request)
