@@ -27,36 +27,36 @@
     <div class="col-12 card">
         <h3 class="section-title">Resident Type Overview</h3>
         <div class="grid" style="gap:10px">
-            <div class="col-2 card soft">
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory">
                 <div class="muted">Total Units</div>
                 <div class="kpi">{{ $kpis['total_units'] ?? 0 }}</div>
                 <span class="badge">Master</span>
-            </div>
-            <div class="col-2 card soft">
+            </a>
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=house">
                 <div class="muted">House Units</div>
                 <div class="kpi">{{ $kpis['house_units'] ?? 0 }}</div>
                 <span class="badge success">House</span>
-            </div>
-            <div class="col-2 card soft">
+            </a>
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=bachelor">
                 <div class="muted">Bachelor Units</div>
                 <div class="kpi">{{ $kpis['bachelor_units'] ?? 0 }}</div>
                 <span class="badge">Bachelor</span>
-            </div>
-            <div class="col-2 card soft">
+            </a>
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=hostel">
                 <div class="muted">Hostel</div>
                 <div class="kpi">{{ $kpis['hostel_units'] ?? 0 }}</div>
                 <span class="badge">Hostel</span>
-            </div>
-            <div class="col-2 card soft">
+            </a>
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=containers">
                 <div class="muted">Containers</div>
                 <div class="kpi">{{ $kpis['container_units'] ?? 0 }}</div>
                 <span class="badge warn">Admin</span>
-            </div>
-            <div class="col-2 card soft">
+            </a>
+            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=uncategorized">
                 <div class="muted">Uncategorized</div>
                 <div class="kpi">{{ $kpis['uncategorized_units'] ?? 0 }}</div>
                 <span class="badge warn">Review</span>
-            </div>
+            </a>
         </div>
     </div>
 
@@ -105,4 +105,17 @@
         </div>
     </div>
 </div>
+<style>
+.kpi-link-card{
+    display:block;
+    text-decoration:none;
+    color:inherit;
+    cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+}
+.kpi-link-card:hover{
+    transform:translateY(-2px);
+    box-shadow:0 18px 36px rgba(15,23,42,.12);
+}
+</style>
 @endsection

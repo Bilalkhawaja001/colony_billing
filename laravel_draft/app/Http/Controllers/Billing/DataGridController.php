@@ -32,7 +32,7 @@ class DataGridController extends Controller
             'key' => 'unit_id',
             'select' => ['unit_id','colony_type','block_name','room_no','is_active'],
             'search' => ['unit_id','colony_type','block_name','room_no'],
-            'filters' => ['unit_id','colony_type','is_active'],
+            'filters' => ['unit_id','colony_type','is_active','res_type'],
             'editable' => ['unit_id','colony_type','block_name','room_no','is_active'],
         ],
         'rooms' => [
@@ -140,8 +140,24 @@ class DataGridController extends Controller
                     $w->orWhere('e.name', 'like', "%{$q}%");
                 }
             });
+        }        if ($module === 'units') {
+            $resType = (string) $request->query('res_type', '');
+            if ($resType === 'house') {
+                $query->where(fn($w) => $w->where('util_unit.colony_type','like','%Family%')->orWhere('util_unit.colony_type','like','%House%'))->where('util_unit.colony_type','not like','%Hostel%')->where('util_unit.colony_type','not like','%Guest%');
+            } elseif ($resType === 'bachelor') {
+                $query->where(fn($w) => $w->where('util_unit.colony_type','like','%Bachelor%')->orWhere('util_unit.colony_type','like','%Palidar%'));
+            } elseif ($resType === 'hostel') {
+                $query->where(fn($w) => $w->where('util_unit.colony_type','like','%Hostel%')->orWhere('util_unit.colony_type','like','%Guest%')->orWhere('util_unit.colony_type','like','%HOD%'));
+            } elseif ($resType === 'containers') {
+                $query->where(fn($w) => $w->where('util_unit.colony_type','like','%Container%')->orWhere('util_unit.colony_type','like','%Admin Block%')->orWhere('util_unit.colony_type','like','%Old Abaseen%'));
+            } elseif ($resType === 'uncategorized') {
+                $query->where(fn($w) => $w->whereNull('util_unit.colony_type')->orWhere('util_unit.colony_type',''));
+            }
         }
-        foreach (['month_cycle','billing_month_date','unit_id','room_no','active','category','department','designation','meter_type','company_id'] as $filter) {
+
+
+        foreach (['month_cycle','billing_month_date','unit_id','room_no','active','category','colony_type','is_active','res_type','department','designation','meter_type','company_id'] as $filter) {
+            if ($filter === 'res_type') continue;
             $value = $request->query($filter);
             if ($value !== null && $value !== '' && in_array($filter, $cfg['filters'], true)) {
                 if ($filter === 'month_cycle') {
@@ -205,6 +221,147 @@ class DataGridController extends Controller
         $payload = $response->getData(true);
         return $this->csvResponse($module.'-export-'.date('Ymd_His').'.csv', $payload['columns'], $payload['rows']);
     }
+
+    public function unitResidentGroups(Request $request)
+    {
+        $resType = (string) $request->query('res_type', '');
+        $month = $this->normalizeMonthCycle((string) $request->query('month_cycle', ''));
+        if ($month === '') {
+            $latest = DB::table('util_occupancy_monthly')->max('month_cycle');
+            $month = $latest ?: '05-2026';
+        }
+
+        $query = DB::table('util_unit as u')
+            ->leftJoin('util_occupancy_monthly as o', function ($join) use ($month) {
+                $join->on('o.unit_id', '=', 'u.unit_id')
+                    ->where('o.month_cycle', '=', $month);
+            })
+            ->select(
+                'u.colony_type',
+                DB::raw('COUNT(DISTINCT u.unit_id) as unit_count'),
+                DB::raw('COUNT(DISTINCT o.room_no) as room_count'),
+                DB::raw('COUNT(DISTINCT o.employee_id) as resident_count')
+            )
+            ->groupBy('u.colony_type')
+            ->orderBy('u.colony_type');
+
+        if ($resType === 'house') {
+            $query->where(fn($w) => $w->where('u.colony_type','like','%Family%')->orWhere('u.colony_type','like','%House%'))->where('u.colony_type','not like','%Hostel%')->where('u.colony_type','not like','%Guest%');
+        } elseif ($resType === 'bachelor') {
+            $query->where(fn($w) => $w->where('u.colony_type','like','%Bachelor%')->orWhere('u.colony_type','like','%Palidar%'));
+        } elseif ($resType === 'hostel') {
+            $query->where(fn($w) => $w->where('u.colony_type','like','%Hostel%')->orWhere('u.colony_type','like','%Guest%')->orWhere('u.colony_type','like','%HOD%'));
+        } elseif ($resType === 'containers') {
+            $query->where(fn($w) => $w->where('u.colony_type','like','%Container%')->orWhere('u.colony_type','like','%Admin Block%')->orWhere('u.colony_type','like','%Old Abaseen%'));
+        } elseif ($resType === 'uncategorized') {
+            $query->where(fn($w) => $w->whereNull('u.colony_type')->orWhere('u.colony_type',''));
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'month_cycle' => $month,
+            'rows' => $query->get(),
+        ]);
+    }
+
+    public function unitResidentRooms(Request $request)
+    {
+        $month = $this->normalizeMonthCycle((string) $request->query('month_cycle', ''));
+        if ($month === '') {
+            $latest = DB::table('util_occupancy_monthly')->max('month_cycle');
+            $month = $latest ?: '05-2026';
+        }
+
+        $colonyType = trim((string) $request->query('colony_type', ''));
+
+        $query = DB::table('util_occupancy_monthly as o')
+            ->leftJoin('util_unit as u', 'u.unit_id', '=', 'o.unit_id')
+            ->where('o.month_cycle', $month)
+            ->select(
+                'u.colony_type',
+                'o.unit_id',
+                'o.block_floor',
+                'o.room_no',
+                DB::raw('COUNT(DISTINCT o.employee_id) as employee_count')
+            )
+            ->whereNotNull('o.room_no')
+            ->where('o.room_no', '<>', '')
+            ->groupBy('u.colony_type', 'o.unit_id', 'o.block_floor', 'o.room_no')
+            ->orderBy('o.unit_id')
+            ->orderBy('o.room_no');
+
+        if ($colonyType === '__uncategorized') {
+            $query->where(fn($w) => $w->whereNull('u.colony_type')->orWhere('u.colony_type',''));
+        } elseif ($colonyType !== '') {
+            $query->where('u.colony_type', $colonyType);
+        }
+
+        $roomNo = trim((string) $request->query('room_no', ''));
+        if ($roomNo !== '') {
+            $query->where('o.room_no', $roomNo);
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'month_cycle' => $month,
+            'rows' => $query->limit(5000)->get(),
+        ]);
+    }
+
+
+    public function unitResidents(Request $request)
+    {
+        $month = $this->normalizeMonthCycle((string) $request->query('month_cycle', ''));
+        if ($month === '') {
+            $latest = DB::table('util_occupancy_monthly')->max('month_cycle');
+            $month = $latest ?: '05-2026';
+        }
+
+        $colonyType = trim((string) $request->query('colony_type', ''));
+
+        $query = DB::table('util_occupancy_monthly as o')
+            ->leftJoin('util_unit as u', 'u.unit_id', '=', 'o.unit_id')
+            ->leftJoin('employees_master as e', 'e.company_id', '=', 'o.employee_id')
+            ->leftJoin('family_details as fd', function ($join) use ($month) {
+                $join->on('fd.company_id', '=', 'o.employee_id')
+                    ->where('fd.month_cycle', '=', $month);
+            })
+            ->where('o.month_cycle', $month)
+            ->select(
+                'o.month_cycle',
+                'o.employee_id as company_id',
+                'e.name',
+                'e.department',
+                'e.designation',
+                'u.colony_type',
+                'o.unit_id',
+                'o.block_floor',
+                'o.room_no',
+                'o.active_days',
+                DB::raw('COALESCE(fd.spouse_count,0) + COALESCE(fd.children_count,0) as family_members')
+            )
+            ->orderBy('o.unit_id')
+            ->orderBy('o.room_no')
+            ->orderBy('o.employee_id');
+
+        if ($colonyType === '__uncategorized') {
+            $query->where(fn($w) => $w->whereNull('u.colony_type')->orWhere('u.colony_type',''));
+        } elseif ($colonyType !== '') {
+            $query->where('u.colony_type', $colonyType);
+        }
+
+        $roomNo = trim((string) $request->query('room_no', ''));
+        if ($roomNo !== '') {
+            $query->where('o.room_no', $roomNo);
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'month_cycle' => $month,
+            'rows' => $query->limit(5000)->get(),
+        ]);
+    }
+
 
     public function employeeStatement(Request $request)
     {

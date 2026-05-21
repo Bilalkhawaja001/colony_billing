@@ -270,6 +270,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/billing/electric/export-complete', [BillingDraftController::class, 'exportCompleteElectricBillExcel']);
     Route::get('/billing/electric/alerts-audit', [BillingDraftController::class, 'exportElectricAlertsAuditExcel']);
     Route::get('/billing/electric/missing-skipped-audit', [BillingDraftController::class, 'exportElectricMissingSkippedAuditExcel']);
+    Route::get('/api/units/resident-groups', [DataGridController::class, 'unitResidentGroups']);
+    Route::get('/api/units/resident-rooms', [DataGridController::class, 'unitResidentRooms']);
+    Route::get('/api/units/residents', [DataGridController::class, 'unitResidents']);
     Route::get('/api/grids/{module}', [DataGridController::class, 'list']);
     Route::get('/meter-reading/list', [DataGridController::class, 'list'])->defaults('module', 'meter-readings');
     Route::get('/export/{module}', [DataGridController::class, 'export']);
