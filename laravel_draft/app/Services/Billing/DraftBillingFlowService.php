@@ -1253,8 +1253,29 @@ class DraftBillingFlowService implements BillingFlowContract
             $runKey = $monthCycle.':'.substr(bin2hex(random_bytes(8)), 0, 8);
         }
         $actor = (int)($payload['actor_user_id'] ?? session('actor_user_id') ?? session('user_id') ?? 1);
+        $cycleStart = trim((string)($payload['cycle_start_date'] ?? ''));
+        $cycleEnd = trim((string)($payload['cycle_end_date'] ?? ''));
 
-        DB::statement("INSERT OR IGNORE INTO util_billing_run(month_cycle,run_key,run_status,started_by_user_id) VALUES(?,?,'DRAFT',?)", [$monthCycle, $runKey, $actor]);
+        if ($cycleStart === '' || $cycleEnd === '') {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'cycle_start_date and cycle_end_date are required'];
+        }
+
+        if (strtotime($cycleStart) === false || strtotime($cycleEnd) === false || strtotime($cycleStart) > strtotime($cycleEnd)) {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'invalid billing cycle dates'];
+        }
+
+        DB::table('util_billing_run')->updateOrInsert(
+            ['month_cycle' => $monthCycle, 'run_key' => $runKey],
+            [
+                'cycle_start_date' => $cycleStart,
+                'cycle_end_date' => $cycleEnd,
+                'run_status' => 'DRAFT',
+                'started_by_user_id' => $actor,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
         $run = DB::selectOne('SELECT id FROM util_billing_run WHERE month_cycle=? AND run_key=?', [$monthCycle, $runKey]);
         $runId = (int)($run->id ?? 0);
         if ($runId <= 0) {
@@ -1266,7 +1287,7 @@ class DraftBillingFlowService implements BillingFlowContract
                     CASE WHEN elec_units=0 THEN 0 ELSE ROUND(elec_amount/elec_units,4) END,
                     elec_amount, 'util_formula_result'
              FROM util_formula_result WHERE month_cycle=?
-             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+             ON DUPLICATE KEY UPDATE qty=VALUES(qty), rate=VALUES(rate), amount=VALUES(amount), source_ref=VALUES(source_ref), updated_at=CURRENT_TIMESTAMP", [$runId, $monthCycle]);
 
         // Flask-authoritative sequence: ELEC insert occurs, then run lines are cleared before rebuilding persisted summary set.
         DB::statement('DELETE FROM util_billing_line WHERE billing_run_id=?', [$runId]);
@@ -1276,19 +1297,19 @@ class DraftBillingFlowService implements BillingFlowContract
                     CASE WHEN chargeable_general_water_liters=0 THEN 0 ELSE ROUND(water_general_amount/chargeable_general_water_liters,4) END,
                     water_general_amount, 'util_formula_result'
              FROM util_formula_result WHERE month_cycle=?
-             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+             ON DUPLICATE KEY UPDATE qty=VALUES(qty), rate=VALUES(rate), amount=VALUES(amount), source_ref=VALUES(source_ref), updated_at=CURRENT_TIMESTAMP", [$runId, $monthCycle]);
 
         DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
              SELECT ?, month_cycle, employee_id, 'WATER_DRINKING', billed_liters, rate, amount, 'util_drinking_formula_result'
              FROM util_drinking_formula_result WHERE month_cycle=?
-             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+             ON DUPLICATE KEY UPDATE qty=VALUES(qty), rate=VALUES(rate), amount=VALUES(amount), source_ref=VALUES(source_ref), updated_at=CURRENT_TIMESTAMP", [$runId, $monthCycle]);
 
         DB::statement("INSERT INTO util_billing_line(billing_run_id,month_cycle,employee_id,utility_type,qty,rate,amount,source_ref)
              SELECT ?, month_cycle, employee_id, 'SCHOOL_VAN', COUNT(*),
                     CASE WHEN COUNT(*)=0 THEN 0 ELSE ROUND(SUM(amount)/COUNT(*),2) END,
                     SUM(amount), 'util_school_van_monthly_charge'
              FROM util_school_van_monthly_charge WHERE month_cycle=? GROUP BY month_cycle, employee_id
-             ON CONFLICT(billing_run_id,employee_id,utility_type) DO UPDATE SET qty=excluded.qty, rate=excluded.rate, amount=excluded.amount", [$runId, $monthCycle]);
+             ON DUPLICATE KEY UPDATE qty=VALUES(qty), rate=VALUES(rate), amount=VALUES(amount), source_ref=VALUES(source_ref), updated_at=CURRENT_TIMESTAMP", [$runId, $monthCycle]);
 
         // Flask parity: generated run becomes APPROVED so reporting path can open without removed approve workflow.
         DB::update("UPDATE util_billing_run SET run_status='APPROVED' WHERE id=?", [$runId]);

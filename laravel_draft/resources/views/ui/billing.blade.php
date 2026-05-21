@@ -14,9 +14,14 @@
   <div class="col-7 card">
     <h3 class="section-title">Run Billing</h3>
     <form id="billingRunForm" class="form-grid">
-      <div class="field col-6"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY or YYYY-MM" value="{{ $monthCycle }}"></div>
-      <div class="field col-6"><label class="label">Run Key</label><input name="run_key" placeholder="run key" value="UI-RUN-1"></div>
-      <div class="col-12"><button class="btn btn-primary" type="submit">Run Billing</button></div>
+      <div class="field col-3"><label class="label">Month Cycle</label><input name="month_cycle" placeholder="MM-YYYY or YYYY-MM" value="{{ $monthCycle }}" required></div>
+      <div class="field col-3"><label class="label">Cycle Start Date</label><input name="cycle_start_date" type="date" required></div>
+      <div class="field col-3"><label class="label">Cycle End Date</label><input name="cycle_end_date" type="date" required></div>
+      <div class="field col-3"><label class="label">Run Key</label><input name="run_key" placeholder="run key" value="UI-RUN-1"></div>
+      <div class="col-12">
+        <button class="btn btn-primary" type="submit">Run Billing</button>
+        <span class="muted" style="margin-left:8px">Cycle dates are required before billing generation.</span>
+      </div>
     </form>
   </div>
 
@@ -69,7 +74,19 @@ async function postJson(url,payload){
    document.querySelector('#billingLockForm input[name="run_id"]').value=j.run_id;
  }
 }
-document.getElementById('billingRunForm').addEventListener('submit',e=>{e.preventDefault();postJson('/billing/run',Object.fromEntries(new FormData(e.target)));});
+document.getElementById('billingRunForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const payload=Object.fromEntries(new FormData(e.target));
+  if(!payload.cycle_start_date || !payload.cycle_end_date){
+    setStatus(false,'Cycle Start Date and Cycle End Date are required before billing generation.');
+    return;
+  }
+  if(payload.cycle_end_date < payload.cycle_start_date){
+    setStatus(false,'Cycle End Date cannot be before Cycle Start Date.');
+    return;
+  }
+  postJson('/billing/run',payload);
+});
 document.getElementById('billingLockForm').addEventListener('submit',e=>{e.preventDefault();postJson('/billing/lock',Object.fromEntries(new FormData(e.target)));});
 </script>
 @endsection
