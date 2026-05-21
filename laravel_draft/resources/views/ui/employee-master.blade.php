@@ -32,22 +32,22 @@
   <div class="grid people-kpi-grid" style="margin-bottom:14px">
     <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('all')">
       <div class="muted">Total Employees</div>
-      <div class="kpi" id="kpi_total_employees">0</div>
+      <div class="kpi" id="kpi_total_employees">Loading...</div>
       <div class="people-help">Click to view complete employee list</div>
     </button>
     <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('active')">
       <div class="muted">Active Employees</div>
-      <div class="kpi" id="kpi_active_employees">0</div>
+      <div class="kpi" id="kpi_active_employees">Loading...</div>
       <div class="people-help">Active = Yes</div>
     </button>
     <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('deactive')">
       <div class="muted">Deactive Employees</div>
-      <div class="kpi" id="kpi_deactive_employees">0</div>
+      <div class="kpi" id="kpi_deactive_employees">Loading...</div>
       <div class="people-help">Active = No</div>
     </button>
     <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('missing')">
       <div class="muted">Missing Status</div>
-      <div class="kpi" id="kpi_missing_status">0</div>
+      <div class="kpi" id="kpi_missing_status">Loading...</div>
       <div class="people-help">Blank active status</div>
     </button>
   </div>
@@ -647,7 +647,9 @@ function refreshEmployeeKpis(){
 }
 
 async function ensureEmployeesLoaded(){
+  const setLoading=(txt)=>['kpi_total_employees','kpi_active_employees','kpi_deactive_employees','kpi_missing_status'].forEach(id=>{const el=document.getElementById(id); if(el) el.textContent=txt;});
   if(!EMP_ROWS.length){
+    setLoading('Loading...');
     const r=await req('/employees?active_only=0');
     show(r);
     EMP_ROWS=r.body?.rows||[];
