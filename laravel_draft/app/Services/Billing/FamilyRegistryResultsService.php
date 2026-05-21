@@ -298,8 +298,8 @@ class FamilyRegistryResultsService
                 'sub_section' => $this->nullableTrim($data['Sub Section'] ?? null),
                 'designation' => $this->nullableTrim($data['Designation'] ?? null),
                 'employee_type' => $this->nullableTrim($data['Employee Type'] ?? null),
-                'join_date' => $this->nullableTrim($data['Join Date'] ?? null),
-                'leave_date' => $this->nullableTrim($data['Leave Date'] ?? null),
+                'join_date' => $this->normalizeDateValue($data['Join Date'] ?? null),
+                'leave_date' => $this->normalizeDateValue($data['Leave Date'] ?? null),
                 'unit_id' => $this->nullableTrim($data['Unit_ID'] ?? null),
                 'father_name' => $this->nullableTrim($data["Father's Name"] ?? null),
                 'mobile_no' => $this->nullableTrim($data['Mobile_No.'] ?? null),
@@ -385,25 +385,33 @@ class FamilyRegistryResultsService
 
         $inserted = 0;
         $updated = 0;
+        $skippedDuplicates = 0;
+        $insertedCompanyIds = [];
 
         foreach ($accepted as $item) {
             $row = $item['row'];
-            $companyId = $row['CompanyID'];
-            $exists = DB::table('employees_registry')->where('company_id', $companyId)->exists();
-            $this->registryEmployeesUpsert($row);
-            if ($exists) {
-                $updated++;
-            } else {
-                $inserted++;
+            $companyId = (string) $row['CompanyID'];
+
+            $existsInMaster = DB::table('employees_master')->where('company_id', $companyId)->exists();
+            $existsInRegistry = DB::table('employees_registry')->where('company_id', $companyId)->exists();
+
+            if ($existsInMaster || $existsInRegistry) {
+                $skippedDuplicates++;
+                continue;
             }
+
+            $this->registryEmployeesUpsert($row);
+            $inserted++;
+            $insertedCompanyIds[] = $companyId;
         }
 
-        $promote = $this->promoteRegistryRowsToMaster(array_map(fn ($item) => (string) ($item['CompanyID'] ?? ''), $accepted), true);
+        $promote = $this->promoteRegistryRowsToMaster($insertedCompanyIds, true);
         $rejected = max(0, $this->csvDataRowCount($csvText) - count($accepted));
         return [
             'status' => 'ok',
             'inserted' => $inserted,
             'updated' => $updated,
+            'skipped_duplicates' => $skippedDuplicates,
             'rejected' => $rejected,
             'auto_promote' => [
                 'promoted' => (int) ($promote['promoted'] ?? 0),
@@ -630,6 +638,34 @@ class FamilyRegistryResultsService
     {
         $out = trim((string) ($value ?? ''));
         return $out === '' ? null : $out;
+    }
+
+    private function normalizeDateValue(mixed $value): ?string
+    {
+        $value = trim((string) ($value ?? ''));
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            return $value;
+        }
+
+        if (preg_match('/^\d+(\.\d+)?$/', $value)) {
+            $serial = (int) floor((float) $value);
+            if ($serial > 25000 && $serial < 90000) {
+                return date('Y-m-d', strtotime('1899-12-30 +'.$serial.' days'));
+            }
+        }
+
+        foreach (['d-m-Y', 'd/m/Y', 'm/d/Y', 'M d Y', 'd M Y'] as $format) {
+            $dt = \DateTime::createFromFormat($format, $value);
+            if ($dt instanceof \DateTime) {
+                return $dt->format('Y-m-d');
+            }
+        }
+
+        return null;
     }
 
     private function truthy(mixed $value): bool
