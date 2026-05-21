@@ -189,6 +189,7 @@
         @media (max-width:1200px){.sidebar{display:none}.col-3,.col-4,.col-5,.col-6,.col-7,.col-8,.col-12{grid-column:span 12}.container{padding:16px}.sticky-actions{position:static;padding:6px}}
     </style>
     <script defer src="/js/crud-grids.js?v=20260520-1611"></script>
+    <link rel="stylesheet" href="{{ asset('css/enterprise-shell.css') }}?v={{ filemtime(public_path('css/enterprise-shell.css')) }}">
 </head>
 <body>
 <div class="app">
