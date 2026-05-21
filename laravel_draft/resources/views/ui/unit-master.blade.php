@@ -174,20 +174,23 @@ document.getElementById('loadUnitsBtn').onclick=loadFilteredUnits;
 
 function detectGroup(label){
     const v = String(label || '').toLowerCase();
-    if(v.includes('hostel') || v.includes('guest')) return 'hostel';
+
+    if(v.includes('hod') || v.includes('hostel') || v.includes('guest')) return 'hostel';
+    if(v.includes('palidar') || v.includes('bachelor')) return 'bachelor';
+    if(v.includes('old abaseen') || v.includes('admin block') || v.includes('container')) return 'containers';
     if(v.includes('family') || v.includes('house')) return 'house';
-    if(v.includes('bachelor')) return 'bachelor';
-    if(v.includes('admin block') || v.includes('container')) return 'containers';
-    if(!v || v.includes('uncategorized')) return 'uncategorized';
-    return 'other';
+    if(!v || v.includes('null') || v.includes('uncategorized')) return 'uncategorized';
+
+    return 'uncategorized';
 }
+
 
 function groupTone(key){
     return {house:'house',bachelor:'bachelor',hostel:'hostel',containers:'container',uncategorized:'uncategorized',other:'default'}[key] || 'default';
 }
 
 function groupLabel(key){
-    return {house:'House Units',bachelor:'Bachelor Units',hostel:'Hostel Units',containers:'Containers / Admin',uncategorized:'Uncategorized',other:'Other'}[key] || key;
+    return {house:'House Units',bachelor:'Bachelor Units',hostel:'Hostel Units',containers:'Admin Block',uncategorized:'Uncategorized',other:'Other'}[key] || key;
 }
 
 function sumRows(list, key){return list.reduce((a,x)=>a+Number(x[key]||0),0);}

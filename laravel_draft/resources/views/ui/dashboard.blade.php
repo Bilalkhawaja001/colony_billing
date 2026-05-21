@@ -48,9 +48,9 @@
                 <span class="badge">Hostel</span>
             </a>
             <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=containers">
-                <div class="muted">Containers</div>
+                <div class="muted">Admin Block</div>
                 <div class="kpi">{{ $kpis['container_units'] ?? 0 }}</div>
-                <span class="badge warn">Admin</span>
+                <span class="badge warn">Admin Block</span>
             </a>
             <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=uncategorized">
                 <div class="muted">Uncategorized</div>
