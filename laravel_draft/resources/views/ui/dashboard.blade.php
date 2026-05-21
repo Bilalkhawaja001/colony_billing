@@ -24,6 +24,42 @@
         <span class="badge warn">Transport</span>
     </div>
 
+    <div class="col-12 card">
+        <h3 class="section-title">Resident Type Overview</h3>
+        <div class="grid" style="gap:10px">
+            <div class="col-2 card soft">
+                <div class="muted">Total Units</div>
+                <div class="kpi">{{ $kpis['total_units'] ?? 0 }}</div>
+                <span class="badge">Master</span>
+            </div>
+            <div class="col-2 card soft">
+                <div class="muted">House Units</div>
+                <div class="kpi">{{ $kpis['house_units'] ?? 0 }}</div>
+                <span class="badge success">House</span>
+            </div>
+            <div class="col-2 card soft">
+                <div class="muted">Bachelor Units</div>
+                <div class="kpi">{{ $kpis['bachelor_units'] ?? 0 }}</div>
+                <span class="badge">Bachelor</span>
+            </div>
+            <div class="col-2 card soft">
+                <div class="muted">Hostel</div>
+                <div class="kpi">{{ $kpis['hostel_units'] ?? 0 }}</div>
+                <span class="badge">Hostel</span>
+            </div>
+            <div class="col-2 card soft">
+                <div class="muted">Containers</div>
+                <div class="kpi">{{ $kpis['container_units'] ?? 0 }}</div>
+                <span class="badge warn">Admin</span>
+            </div>
+            <div class="col-2 card soft">
+                <div class="muted">Uncategorized</div>
+                <div class="kpi">{{ $kpis['uncategorized_units'] ?? 0 }}</div>
+                <span class="badge warn">Review</span>
+            </div>
+        </div>
+    </div>
+
     <div class="col-8 card">
         <h3 class="section-title">Month Control + Quick Actions</h3>
         <form method="get" action="/dashboard" class="form-grid" style="margin-bottom:12px;">
