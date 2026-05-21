@@ -14,10 +14,10 @@ class DataGridController extends Controller
         'employees' => [
             'table' => 'employees_master',
             'key' => 'company_id',
-            'select' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','unit_id','room_no','colony_type','block_floor'],
+            'select' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','leave_date','unit_id','room_no','colony_type','block_floor'],
             'search' => ['company_id','name','cnic_no','mobile_no'],
             'filters' => ['department','designation','active','unit_id','room_no'],
-            'editable' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','unit_id','room_no','colony_type','block_floor'],
+            'editable' => ['company_id','name','father_name','cnic_no','mobile_no','department','section','designation','employee_type','active','leave_date','unit_id','room_no','colony_type','block_floor'],
         ],
         'active-days' => [
             'table' => 'electric_active_days_monthly',
@@ -165,6 +165,20 @@ class DataGridController extends Controller
         $cfg = $this->cfg($module);
         if (empty($cfg['editable'])) abort(403, 'Module is read-only.');
         $data = $request->only($cfg['editable']);
+
+        if ($module === 'employees') {
+            $active = trim((string)($data['active'] ?? ''));
+            $leaveDate = trim((string)($data['leave_date'] ?? ''));
+
+            if ($leaveDate !== '' && strtotime($leaveDate) !== false && strtotime($leaveDate) <= strtotime(date('Y-m-d'))) {
+                $data['active'] = 'No';
+            }
+
+            if (($data['active'] ?? '') === 'No' && $leaveDate === '') {
+                abort(422, 'Leave Date is required when deactivating employee.');
+            }
+        }
+
         if ($module === 'active-days') $this->validateActiveDays($data);
         if ($module === 'meter-readings' && isset($data['reading_value']) && (float)$data['reading_value'] < 0) abort(422, 'Reading cannot be negative.');
         $key = $cfg['key'];

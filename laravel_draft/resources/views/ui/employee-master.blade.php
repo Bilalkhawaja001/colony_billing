@@ -1,21 +1,62 @@
 @extends('layouts.app')
 @section('page_title','People & Residency')
-@section('page_subtitle','Flask-parity Employee Master + Family + Occupancy in one workspace.')
+@section('page_subtitle','Employee master, room assignment, family details and CSV validation in one controlled workspace.')
 @section('content')
-<div class="card">
+<style>
+.page-head{display:none!important}
+.container{padding-top:18px!important}
+
+.people-shell{border:1px solid rgba(109,159,219,.28);background:linear-gradient(180deg,rgba(255,255,255,.92),rgba(238,246,254,.78))}
+.people-shell .module-intro{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:4px 2px 14px;border-bottom:1px solid rgba(170,190,216,.45);margin-bottom:14px}
+.people-shell .module-intro h3,.people-shell .module-intro h4{margin:0 0 5px;color:#10263d}
+.people-shell .module-intro p{margin:0;color:#647a92;font-size:13px;max-width:760px}
+.segmented{display:inline-flex;gap:6px;padding:6px;border:1px solid rgba(170,190,216,.45);border-radius:16px;background:rgba(247,251,255,.75)}
+.people-panel-title{font-size:13px;font-weight:900;color:#315579;text-transform:uppercase;letter-spacing:.7px;margin:0 0 8px}
+#quick_panel{background:linear-gradient(90deg,rgba(231,240,251,.95),rgba(247,251,255,.82));border:1px solid rgba(109,159,219,.22)}
+#bulk_panel{border:1px solid rgba(109,159,219,.22)}
+#actionStatus{font-weight:700}
+.people-help{font-size:12px;color:#647a92;margin-top:6px}
+.people-kpi-card{grid-column:span 3;text-align:left;cursor:pointer;border-color:rgba(109,159,219,.26)}
+.people-kpi-card:hover{transform:translateY(-1px);border-color:rgba(109,159,219,.45)}
+.people-kpi-card .kpi{margin:4px 0;font-size:26px}
+</style>
+<div class="card people-shell">
   <div class="module-intro">
     <div>
-      <h3>People & Residency Workspace</h3>
-      <p>Unified employee, family, and occupancy operations in one operator-focused shell. All existing actions and API calls stay intact.</p>
+      <h3>Employee Master Control</h3>
+      <p>Manage employee status, residency assignment, CSV validation and family links from one controlled workspace.</p>
     </div>
-    <span class="badge">Parity Workspace</span>
+    <span class="badge">Employee Operations</span>
+  </div>
+
+  <div class="grid people-kpi-grid" style="margin-bottom:14px">
+    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('all')">
+      <div class="muted">Total Employees</div>
+      <div class="kpi" id="kpi_total_employees">0</div>
+      <div class="people-help">Click to view complete employee list</div>
+    </button>
+    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('active')">
+      <div class="muted">Active Employees</div>
+      <div class="kpi" id="kpi_active_employees">0</div>
+      <div class="people-help">Active = Yes</div>
+    </button>
+    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('deactive')">
+      <div class="muted">Deactive Employees</div>
+      <div class="kpi" id="kpi_deactive_employees">0</div>
+      <div class="people-help">Active = No</div>
+    </button>
+    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('missing')">
+      <div class="muted">Missing Status</div>
+      <div class="kpi" id="kpi_missing_status">0</div>
+      <div class="people-help">Blank active status</div>
+    </button>
   </div>
 
   <div class="toolbar sticky-actions" style="margin-bottom:12px">
     <div class="segmented" role="group" aria-label="People Residency tabs">
-      <button id="tab_btn_employee" class="btn btn-primary" type="button" onclick="setPeopleTab('employee')">Employee</button>
-      <button id="tab_btn_family" class="btn" type="button" onclick="setPeopleTab('family')">Family</button>
-      <button id="tab_btn_occupancy" class="btn" type="button" onclick="setPeopleTab('occupancy')">Occupancy</button>
+      <button id="tab_btn_employee" class="btn btn-primary" type="button" onclick="setPeopleTab('employee')">Employee Master</button>
+      <button id="tab_btn_family" class="btn" type="button" onclick="setPeopleTab('family')">Family Details</button>
+      <button id="tab_btn_occupancy" class="btn" type="button" onclick="setPeopleTab('occupancy')">Occupancy Status</button>
     </div>
   </div>
 
@@ -23,9 +64,9 @@
   <div id="people_tab_employee" style="margin-top:8px">
     <div class="toolbar sticky-actions" style="margin-bottom:12px">
       <div class="segmented">
-        <button id="mode_quick" class="btn btn-primary" type="button" onclick="setMode('quick')">Quick Add/Edit</button>
-        <button id="mode_bulk" class="btn" type="button" onclick="setMode('bulk')">Bulk Upload</button>
-        <button id="mode_manage" class="btn" type="button" onclick="setMode('manage')">Manage/List</button>
+        <button id="mode_quick" class="btn btn-primary" type="button" onclick="setMode('quick')">Search / Edit</button>
+        <button id="mode_bulk" class="btn" type="button" onclick="setMode('bulk')">CSV Upload</button>
+        <button id="mode_manage" class="btn" type="button" onclick="setMode('manage')">Employee List</button>
       </div>
     </div>
 
@@ -34,17 +75,17 @@
         <span class="badge">Quick Mode</span>
         <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
         <button class="btn" type="button" onclick="fetchById()">Fetch by ID</button>
-        <button class="btn" type="button" onclick="saveToRegistry()">Save Draft Registry</button>
-        <span class="muted">Quick mode: required fields fill karo, then Add Employee.</span>
+        <button class="btn" type="button" onclick="saveToRegistry()">Save to Registry</button>
+        <span class="muted">Search by CompanyID, review details, then save changes only when needed.</span>
       </div>
     </div>
 
     <div id="bulk_panel" class="card soft" style="display:none;margin-bottom:10px">
-      <div class="field"><label class="label">Employee Bulk Upload</label><input id="bulk_csv_file" type="file" accept=".csv,text/csv"></div>
+      <div class="field"><label class="label">Employee CSV Upload & Validation</label><input id="bulk_csv_file" type="file" accept=".csv,text/csv"></div>
       <div class="toolbar" style="margin-top:8px">
         <button class="btn" type="button" onclick="loadCsvFile()">Load Selected File</button>
         <button class="btn" type="button" onclick="previewBulk()">Import Preview</button>
-        <button class="btn btn-success" type="button" onclick="commitBulk()">Commit Valid Rows</button>
+        <button class="btn btn-success" type="button" onclick="commitBulk()">Commit New Valid Rows</button>
         </div>
         <div class="banner small" style="margin-top:8px">
           <div><b>Expected header order</b></div>
@@ -76,7 +117,7 @@
 
       <div class="grid" style="margin-top:10px">
         <div class="col-6">
-          <h4 class="section-title">Valid Rows Preview</h4>
+          <h4 class="section-title">Accepted Rows Preview</h4>
           <div class="table-wrap">
             <table>
               <thead>
@@ -89,7 +130,7 @@
           </div>
         </div>
         <div class="col-6">
-          <h4 class="section-title">Failed Rows Summary</h4>
+          <h4 class="section-title">Rejected Rows Summary</h4>
           <div class="table-wrap">
             <table>
               <thead>
@@ -155,9 +196,9 @@
     </div>
 
     <div id="quick_actions" class="toolbar" style="margin-top:10px">
-      <button class="btn btn-primary" type="button" onclick="addEmployee()">Add Employee</button>
-      <button class="btn" type="button" onclick="upsertEmployee()">Upsert</button>
-      <button class="btn" type="button" onclick="saveToRegistry()">Save Draft Registry</button>
+      <button class="btn btn-primary" type="button" onclick="addEmployee()">Add New Employee</button>
+      <button class="btn" type="button" onclick="upsertEmployee()">Update Existing</button>
+      <button class="btn" type="button" onclick="saveToRegistry()">Save to Registry</button>
     </div>
 
     <div id="manage_panel" style="display:none;margin-top:12px">
@@ -174,7 +215,7 @@
         <div class="field col-3"><label class="label">Designation</label><input id="mf_desg" oninput="applyFilters()"></div>
         <div class="field col-3"><label class="label">Active</label><select id="mf_active" onchange="applyFilters()"><option value="">All</option><option>Yes</option><option>No</option></select></div>
       </div>
-      <div id="emp_list" class="table-wrap" style="margin-top:10px"></div>
+      <div id="emp_list_title" class="banner" style="margin-top:10px;display:none">Employee List</div><div id="emp_list" class="table-wrap" style="margin-top:10px"></div>
       <div class="toolbar" style="margin-top:8px">
         <span id="emp_page_info" class="muted"></span>
         <button class="btn" type="button" onclick="prevEmpPage()">Prev</button>
@@ -352,6 +393,11 @@ function buildOccupancyWorkspaceHref(){
 }
 
 function setPeopleTab(tab){
+  const empGrid=document.getElementById('employee_grid_wrap');
+  const famGrid=document.getElementById('family_grid_wrap');
+  if(empGrid) empGrid.style.display = tab==='employee' ? '' : 'none';
+  if(famGrid) famGrid.style.display = tab==='family' ? '' : 'none';
+
   ['employee','family','occupancy'].forEach(t=>{
     const pane=document.getElementById('people_tab_'+t);
     const btn=document.getElementById('tab_btn_'+t);
@@ -588,6 +634,54 @@ function fillForm(r){
 }
 
 function showTab(tab){['basic','res','assets'].forEach(t=>document.getElementById('tab-'+t).style.display=(t===tab?'':'none'));}
+function refreshEmployeeKpis(){
+  const total=EMP_ROWS.length;
+  const active=EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='Yes').length;
+  const deactive=EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='No').length;
+  const missing=EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='').length;
+  const set=(id,val)=>{const el=document.getElementById(id); if(el) el.textContent=String(val);};
+  set('kpi_total_employees',total);
+  set('kpi_active_employees',active);
+  set('kpi_deactive_employees',deactive);
+  set('kpi_missing_status',missing);
+}
+
+async function ensureEmployeesLoaded(){
+  if(!EMP_ROWS.length){
+    const r=await req('/employees?active_only=0');
+    show(r);
+    EMP_ROWS=r.body?.rows||[];
+    EMP_FILTERED=[...EMP_ROWS];
+    EMP_PAGE=1;
+    refreshEmployeeKpis();
+  }
+}
+
+async function openEmployeeMetric(kind){
+  await ensureEmployeesLoaded();
+  setPeopleTab('employee');
+  setMode('manage');
+  document.getElementById('mf_q').value='';
+  document.getElementById('mf_dept').value='';
+  document.getElementById('mf_desg').value='';
+  document.getElementById('mf_active').value = kind==='active' ? 'Yes' : (kind==='deactive' ? 'No' : '');
+  const title=document.getElementById('emp_list_title');
+  if(title){
+    title.style.display='';
+    title.textContent = kind==='active' ? `Active Employees — ${EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='Yes').length} records`
+      : kind==='deactive' ? `Deactive Employees — ${EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='No').length} records`
+      : kind==='missing' ? `Missing Status Employees — ${EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='').length} records`
+      : `All Employees — ${EMP_ROWS.length} records`;
+  }
+  if(kind==='missing'){
+    EMP_FILTERED=EMP_ROWS.filter(r=>String(empVal(r,'Active')||'').trim()==='');
+    EMP_PAGE=1;
+    renderRows();
+    return;
+  }
+  applyFilters();
+}
+
 function setMode(mode){
   const quick=mode==='quick', bulk=mode==='bulk', manage=mode==='manage';
   document.getElementById('quick_panel').style.display=quick?'':'none';
@@ -696,16 +790,17 @@ function applyFilters(){
 
 async function listEmployees(activeOnly){
   const r=await req('/employees?active_only='+(activeOnly?1:0)); show(r);
-  EMP_ROWS=r.body?.rows||[]; EMP_FILTERED=[...EMP_ROWS]; EMP_PAGE=1; renderRows();
+  EMP_ROWS=r.body?.rows||[]; EMP_FILTERED=[...EMP_ROWS]; EMP_PAGE=1; refreshEmployeeKpis(); renderRows();
 }
 
+const EMP_LIST_COLUMNS=['CompanyID','Name','Department','Designation','Active','Leave Date','Unit_ID','Room No'];
 function renderRows(){
   const box=document.getElementById('emp_list');
   if(!EMP_FILTERED.length){ box.innerHTML='<div class="empty">No rows found.</div>'; document.getElementById('emp_page_info').textContent=''; return; }
   const total=EMP_FILTERED.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE)); if(EMP_PAGE>pages) EMP_PAGE=pages;
   const s=(EMP_PAGE-1)*PAGE_SIZE, e=Math.min(total,s+PAGE_SIZE), rows=EMP_FILTERED.slice(s,e);
   document.getElementById('emp_page_info').textContent=`Showing ${s+1}-${e} of ${total} (page ${EMP_PAGE}/${pages})`;
-  box.innerHTML='<table><thead><tr>'+BULK_COLUMNS.map(c=>`<th>${c}</th>`).join('')+'<th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr>${BULK_COLUMNS.map(c=>`<td>${empVal(r,c)||''}</td>`).join('')}<td><button class="btn" onclick='editRow(${JSON.stringify(empVal(r,'CompanyID'))})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
+  box.innerHTML='<table><thead><tr>'+EMP_LIST_COLUMNS.map(c=>`<th>${c}</th>`).join('')+'<th>Action</th></tr></thead><tbody>'+rows.map(r=>`<tr>${EMP_LIST_COLUMNS.map(c=>`<td>${empVal(r,c)||''}</td>`).join('')}<td><button class="btn btn-primary" onclick='editRow(${JSON.stringify(empVal(r,'CompanyID'))})'>Edit</button></td></tr>`).join('')+'</tbody></table>';
 }
 async function editRow(id){
   const targetId=String(id ?? '').trim();
@@ -724,8 +819,7 @@ function nextEmpPage(){ const p=Math.max(1,Math.ceil(EMP_FILTERED.length/PAGE_SI
 
 document.getElementById('bulk_header_line').textContent=BULK_COLUMNS.join(',');
 document.getElementById('bulk_sample_line').textContent=BULK_SAMPLE_ROW.join(',');
-showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref();
+showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); ensureEmployeesLoaded();
 </script>
-<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="employees"></div><div class="col-12" data-grid="family"></div></div>
-<script src="/js/crud-grids.js"></script>
+{{-- Auto CRUD grids removed from People Residency to prevent double employee grid. --}}
 @endsection
