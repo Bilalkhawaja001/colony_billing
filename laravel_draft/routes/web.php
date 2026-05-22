@@ -7,6 +7,7 @@ use App\Http\Controllers\Billing\ImportsMonthlySetupController;
 use App\Http\Controllers\Billing\MasterDataDraftController;
 use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Billing\FamilyRegistryResultsController;
+use App\Http\Controllers\Billing\EmployeeProfileController;
 use App\Http\Controllers\Billing\EmployeesMeterParityController;
 use App\Http\Controllers\Billing\MonthlyActiveDaysController;
 use App\Http\Controllers\Billing\DataGridController;
@@ -37,6 +38,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
+    Route::get('/employee-profile/{companyId}', [EmployeeProfileController::class, 'show']);
     Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {

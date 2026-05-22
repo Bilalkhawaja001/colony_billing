@@ -75,6 +75,7 @@
         <span class="badge">Quick Mode</span>
         <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
         <button class="btn" type="button" onclick="fetchById()">Fetch by ID</button>
+        <button class="btn btn-primary" type="button" onclick="openEmployeeProfile()">Open Employee Profile</button>
         <button class="btn" type="button" onclick="saveToRegistry()">Save to Registry</button>
         <span class="muted">Search by CompanyID, review details, then save changes only when needed.</span>
       </div>
@@ -870,6 +871,21 @@ function setMode(mode){
   document.getElementById('quick_actions').style.display=quick?'':'none';
   document.getElementById('manage_panel').style.display=manage?'':'none';
   if(manage && !EMP_ROWS.length) listEmployees(false);
+}
+
+function openEmployeeProfile(){
+  const companyId = String(
+    document.getElementById('e_CompanyID')?.value ||
+    document.getElementById('lookup_id')?.value ||
+    ''
+  ).trim();
+
+  if(!companyId){
+    setStatus(false, 'Enter or load CompanyID before opening Employee Profile.');
+    return;
+  }
+
+  window.location.href = '/employee-profile/' + encodeURIComponent(companyId);
 }
 
 async function fetchById(){
