@@ -39,6 +39,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::get('/employee-profile/{companyId}', [EmployeeProfileController::class, 'show']);
+    Route::post('/employee-profile/{companyId}/family-members/{familyMemberId}/movement', [EmployeeProfileController::class, 'recordFamilyMovement']);
     Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
