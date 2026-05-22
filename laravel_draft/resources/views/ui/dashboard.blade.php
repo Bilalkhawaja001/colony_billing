@@ -28,7 +28,7 @@
         <h3 class="section-title">Resident Type Overview</h3>
         <div class="grid" style="gap:10px">
             <a class="col-2 card soft kpi-link-card" href="/unit-directory">
-                <div class="muted">Total Units</div>
+                <div class="muted">Total Rooms</div>
                 <div class="kpi">{{ $kpis['total_units'] ?? 0 }}</div>
                 <span class="badge">Master</span>
             </a>
@@ -48,9 +48,9 @@
                 <span class="badge">Hostel</span>
             </a>
             <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=containers">
-                <div class="muted">Admin Block</div>
+                <div class="muted">Admin Colonies</div>
                 <div class="kpi">{{ $kpis['container_units'] ?? 0 }}</div>
-                <span class="badge warn">Admin Block</span>
+                <span class="badge warn">Admin Colonies</span>
             </a>
             <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=uncategorized">
                 <div class="muted">Uncategorized</div>

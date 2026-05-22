@@ -43,12 +43,13 @@ class DashboardParityService
         $resident = $this->qOne(
             "SELECT
                 COUNT(*) AS total_units,
-                SUM(CASE WHEN (colony_type LIKE '%Family%' OR colony_type LIKE '%House%') AND colony_type NOT LIKE '%Hostel%' AND colony_type NOT LIKE '%Guest%' THEN 1 ELSE 0 END) AS house_units,
-                SUM(CASE WHEN colony_type LIKE '%Bachelor%' OR colony_type LIKE '%Palidar%' THEN 1 ELSE 0 END) AS bachelor_units,
-                SUM(CASE WHEN colony_type LIKE '%Hostel%' OR colony_type LIKE '%Guest%' OR colony_type LIKE '%HOD%' THEN 1 ELSE 0 END) AS hostel_units,
-                SUM(CASE WHEN colony_type LIKE '%Container%' OR colony_type LIKE '%Admin Block%' OR colony_type LIKE '%Old Abaseen%' THEN 1 ELSE 0 END) AS container_units,
-                SUM(CASE WHEN colony_type IS NULL OR colony_type = '' THEN 1 ELSE 0 END) AS uncategorized_units
-             FROM util_unit"
+                SUM(CASE WHEN residence_type LIKE 'House %' THEN 1 ELSE 0 END) AS house_units,
+                SUM(CASE WHEN residence_type = 'Bachelor' THEN 1 ELSE 0 END) AS bachelor_units,
+                SUM(CASE WHEN residence_type = 'Hostel' THEN 1 ELSE 0 END) AS hostel_units,
+                SUM(CASE WHEN residence_type = 'Container' THEN 1 ELSE 0 END) AS container_units,
+                SUM(CASE WHEN residence_type IS NULL OR residence_type = '' THEN 1 ELSE 0 END) AS uncategorized_units
+             FROM util_unit_room_snapshot
+             WHERE month_cycle = (SELECT MAX(month_cycle) FROM util_unit_room_snapshot)"
         );
 
         if (!$month) {

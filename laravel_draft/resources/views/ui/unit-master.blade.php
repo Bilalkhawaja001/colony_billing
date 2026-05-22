@@ -23,12 +23,28 @@
 .tone-container{--accent:#0f766e;--border:#99f6e4;--bg1:#f0fdfa;--bg2:#fff}
 .tone-uncategorized{--accent:#6b7280;--border:#e5e7eb;--bg1:#f9fafb;--bg2:#fff}
 .tone-default{--accent:#334155;--border:#cbd5e1;--bg1:#f8fafc;--bg2:#fff}
+.unit-list-details summary::-webkit-details-marker{display:none}
+.unit-list-details summary:after{content:' ▼';font-size:12px;color:#64748b}
+.unit-list-details[open] summary:after{content:' ▲'}
 .room-link-btn{
-    padding:6px 10px;
-    border-radius:10px;
-    font-weight:900;
-    color:#1d4ed8;
+    min-width:110px!important;
+    height:34px!important;
+    padding:0 12px!important;
+    border-radius:10px!important;
+    border:1px solid #60a5fa!important;
+    background:linear-gradient(180deg,#dbeafe,#bfdbfe)!important;
+    color:#1d4ed8!important;
+    font-weight:900!important;
+    font-size:12px!important;
+    letter-spacing:.01em!important;
+    box-shadow:0 5px 12px rgba(37,99,235,.16)!important;
 }
+.room-link-btn:hover{
+    background:linear-gradient(180deg,#bfdbfe,#93c5fd)!important;
+    border-color:#2563eb!important;
+    transform:translateY(-1px);
+}
+
 </style>
 
 <div class="grid">
@@ -113,13 +129,15 @@
     </div>
 
     <div class="col-12 card">
-        <h3 class="section-title">Unit Listing</h3>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Unit ID</th><th>Colony Type</th><th>Block/Floor</th><th>Room No</th><th>Active</th></tr></thead>
-                <tbody id="unitRows"><tr><td colspan="5"><div class="empty">No rows loaded.</div></td></tr></tbody>
-            </table>
-        </div>
+        <details class="unit-list-details">
+            <summary class="section-title" style="cursor:pointer;margin:0">Unit Listing</summary>
+            <div class="table-wrap" style="margin-top:12px">
+                <table>
+                    <thead><tr><th>Unit ID</th><th>Colony Type</th><th>Block/Floor</th><th>Room No</th><th>Active</th></tr></thead>
+                    <tbody id="unitRows"><tr><td colspan="5"><div class="empty">No rows loaded.</div></td></tr></tbody>
+                </table>
+            </div>
+        </details>
     </div>
 
     <div class="col-12 card">
@@ -148,13 +166,29 @@ function render(rows){
         rowsEl.innerHTML='<tr><td colspan="5"><div class="empty">No rows found.</div></td></tr>';
         return;
     }
-    rowsEl.innerHTML=rows.map(r=>`<tr>
-        <td>${r.unit_id??''}</td>
-        <td>${r.colony_type??''}</td>
-        <td>${r.block_name??''}</td>
-        <td>${r.room_no??''}</td>
-        <td>${r.is_active??''}</td>
-    </tr>`).join('');
+
+    rowsEl.innerHTML=rows.map(r=>{
+        const room = r.room_no || '';
+        const roomCell = room
+            ? `<button type="button" class="btn room-link-btn"
+                    data-list-colony="${String(r.colony_type || '').replaceAll('"','&quot;')}"
+                    data-list-room="${String(room).replaceAll('"','&quot;')}">
+                    ${room}
+               </button>`
+            : '';
+
+        return `<tr>
+            <td>${r.unit_id??''}</td>
+            <td>${r.colony_type??''}</td>
+            <td>${r.block_name??''}</td>
+            <td>${roomCell}</td>
+            <td>${r.is_active??''}</td>
+        </tr>`;
+    }).join('');
+
+    rowsEl.querySelectorAll('[data-list-room]').forEach(btn=>{
+        btn.onclick=()=>loadResidents(btn.dataset.listColony || '', 'Room ' + btn.dataset.listRoom, btn.dataset.listRoom);
+    });
 }
 
 document.getElementById('unitUpsertForm').addEventListener('submit',e=>{e.preventDefault();req('/units/upsert','POST',Object.fromEntries(new FormData(e.target)));});
@@ -164,7 +198,7 @@ document.getElementById('importUnitCsv').onclick=async()=>{const f=document.getE
 async function loadFilteredUnits(){
     const params = new URLSearchParams(window.location.search || '');
     params.set('page', '1');
-    params.set('per_page', '100');
+    params.set('per_page', '5');
     const r = await req('/api/grids/units?' + params.toString());
     render(r.body?.rows || []);
     const label = params.get('res_type') || params.get('colony_type') || 'all';
@@ -174,13 +208,11 @@ document.getElementById('loadUnitsBtn').onclick=loadFilteredUnits;
 
 function detectGroup(label){
     const v = String(label || '').toLowerCase();
-
-    if(v.includes('hod') || v.includes('hostel') || v.includes('guest')) return 'hostel';
-    if(v.includes('palidar') || v.includes('bachelor')) return 'bachelor';
-    if(v.includes('old abaseen') || v.includes('admin block') || v.includes('container')) return 'containers';
-    if(v.includes('family') || v.includes('house')) return 'house';
-    if(!v || v.includes('null') || v.includes('uncategorized')) return 'uncategorized';
-
+    if(v === 'house' || v.includes('house')) return 'house';
+    if(v === 'bachelor' || v === 'room') return 'bachelor';
+    if(v === 'hostel' || v.includes('hostel')) return 'hostel';
+    if(v === 'containers' || v.includes('container')) return 'containers';
+    if(v === 'uncategorized') return 'uncategorized';
     return 'uncategorized';
 }
 
@@ -190,7 +222,7 @@ function groupTone(key){
 }
 
 function groupLabel(key){
-    return {house:'House Units',bachelor:'Bachelor Units',hostel:'Hostel Units',containers:'Admin Block',uncategorized:'Uncategorized',other:'Other'}[key] || key;
+    return {house:'House Units',bachelor:'Bachelor Units',hostel:'Hostel Units',containers:'Containers',uncategorized:'Uncategorized',other:'Other'}[key] || key;
 }
 
 function sumRows(list, key){return list.reduce((a,x)=>a+Number(x[key]||0),0);}
@@ -210,7 +242,7 @@ async function loadResidentGroups(){
 
     const grouped = {};
     rows.forEach(row => {
-        const key = detectGroup(row.colony_type || '');
+        const key = row.group_key || detectGroup(row.residence_type || row.colony_type || '');
         if(!grouped[key]) grouped[key]=[];
         grouped[key].push(row);
     });
@@ -260,8 +292,8 @@ function renderSubCards(title, rows){
         rows.map(row=>{
             const colony=row.colony_type || '__uncategorized';
             const label=row.colony_type || 'Uncategorized';
-            const tone=groupTone(detectGroup(label));
-            return `<button type="button" class="unit-sub-card tone-${tone}" data-colony="${String(colony).replaceAll('"','&quot;')}">
+            const tone=groupTone(row.group_key || detectGroup(row.residence_type || label));
+            return `<button type="button" class="unit-sub-card tone-${tone}" data-colony="${String(colony).replaceAll('"','&quot;')}" data-residence-type="${String(row.residence_type || '').replaceAll('"','&quot;')}">
                 <div class="us-title">${label}</div>
                 <div class="us-row"><strong>${row.resident_count ?? 0}</strong><span>Residents</span></div>
                 <div class="us-meta"><span>Units <b>${row.unit_count ?? 0}</b></span><span>Rooms <b>${row.room_count ?? 0}</b></span></div>
@@ -274,7 +306,7 @@ function renderSubCards(title, rows){
             const label = btn.querySelector('.us-title')?.textContent || '';
             const group = detectGroup(label);
             if(group === 'bachelor' || group === 'hostel'){
-                loadRooms(btn.dataset.colony, label);
+                loadRooms(btn.dataset.colony, label, btn.dataset.residenceType || '');
             } else {
                 loadResidents(btn.dataset.colony, label);
             }
@@ -283,9 +315,10 @@ function renderSubCards(title, rows){
 }
 
 
-async function loadRooms(colony, label){
+async function loadRooms(colony, label, residenceType=''){
     const params = new URLSearchParams(window.location.search || '');
     params.set('colony_type', colony);
+    if(residenceType) params.set('residence_type', residenceType);
 
     const card = document.getElementById('residentRoomCard');
     const title = document.getElementById('residentRoomTitle');
@@ -314,15 +347,16 @@ async function loadRooms(colony, label){
     </tr>`).join('');
 
     body.querySelectorAll('[data-room]').forEach(btn=>{
-        btn.onclick=()=>loadResidents(btn.dataset.colony, 'Room ' + btn.dataset.room, btn.dataset.room);
+        btn.onclick=()=>loadResidents(btn.dataset.colony, 'Room ' + btn.dataset.room, btn.dataset.room, residenceType);
     });
 }
 
 
-async function loadResidents(colony, label, roomNo=""){
+async function loadResidents(colony, label, roomNo="", residenceType=""){
     const params=new URLSearchParams(window.location.search || '');
     params.set('colony_type', colony);
     if(roomNo) params.set('room_no', roomNo);
+    if(residenceType) params.set('residence_type', residenceType);
 
     const card=document.getElementById('residentDetailsCard');
     const title=document.getElementById('residentDetailsTitle');
@@ -330,14 +364,20 @@ async function loadResidents(colony, label, roomNo=""){
 
     card.style.display='block';
     title.textContent='Residents - '+label;
+    setStatus(true, 'Loading residents for ' + label + '...');
 
     const r=await req('/api/units/residents?'+params.toString());
     const rows=r.body?.rows || [];
 
     if(!rows.length){
         body.innerHTML='<tr><td colspan="10"><div class="empty">No residents found.</div></td></tr>';
+        card.scrollIntoView({behavior:'smooth', block:'start'});
+        setStatus(false, 'No residents found for ' + label);
         return;
     }
+
+    setStatus(true, 'Loaded ' + rows.length + ' resident(s) for ' + label);
+    card.scrollIntoView({behavior:'smooth', block:'start'});
 
     body.innerHTML=rows.map(x=>`<tr>
         <td>${x.company_id ?? ''}</td>
@@ -352,6 +392,8 @@ async function loadResidents(colony, label, roomNo=""){
         <td>${x.active_days ?? ''}</td>
     </tr>`).join('');
 }
+
+window.loadResidents = loadResidents;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadFilteredUnits();
