@@ -25,12 +25,25 @@ class FamilyRegistryResultsController extends Controller
         return response()->json($this->service->familyDetails($request->query()));
     }
 
-    public function familyDetailsUpsert(Request $request)
+    public function familyMembersRegistry(Request $request)
     {
-        $result = $this->service->familyDetailsUpsert($request->all());
+        return response()->json($this->service->familyMembersRegistry($request->query()));
+    }
+
+    public function familyMembersMaster(Request $request)
+    {
+        $result = $this->service->familyMembersMaster($request->query());
         $code = (int) ($result['_http'] ?? 200);
         unset($result['_http']);
         return response()->json($result, $code);
+    }
+
+    public function familyDetailsUpsert(Request $request)
+    {
+        return response()->json([
+            'status' => 'error',
+            'error' => 'Legacy monthly family save is disabled. Use Permanent Family Master workflow.',
+        ], 410);
     }
 
     public function registryEmployeesUpsert(Request $request)

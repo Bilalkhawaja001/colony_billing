@@ -49,6 +49,76 @@ class FamilyRegistryResultsService
         ];
     }
 
+    public function familyMembersRegistry(array $query): array
+    {
+        $rows = DB::table('family_members')
+            ->orderBy('company_id')
+            ->orderBy('id')
+            ->get([
+                'id',
+                'company_id',
+                'member_name',
+                'relation',
+                'age',
+                'school_going',
+                'school_name',
+                'class_name',
+                'source_residence_type',
+                'source_colony_building_name',
+                'source_room_no',
+                'current_status',
+            ])
+            ->map(fn ($row) => (array) $row)
+            ->all();
+
+        return [
+            'status' => 'ok',
+            'count' => count($rows),
+            'employee_count' => count(array_unique(array_column($rows, 'company_id'))),
+            'rows' => $rows,
+        ];
+    }
+
+    public function familyMembersMaster(array $query): array
+    {
+        $companyId = trim((string) ($query['company_id'] ?? ''));
+
+        if ($companyId === '') {
+            return ['_http' => 400, 'status' => 'error', 'error' => 'company_id is required'];
+        }
+
+        $rows = DB::table('family_members')
+            ->where('company_id', $companyId)
+            ->orderBy('id')
+            ->get([
+                'id',
+                'company_id',
+                'member_name',
+                'relation',
+                'age',
+                'school_going',
+                'school_name',
+                'class_name',
+                'source_month_cycle',
+                'source_residence_type',
+                'source_colony_building_name',
+                'source_block_floor',
+                'source_room_no',
+                'current_status',
+                'is_active',
+                'remarks',
+            ])
+            ->map(fn ($row) => (array) $row)
+            ->all();
+
+        return [
+            'status' => 'ok',
+            'company_id' => $companyId,
+            'count' => count($rows),
+            'rows' => $rows,
+        ];
+    }
+
     public function familyDetails(array $query): array
     {
         $monthCycle = trim((string) ($query['month_cycle'] ?? ''));

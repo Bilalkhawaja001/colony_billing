@@ -250,6 +250,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::get('/family/details/context', [FamilyRegistryResultsController::class, 'familyDetailsContext']);
     Route::get('/family/details', [FamilyRegistryResultsController::class, 'familyDetails']);
+    Route::get('/family/members/master', [FamilyRegistryResultsController::class, 'familyMembersMaster']);
+    Route::get('/family/members/registry', [FamilyRegistryResultsController::class, 'familyMembersRegistry']);
     Route::get('/registry/employees/{company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
     Route::get('/registry/employees/<company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGetLiteral']);
     Route::get('/api/results/employee-wise', [FamilyRegistryResultsController::class, 'resultsEmployeeWise']);

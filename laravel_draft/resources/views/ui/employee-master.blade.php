@@ -235,30 +235,51 @@
     <div class="module-intro">
       <div>
         <h4>Family</h4>
-        <p>Household-level details, school-going counts, and van usage remain on the same endpoints.</p>
+        <p>Permanent employee-linked family records and movement-ready master data workspace.</p>
       </div>
       <span class="badge success">Family Data</span>
     </div>
-    <div class="banner small" id="family_header">Select an employee to load family details.</div>
-    <div class="toolbar" style="margin:8px 0">
-      <button class="btn" type="button" onclick="reloadFamily()">Reload Family</button>
-      <button class="btn btn-primary" type="button" onclick="saveFamily()">Save Family</button>
-    </div>
-    <div class="form-grid" id="family_summary">
-      <div class="field col-3"><label class="label">Month Cycle</label><input id="fam_month_cycle" placeholder="MM-YYYY"></div>
-      <div class="field col-3"><label class="label">Spouse Name</label><input id="fam_spouse_name"></div>
-      <div class="field col-3"><label class="label">Children Count</label><input id="fam_children_count" type="number" min="0"></div>
-      <div class="field col-3"><label class="label">School Going Children</label><input id="fam_school_going_children" type="number" min="0" disabled></div>
-      <div class="field col-3"><label class="label">Van Using Children</label><input id="fam_van_using_children" type="number" min="0" disabled></div>
-      <div class="field col-3"><label class="label">Van Using Adults</label><input id="fam_van_using_adults" type="number" min="0"></div>
-      <div class="field col-6"><label class="label">Remarks</label><input id="fam_remarks"></div>
+    <div id="legacy_family_monthly_controls" style="display:none" aria-hidden="true">
+      <div class="banner small" id="family_header">Legacy monthly family controls disabled.</div>
+      <div class="form-grid" id="family_summary">
+        <div class="field col-3"><label class="label">Month Cycle</label><input id="fam_month_cycle" placeholder="MM-YYYY"></div>
+        <div class="field col-3"><label class="label">Spouse Name</label><input id="fam_spouse_name"></div>
+        <div class="field col-3"><label class="label">Children Count</label><input id="fam_children_count" type="number" min="0"></div>
+        <div class="field col-3"><label class="label">School Going Children</label><input id="fam_school_going_children" type="number" min="0" disabled></div>
+        <div class="field col-3"><label class="label">Van Using Children</label><input id="fam_van_using_children" type="number" min="0" disabled></div>
+        <div class="field col-3"><label class="label">Van Using Adults</label><input id="fam_van_using_adults" type="number" min="0"></div>
+        <div class="field col-6"><label class="label">Remarks</label><input id="fam_remarks"></div>
+      </div>
+      <div class="table-wrap" id="family_children"></div>
     </div>
 
-    <div class="toolbar" style="margin:12px 0 4px">
-      <span class="muted">Children</span>
-      <button class="btn" type="button" onclick="addFamilyChildRow()">Add Child</button>
+    <div class="module-intro" style="margin-top:20px">
+      <div>
+        <h4>All Permanent Families Registry</h4>
+        <p>Read-only permanent family member records for all employees. Search by Company ID, member, relation or source house.</p>
+      </div>
+      <span class="badge success">All Families</span>
     </div>
-    <div class="table-wrap" id="family_children"></div>
+    <div class="toolbar" style="margin:8px 0">
+      <input id="family_registry_search" placeholder="Search Company ID, member, relation or house..." oninput="filterFamilyRegistry()">
+      <button class="btn" type="button" onclick="reloadFamilyRegistry()">Reload All Families</button>
+    </div>
+    <div class="banner small" id="family_registry_header">Loading permanent family registry...</div>
+    <div class="table-wrap" id="family_registry_members">
+      <div class="empty">Loading records...</div>
+    </div>
+
+    <div class="module-intro" style="margin-top:20px">
+      <div>
+        <h4>Permanent Family Master</h4>
+        <p>Permanent employee-linked family records. This section is read-only at this stage; movement actions will be added separately.</p>
+      </div>
+      <span class="badge success">Master Records</span>
+    </div>
+    <div class="banner small" id="family_master_header">Select an employee to view permanent family master records.</div>
+    <div class="table-wrap" id="family_master_members">
+      <div class="empty">No employee selected.</div>
+    </div>
   </div>
 
   {{-- OCCUPANCY TAB --}}
@@ -416,13 +437,169 @@ function setPeopleTab(tab){
   }
 }
 
+let familyRegistryRows=[];
+
+function renderFamilyRegistry(rows){
+  const box=document.getElementById('family_registry_members');
+  const header=document.getElementById('family_registry_header');
+
+  header.textContent='All Permanent Families Registry — '+rows.length+' displayed / '+familyRegistryRows.length+' total member(s)';
+
+  if(rows.length===0){
+    box.innerHTML='<div class="empty">No matching permanent family records found.</div>';
+    return;
+  }
+
+  const body=rows.map((x,i)=>`<tr>
+    <td>${i+1}</td>
+    <td>${familyMasterEsc(x.company_id)}</td>
+    <td>${familyMasterEsc(x.member_name)}</td>
+    <td>${familyMasterEsc(x.relation)}</td>
+    <td>${familyMasterAge(x.age)}</td>
+    <td>${String(x.school_going)==='1' ? 'Yes' : 'No'}</td>
+    <td>${familyMasterEsc(x.school_name)}</td>
+    <td>${familyMasterEsc(x.class_name)}</td>
+    <td>${familyMasterEsc(x.current_status)}</td>
+    <td>${familyMasterEsc(x.source_room_no)}</td>
+  </tr>`).join('');
+
+  box.innerHTML=`<table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Company ID</th>
+        <th>Member Name</th>
+        <th>Relation</th>
+        <th>Age</th>
+        <th>School Going</th>
+        <th>School Name</th>
+        <th>Class</th>
+        <th>Status</th>
+        <th>Source House</th>
+      </tr>
+    </thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
+function filterFamilyRegistry(){
+  const q=String(document.getElementById('family_registry_search')?.value || '').trim().toLowerCase();
+
+  if(!q){
+    renderFamilyRegistry(familyRegistryRows);
+    return;
+  }
+
+  const rows=familyRegistryRows.filter(x => [
+    x.company_id,
+    x.member_name,
+    x.relation,
+    x.source_room_no,
+    x.source_colony_building_name,
+    x.current_status
+  ].some(v => String(v ?? '').toLowerCase().includes(q)));
+
+  renderFamilyRegistry(rows);
+}
+
+async function reloadFamilyRegistry(){
+  const header=document.getElementById('family_registry_header');
+  const box=document.getElementById('family_registry_members');
+
+  header.textContent='Loading permanent family registry...';
+
+  const r=await req('/family/members/registry');
+
+  if(r.status!==200 || r.body?.status!=='ok'){
+    header.textContent='Failed to load permanent family registry.';
+    box.innerHTML='<div class="empty">Unable to load records.</div>';
+    return;
+  }
+
+  familyRegistryRows=r.body.rows || [];
+  filterFamilyRegistry();
+}
+
+function familyMasterEsc(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    '"':'&quot;',
+    "'":'&#039;'
+  }[ch]));
+}
+
+function familyMasterAge(value){
+  return value === null || value === undefined || value === '' ? '' : familyMasterEsc(value);
+}
+
+async function reloadFamilyMaster(cid){
+  const header=document.getElementById('family_master_header');
+  const box=document.getElementById('family_master_members');
+
+  if(!cid){
+    header.textContent='Select an employee to view permanent family master records.';
+    box.innerHTML='<div class="empty">No employee selected.</div>';
+    return;
+  }
+
+  header.textContent='Loading permanent family master for '+cid+'...';
+  const r=await req('/family/members/master?'+new URLSearchParams({company_id:cid}).toString());
+
+  if(r.status!==200 || r.body?.status!=='ok'){
+    header.textContent='Failed to load permanent family master.';
+    box.innerHTML='<div class="empty">Unable to load family master records.</div>';
+    return;
+  }
+
+  const rows=r.body.rows||[];
+  header.textContent='Permanent Family Master for '+cid+' — '+rows.length+' member(s)';
+
+  if(rows.length===0){
+    box.innerHTML='<div class="empty">No permanent family members found.</div>';
+    return;
+  }
+
+  const body=rows.map((x,i)=>`<tr>
+    <td>${i+1}</td>
+    <td>${familyMasterEsc(x.member_name)}</td>
+    <td>${familyMasterEsc(x.relation)}</td>
+    <td>${familyMasterAge(x.age)}</td>
+    <td>${String(x.school_going)==='1' ? 'Yes' : 'No'}</td>
+    <td>${familyMasterEsc(x.school_name)}</td>
+    <td>${familyMasterEsc(x.class_name)}</td>
+    <td>${familyMasterEsc(x.current_status)}</td>
+    <td>${familyMasterEsc(x.source_room_no)}</td>
+  </tr>`).join('');
+
+  box.innerHTML=`<table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Member Name</th>
+        <th>Relation</th>
+        <th>Age</th>
+        <th>School Going</th>
+        <th>School Name</th>
+        <th>Class</th>
+        <th>Current Status</th>
+        <th>Source House</th>
+      </tr>
+    </thead>
+    <tbody>${body}</tbody>
+  </table>`;
+}
+
 async function reloadFamily(){
   const header=document.getElementById('family_header');
   const children=document.getElementById('family_children');
+  await reloadFamilyRegistry();
   const ctx=setEmployeeContextFromForm();
   const cid=ctx.company_id;
   const month=ctx.month_cycle;
   if(!cid){ header.textContent='Set CompanyID in Employee tab first.'; children.innerHTML='';
+    await reloadFamilyMaster('');
     document.getElementById('fam_month_cycle').value='';
     document.getElementById('fam_spouse_name').value='';
     document.getElementById('fam_children_count').value='';
@@ -440,6 +617,7 @@ async function reloadFamily(){
   header.textContent='Family for '+cid;
   document.getElementById('fam_month_cycle').value=month||'';
   buildOccupancyWorkspaceHref();
+  await reloadFamilyMaster(cid);
   document.getElementById('fam_spouse_name').value=row.spouse_name||'';
   document.getElementById('fam_children_count').value=row.children_count??'';
   document.getElementById('fam_school_going_children').value=row.school_going_children??'';
