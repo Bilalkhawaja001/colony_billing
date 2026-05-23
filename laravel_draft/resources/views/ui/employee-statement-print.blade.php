@@ -208,7 +208,7 @@
             }
             @page{size:A4 landscape;margin:8mm}
         }
-    
+
         .charge-summary-table{
             width:100%;
             border-collapse:collapse;
@@ -239,7 +239,7 @@
             color:#475569;
         }
 
-    
+
         .school-van-detail-print{
             margin-bottom:6px;
         }
