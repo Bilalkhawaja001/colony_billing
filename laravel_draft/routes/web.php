@@ -11,6 +11,7 @@ use App\Http\Controllers\Billing\EmployeeProfileController;
 use App\Http\Controllers\Billing\EmployeesMeterParityController;
 use App\Http\Controllers\Billing\MonthlyActiveDaysController;
 use App\Http\Controllers\Billing\DataGridController;
+use App\Http\Controllers\Billing\HouseAllowanceCorrectionController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
@@ -163,6 +164,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/api/billing/precheck', [BillingDraftController::class, 'precheck']);
     Route::post('/api/billing/finalize', [BillingDraftController::class, 'finalize']);
     Route::post('/billing/elec/compute', [BillingDraftController::class, 'elecCompute']);
+    Route::post('/billing/electric/house-allowance/preview', [HouseAllowanceCorrectionController::class, 'preview']);
+    Route::post('/billing/electric/house-allowance/apply', [HouseAllowanceCorrectionController::class, 'apply']);
     Route::post('/billing/water/compute', [BillingDraftController::class, 'waterCompute']);
     Route::post('/billing/run', [BillingDraftController::class, 'run']);
     Route::post('/billing/fingerprint', [BillingDraftController::class, 'fingerprint']);

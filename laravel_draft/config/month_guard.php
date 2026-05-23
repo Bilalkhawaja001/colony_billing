@@ -14,6 +14,7 @@ return [
         '/api/billing/finalize',
         '/billing/run',
         '/billing/elec/compute',
+        '/billing/electric/house-allowance/apply',
         '/billing/water/compute',
         '/imports/meter-register/ingest-preview',
         '/imports/mark-validated',

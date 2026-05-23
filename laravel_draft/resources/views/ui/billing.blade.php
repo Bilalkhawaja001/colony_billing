@@ -35,6 +35,23 @@
   </div>
 
   <div class="col-12 card">
+    <h3 class="section-title">House Full Allowance Correction</h3>
+    <p class="muted">Controlled post-result correction for <strong>House A Type, House B Type and House C Type only</strong>. Full configured allowance applies once per house. Bachelor, Hostel and Container remain unchanged.</p>
+    <form id="houseAllowanceForm" class="form-grid" style="margin-top:12px">
+      <div class="field col-3">
+        <label class="label">Month Cycle</label>
+        <input name="month_cycle" placeholder="MM-YYYY" value="{{ $monthCycle }}" required>
+      </div>
+      <div class="col-9" style="display:flex;align-items:flex-end;gap:8px">
+        <button class="btn" type="submit">Preview House Correction</button>
+        <button class="btn btn-primary" type="button" id="houseAllowanceApplyBtn" disabled>Apply Verified Correction</button>
+      </div>
+    </form>
+    <div id="houseAllowanceStatus" class="banner" style="margin-top:12px">Run preview before applying. Apply is blocked after month lock.</div>
+    <pre id="houseAllowanceResult" style="margin-top:10px">No preview yet.</pre>
+  </div>
+
+  <div class="col-12 card">
     <h3 class="section-title">Report + Export Shortcuts</h3>
     <div class="toolbar">
       <a class="btn" href="#" id="summaryLink">Monthly Summary JSON</a>
@@ -88,5 +105,80 @@ document.getElementById('billingRunForm').addEventListener('submit',e=>{
   postJson('/billing/run',payload);
 });
 document.getElementById('billingLockForm').addEventListener('submit',e=>{e.preventDefault();postJson('/billing/lock',Object.fromEntries(new FormData(e.target)));});
+
+let houseAllowancePreviewToken = '';
+const houseAllowanceStatus = document.getElementById('houseAllowanceStatus');
+const houseAllowanceResult = document.getElementById('houseAllowanceResult');
+const houseAllowanceApplyBtn = document.getElementById('houseAllowanceApplyBtn');
+
+function setHouseStatus(ok, text) {
+  houseAllowanceStatus.className = ok ? 'banner' : 'alert';
+  houseAllowanceStatus.textContent = text;
+}
+
+async function houseAllowancePost(url, payload) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf},
+    body: JSON.stringify(payload)
+  });
+
+  const j = await r.json().catch(() => ({status: 'error', error: 'non-json response'}));
+  houseAllowanceResult.textContent = JSON.stringify({status: r.status, body: j}, null, 2);
+  return {response: r, body: j};
+}
+
+document.getElementById('houseAllowanceForm').addEventListener('submit', async e => {
+  e.preventDefault();
+
+  houseAllowancePreviewToken = '';
+  houseAllowanceApplyBtn.disabled = true;
+
+  const payload = Object.fromEntries(new FormData(e.target));
+  const result = await houseAllowancePost('/billing/electric/house-allowance/preview', payload);
+
+  if (!result.response.ok || result.body.status !== 'ok') {
+    setHouseStatus(false, result.body.error || 'House correction preview failed.');
+    return;
+  }
+
+  const changed = Number(result.body.summary?.changed_units || 0);
+  houseAllowancePreviewToken = result.body.preview_token || '';
+
+  if (changed === 0) {
+    setHouseStatus(true, 'No correction required. HOUSE allowance rule is already applied for this month.');
+    return;
+  }
+
+  houseAllowanceApplyBtn.disabled = !houseAllowancePreviewToken;
+  setHouseStatus(true, `Preview ready: ${changed} house unit(s) require correction. Review result, then apply.`);
+});
+
+houseAllowanceApplyBtn.addEventListener('click', async () => {
+  if (!houseAllowancePreviewToken) {
+    setHouseStatus(false, 'Preview token missing. Run preview again.');
+    return;
+  }
+
+  const month = (new FormData(document.getElementById('houseAllowanceForm')).get('month_cycle') || '').toString();
+
+  if (!confirm(`Apply verified House A/B/C full allowance correction for ${month}?`)) {
+    return;
+  }
+
+  const result = await houseAllowancePost('/billing/electric/house-allowance/apply', {
+    month_cycle: month,
+    preview_token: houseAllowancePreviewToken
+  });
+
+  if (!result.response.ok || result.body.status !== 'ok') {
+    setHouseStatus(false, result.body.error || 'House correction apply failed.');
+    return;
+  }
+
+  houseAllowanceApplyBtn.disabled = true;
+  houseAllowancePreviewToken = '';
+  setHouseStatus(true, result.body.message || 'HOUSE correction applied successfully.');
+});
 </script>
 @endsection
