@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Employee Electric Bill Statement</title>
+    <title>Employee Bill Statement</title>
     <style>
         *{box-sizing:border-box}
         body{
@@ -171,8 +171,8 @@
             font-weight:800;
         }
         .grand td{
-            background:#111;
-            color:#fff;
+            background:#eef4ff;
+            color:#111;
             font-size:13px;
         }
         .signatures{
@@ -208,6 +208,48 @@
             }
             @page{size:A4 landscape;margin:8mm}
         }
+    
+        .charge-summary-table{
+            width:100%;
+            border-collapse:collapse;
+            margin-bottom:7px;
+            font-size:11px;
+        }
+        .charge-summary-table th{
+            background:#e9ecef;
+            border:1px solid #111;
+            padding:6px 7px;
+            text-transform:uppercase;
+            font-weight:800;
+        }
+        .charge-summary-table td{
+            border:1px solid #111;
+            padding:7px 8px;
+        }
+        .charge-summary-table .payable-row td{
+            background:#eef4ff;
+            color:#111;
+            font-size:13px;
+        }
+        .charge-summary-table .payable-row span{
+            display:block;
+            margin-top:3px;
+            font-size:9px;
+            font-weight:400;
+            color:#475569;
+        }
+
+    
+        .school-van-detail-print{
+            margin-bottom:6px;
+        }
+        .compact-charge-summary{
+            margin-bottom:8px;
+        }
+        .compact-charge-summary th:nth-child(1){width:60%}
+        .compact-charge-summary th:nth-child(2){width:18%}
+        .compact-charge-summary th:nth-child(3){width:22%}
+
     </style>
 </head>
 <body>
@@ -218,6 +260,14 @@
     $schoolVanRows = $schoolVan['rows'] ?? [];
     $schoolVanBlocked = (bool)($schoolVan['blocked'] ?? false);
     $schoolVanGenerated = (bool)($schoolVan['generated'] ?? false);
+    $electricTotal = round((float)($sum['total_amount'] ?? 0), 2);
+    $schoolVanTotal = $schoolVanBlocked ? null : round((float)($schoolVan['total_amount'] ?? 0), 2);
+    $schoolVanChildren = (float)collect($schoolVanRows)->sum('children_count');
+    $schoolVanChargeableUnits = (float)collect($schoolVanRows)->sum('chargeable_units');
+    $schoolVanPerKidRate = (!$schoolVanBlocked && $schoolVanChargeableUnits > 0)
+        ? round(((float)$schoolVanTotal / $schoolVanChargeableUnits), 2)
+        : null;
+    $totalPayable = $schoolVanBlocked ? null : round($electricTotal + $schoolVanTotal, 2);
     $first = $rows[0] ?? [];
     $empName = $first['name'] ?? '';
     $empId = $first['company_id'] ?? ($company_id ?? '');
@@ -242,10 +292,10 @@
         <div><strong>Document No:</strong> {{ $docNo }}</div>
         <div><strong>Generated On:</strong> {{ now()->format('d-M-Y h:i A') }}</div>
         <div><strong>Billing Period:</strong> {{ $from_month ?? '' }} to {{ $to_month ?? '' }}</div>
-        <div><strong>Report Type:</strong> Employee Electric Bill Statement</div>
+        <div><strong>Report Type:</strong> Employee Bill Statement</div>
     </div>
 
-    <div class="title">Employee Electric Bill Statement</div>
+    <div class="title">Employee Bill Statement</div>
 
     <div class="section-title">Employee / Residence Information</div>
     <table class="details">
@@ -270,21 +320,16 @@
     </table>
 
     <div class="section-title">Electric Billing Calculation</div>
-    <table class="billing-table">
+    <table class="billing-table electric-calculation-print">
         <thead>
             <tr>
                 <th>Month</th>
-                <th>Employee ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>House / Unit</th>
-                <th>Room</th>
                 <th>Attendance</th>
                 <th>Used Units</th>
                 <th>Eligible Units</th>
                 <th>Billable Units</th>
-                <th>Rate</th>
-                <th>Electric Bill</th>
+                <th>Rate (Rs.)</th>
+                <th>Electric Bill (Rs.)</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -292,11 +337,6 @@
         @forelse($rows as $row)
             <tr>
                 <td class="center">{{ $row['month_cycle'] ?? '' }}</td>
-                <td class="center">{{ $row['company_id'] ?? '' }}</td>
-                <td>{{ $row['name'] ?? '' }}</td>
-                <td>{{ $row['department'] ?? '' }}</td>
-                <td class="center">{{ $row['unit_id'] ?? '' }}</td>
-                <td class="center">{{ $row['room_no'] ?? '' }}</td>
                 <td class="num">{{ number_format((float)($row['active_days'] ?? 0), 2) }}</td>
                 <td class="num">{{ number_format((float)($row['emp_used_units'] ?? 0), 4) }}</td>
                 <td class="num">{{ number_format((float)($row['eligible_units'] ?? 0), 4) }}</td>
@@ -306,39 +346,31 @@
                 <td class="center">{{ $row['billing_status'] ?? '' }}</td>
             </tr>
         @empty
-            <tr><td colspan="13" class="center">No employee statement rows found.</td></tr>
+            <tr><td colspan="8" class="center">No employee statement rows found.</td></tr>
         @endforelse
 
-        <tr class="total-row">
-            <td colspan="6" class="num">Total</td>
-            <td class="num">{{ number_format((float)($sum['total_active_days'] ?? 0), 2) }}</td>
-            <td class="num">{{ number_format((float)($sum['total_used_units'] ?? 0), 4) }}</td>
-            <td class="num">{{ number_format((float)($sum['total_eligible_units'] ?? 0), 4) }}</td>
-            <td class="num">{{ number_format((float)($sum['total_billable_units'] ?? 0), 4) }}</td>
-            <td></td>
-            <td class="num">{{ number_format((float)($sum['total_amount'] ?? 0), 2) }}</td>
-            <td></td>
-        </tr>
+            <tr class="total-row">
+                <td class="center"><strong>Total</strong></td>
+                <td class="num">{{ number_format((float)($sum['total_active_days'] ?? 0), 2) }}</td>
+                <td class="num">{{ number_format((float)($sum['total_used_units'] ?? 0), 4) }}</td>
+                <td class="num">{{ number_format((float)($sum['total_eligible_units'] ?? 0), 4) }}</td>
+                <td class="num">{{ number_format((float)($sum['total_billable_units'] ?? 0), 4) }}</td>
+                <td></td>
+                <td class="num"><strong>{{ number_format((float)($sum['total_amount'] ?? 0), 2) }}</strong></td>
+                <td></td>
+            </tr>
         </tbody>
     </table>
 
-    <div class="section-title">School Van Charge (Separate)</div>
-
-    @if($schoolVanBlocked)
-        <div class="school-van-blocked">
-            <strong>Blocked — Expense Correction Required.</strong>
-            School van amount cannot be finalized until the invalid transport expense entry is corrected.
-        </div>
-    @endif
-
-    <table class="billing-table school-van-table">
+    <div class="section-title">School Van Billing Calculation</div>
+    <table class="billing-table school-van-detail-print">
         <thead>
             <tr>
                 <th>Month</th>
-                <th>Employee ID</th>
                 <th>Children</th>
+                <th>Per Kid Rate (Rs.)</th>
                 <th>Chargeable Units</th>
-                <th>School Van Charge</th>
+                <th>School Van Charge (Rs.)</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -346,12 +378,12 @@
         @forelse($schoolVanRows as $svRow)
             <tr>
                 <td class="center">{{ $svRow['month_cycle'] ?? '' }}</td>
-                <td class="center">{{ $svRow['company_id'] ?? '' }}</td>
                 <td class="num">{{ number_format((float)($svRow['children_count'] ?? 0)) }}</td>
-                <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
                 <td class="num">
-                    {{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}
+                    {{ ((float)($svRow['chargeable_units'] ?? 0) > 0 && !$schoolVanBlocked) ? number_format(((float)($svRow['payable_amount'] ?? 0) / (float)$svRow['chargeable_units']), 2) : 'Pending' }}
                 </td>
+                <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
+                <td class="num"><strong>{{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}</strong></td>
                 <td class="center">{{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}</td>
             </tr>
         @empty
@@ -362,28 +394,62 @@
         </tbody>
     </table>
 
+    @if($schoolVanBlocked)
+        <div class="school-van-blocked">
+            <strong>School Van Charge Pending Correction.</strong>
+            Total bill amount cannot be finalized until the blocked transport expense is corrected.
+        </div>
+    @endif
+
     <div class="school-van-note">
-        {{ $schoolVanGenerated ? 'Official generated charge.' : 'Calculated preview only - not generated.' }} School Van Charge is displayed separately and is not included in the Electric Net Payable Amount.
+        {{ $schoolVanGenerated ? 'Official generated school van charge included in Net Bill Amount.' : 'Calculated preview school van charge; not officially generated.' }}
     </div>
+
+    <div class="section-title">Bill Amount Summary</div>
+    <table class="charge-summary-table compact-charge-summary">
+        <thead>
+            <tr>
+                <th>Charge Component</th>
+                <th>Status</th>
+                <th>Amount (Rs.)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Electric Bill</strong></td>
+                <td class="center">{{ $electricTotal > 0 ? 'POSITIVE BILL' : 'ZERO BILL' }}</td>
+                <td class="num"><strong>{{ number_format($electricTotal, 2) }}</strong></td>
+            </tr>
+            <tr>
+                <td><strong>School Van Charge</strong></td>
+                <td class="center">{{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}</td>
+                <td class="num"><strong>{{ $schoolVanBlocked ? 'Pending' : number_format((float)$schoolVanTotal, 2) }}</strong></td>
+            </tr>
+            <tr class="payable-row">
+                <td colspan="2"><strong>Net Bill Amount</strong><span>Electric Bill + School Van Charge</span></td>
+                <td class="num"><strong>{{ $totalPayable === null ? 'Pending Correction' : number_format($totalPayable, 2) }}</strong></td>
+            </tr>
+        </tbody>
+    </table>
 
     <div class="summary-wrap">
         <div class="cert">
             <strong>Certification:</strong><br>
-            This statement has been generated from the electric billing records for the selected billing period. The bill amount is calculated on the basis of attendance days, consumed units, eligible units, billable units, and applicable monthly electric rate.
+            This Colony Utility Bill has been generated for the selected billing period from billing records.
         </div>
 
         <table class="amount-table">
             <tr>
-                <td class="label">Total Months</td>
-                <td class="amount">{{ number_format((float)($sum['months_count'] ?? 0)) }}</td>
+                <td class="label">Electric Bill</td>
+                <td class="amount">{{ number_format($electricTotal, 2) }}</td>
             </tr>
             <tr>
-                <td class="label">Total Rows</td>
-                <td class="amount">{{ number_format((float)($sum['rows'] ?? count($rows))) }}</td>
+                <td class="label">School Van Charge</td>
+                <td class="amount">{{ $schoolVanBlocked ? 'Pending' : number_format((float)$schoolVanTotal, 2) }}</td>
             </tr>
             <tr class="grand">
-                <td class="label">Net Payable Amount</td>
-                <td class="amount">{{ number_format((float)($sum['total_amount'] ?? 0), 2) }}</td>
+                <td class="label">Net Bill Amount</td>
+                <td class="amount">{{ $totalPayable === null ? 'Pending Correction' : number_format($totalPayable, 2) }}</td>
             </tr>
         </table>
     </div>

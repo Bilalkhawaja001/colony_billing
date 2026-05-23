@@ -18,6 +18,16 @@
     $schoolVanRows = $schoolVan['rows'] ?? [];
     $schoolVanBlocked = (bool)($schoolVan['blocked'] ?? false);
     $schoolVanGenerated = (bool)($schoolVan['generated'] ?? false);
+    $electricTotal = round((float)($sum['total_amount'] ?? 0), 2);
+    $schoolVanTotal = $schoolVanBlocked ? null : round((float)($schoolVan['total_amount'] ?? 0), 2);
+    $schoolVanChildren = (float)collect($schoolVanRows)->sum('children_count');
+    $schoolVanChargeableUnits = (float)collect($schoolVanRows)->sum('chargeable_units');
+    $schoolVanPerKidRate = (!$schoolVanBlocked && $schoolVanChargeableUnits > 0)
+        ? round(((float)$schoolVanTotal / $schoolVanChargeableUnits), 2)
+        : null;
+    $totalPayable = $schoolVanBlocked ? null : round($electricTotal + $schoolVanTotal, 2);
+    $totalPayableLabel = $schoolVanBlocked ? 'PENDING CORRECTION' : (($totalPayable > 0) ? 'FINAL TOTAL' : 'ZERO BILL');
+    $totalPayableClass = $schoolVanBlocked ? 'is-pending' : (($totalPayable > 0) ? 'is-positive' : 'is-zero');
     $first = $rows[0] ?? [];
 
     $empName = $first['name'] ?? '';
@@ -107,11 +117,10 @@
             </div>
 
             <div class="hero-copy">
-                <h1><span>Electric</span> Bill Statement</h1>
+                <h1><span>Employee</span> Bill Statement</h1>
                 <p>
-                    This statement is generated from electric billing records for the selected billing period.
-                    Calculation is based on attendance days, consumed units, eligible units, billable units,
-                    and applicable monthly electric rate.
+                    Professional billing statement for the selected period, presenting electric usage charges
+                    and official additional charges in a clear payable summary.
                 </p>
             </div>
 
@@ -150,43 +159,51 @@
 
             <section class="panel summary-panel">
                 <div class="panel-head">Bill Summary</div>
-                <div class="panel-body summary-layout">
-                    <div class="summary-stat">
-                        <span>Month</span>
-                        <strong>{{ $monthBox }}</strong>
-                    </div>
-                    <div class="summary-stat">
-                        <span>Attendance (Days)</span>
-                        <strong>{{ number_format((float)($sum['total_active_days'] ?? 0), 2) }}</strong>
-                    </div>
-                    <div class="summary-stat">
-                        <span>Used Units</span>
-                        <strong>{{ number_format((float)($sum['total_used_units'] ?? 0), 4) }}</strong>
-                    </div>
-                    <div class="summary-stat">
-                        <span>Eligible Units</span>
-                        <strong>{{ number_format((float)($sum['total_eligible_units'] ?? 0), 4) }}</strong>
-                    </div>
-                    <div class="summary-stat">
-                        <span>Billable Units</span>
-                        <strong>{{ number_format((float)($sum['total_billable_units'] ?? 0), 4) }}</strong>
-                    </div>
-                    <div class="summary-stat">
-                        <span>Rate (Rs.)</span>
-                        <strong>{{ $rateLabel }}</strong>
+                <div class="panel-body bill-summary-professional">
+                    <div class="summary-detail-block">
+                        <div class="summary-detail-title">Current Month Electric Detail</div>
+                        <div class="summary-detail-grid electric-detail-grid">
+                            <div><span>Month</span><strong>{{ $monthBox }}</strong></div>
+                            <div><span>Attendance</span><strong>{{ number_format((float)($sum['total_active_days'] ?? 0), 2) }}</strong></div>
+                            <div><span>Used Units</span><strong>{{ number_format((float)($sum['total_used_units'] ?? 0), 4) }}</strong></div>
+                            <div><span>Eligible Units</span><strong>{{ number_format((float)($sum['total_eligible_units'] ?? 0), 4) }}</strong></div>
+                            <div><span>Billable Units</span><strong>{{ number_format((float)($sum['total_billable_units'] ?? 0), 4) }}</strong></div>
+                            <div><span>Rate (Rs.)</span><strong>{{ $rateLabel }}</strong></div>
+                            <div class="summary-highlight electric-total">
+                                <span>Electric Bill</span>
+                                <strong>Rs. {{ number_format($electricTotal, 2) }}</strong>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="amount-card {{ $statusClass }}">
-                        <span>Total Amount</span>
-                        <div class="amount-value">Rs. {{ number_format((float)($sum['total_amount'] ?? 0), 2) }}</div>
-                        <div class="amount-status">{{ $statusLabel }}</div>
+                    <div class="summary-bottom-row">
+                        <div class="summary-detail-block school-van-summary">
+                            <div class="summary-detail-title">Current Month School Van Detail</div>
+                            <div class="summary-detail-grid van-detail-grid">
+                                <div><span>Children</span><strong>{{ number_format($schoolVanChildren) }}</strong></div>
+                                <div><span>Per Kid Rate</span><strong>{{ $schoolVanPerKidRate === null ? 'Pending' : 'Rs. '.number_format($schoolVanPerKidRate, 2) }}</strong></div>
+                                <div><span>Chargeable Units</span><strong>{{ number_format($schoolVanChargeableUnits, 2) }}</strong></div>
+                                <div><span>Status</span><strong>{{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}</strong></div>
+                                <div class="summary-highlight van-total">
+                                    <span>School Van Charge</span>
+                                    <strong>{{ $schoolVanBlocked ? 'Pending' : 'Rs. '.number_format((float)$schoolVanTotal, 2) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="net-bill-summary">
+                            <span>Net Bill Amount</span>
+                            <strong>{{ $totalPayable === null ? 'Pending' : 'Rs. '.number_format($totalPayable, 2) }}</strong>
+                            <small>Electric Bill + School Van Charge</small>
+                            <b>{{ $totalPayableLabel }}</b>
+                        </div>
                     </div>
                 </div>
             </section>
         </div>
 
         <section class="panel details-panel">
-            <div class="panel-head">Billing Details</div>
+            <div class="panel-head">Electricity Calculation Details</div>
             <div class="panel-body">
                 <div class="table-wrap">
                     <table class="billing-table">
@@ -227,88 +244,59 @@
             </div>
         </section>
 
-        <section class="panel details-panel school-van-charge-panel">
-            <div class="panel-head">
-                School Van Charge
-                <span class="sv-separate-pill">Separate Charge</span>
-            </div>
+        <section class="panel details-panel">
+            <div class="panel-head">School Van Calculation Details</div>
             <div class="panel-body">
                 @if($schoolVanBlocked)
                     <div class="sv-statement-alert">
-                        <strong>Blocked - Expense Correction Required</strong>
-                        <span>School van amount cannot be finalized until the invalid transport expense entry is corrected.</span>
+                        <strong>School Van Charge Pending Correction</strong>
+                        <span>School van detail cannot be finalized until blocked transport expense is corrected.</span>
                     </div>
                 @endif
 
-                @if(count($schoolVanRows))
-                    <div class="table-wrap">
-                        <table class="billing-table sv-statement-table">
-                            <thead>
-                                <tr>
-                                    <th>Month</th>
-                                    <th>Employee ID</th>
-                                    <th>Children</th>
-                                    <th>Chargeable Units</th>
-                                    <th>School Van Charge (Rs.)</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($schoolVanRows as $svRow)
-                                <tr>
-                                    <td>{{ $svRow['month_cycle'] ?? '' }}</td>
-                                    <td>{{ $svRow['company_id'] ?? '' }}</td>
-                                    <td class="num">{{ number_format((float)($svRow['children_count'] ?? 0)) }}</td>
-                                    <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
-                                    <td class="num bill">
-                                        {{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}
-                                    </td>
-                                    <td>
-                                        <span class="status-pill {{ $schoolVanBlocked ? 'blocked' : 'ok' }}">
-                                            {{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="sv-statement-total">
-                        <span>School Van Charge Total</span>
-                        <strong>
-                            {{ $schoolVanBlocked ? 'Pending Expense Correction' : 'Rs. '.number_format((float)($schoolVan['total_amount'] ?? 0), 2) }}
-                        </strong>
-                    </div>
-                @else
-                    <div class="sv-statement-empty">
-                        No school van charge found for the selected employee and billing period.
-                    </div>
-                @endif
-
-                @if($schoolVanBlocked && count($schoolVan['blockers'] ?? []))
-                    @foreach($schoolVan['blockers'] as $blocker)
-                        <div class="sv-statement-blocker">
-                            Correction required: {{ $blocker['vehicle_code'] ?? 'School Van' }} fuel entry dated
-                            {{ $blocker['entry_date'] ?? '-' }} is outside billing cycle {{ $blocker['month_cycle'] ?? '' }}.
-                        </div>
-                    @endforeach
-                @endif
+                <div class="table-wrap">
+                    <table class="billing-table">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Children</th>
+                                <th>Per Kid Rate (Rs.)</th>
+                                <th>Chargeable Units</th>
+                                <th>School Van Charge (Rs.)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @forelse($schoolVanRows as $svRow)
+                            <tr>
+                                <td class="num">{{ $svRow['month_cycle'] ?? '' }}</td>
+                                <td class="num">{{ number_format((float)($svRow['children_count'] ?? 0)) }}</td>
+                                <td class="num">{{ ((float)($svRow['chargeable_units'] ?? 0) > 0 && !$schoolVanBlocked) ? number_format(((float)($svRow['payable_amount'] ?? 0) / (float)$svRow['chargeable_units']), 2) : 'Pending' }}</td>
+                                <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
+                                <td class="num bill">
+                                    {{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}
+                                </td>
+                                <td>
+                                    <span class="status-pill {{ $schoolVanBlocked ? 'blocked' : 'ok' }}">
+                                        {{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}
+                                    </span>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6">No school van detail found for the selected employee and billing period.</td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
 
                 <div class="sv-statement-note">
-                    {{ $schoolVanGenerated ? 'Official generated charge.' : 'Calculated preview only - generate School Van Bill to make it official.' }} This charge is shown separately and is not merged into the Electric Bill Total.
+                    {{ $schoolVanGenerated ? 'Official generated school van charge detail.' : 'Calculated preview school van detail.' }}
                 </div>
             </div>
         </section>
-    </div>
-</div>
-            </section>
 
-            <section class="footer-box footer-compact">
-                <div class="qr-placeholder"></div>
-                <div class="thank-text">Thank you for your timely payment.</div>
-            </section>
-        </div>
     </div>
 </div>
 
@@ -386,8 +374,9 @@
 
 .hero-copy{padding:34px 34px 24px}
 .hero-copy h1{
+    white-space:nowrap;
+    font-size:42px;
     margin:0 0 18px;
-    font-size:52px;
     line-height:1;
     text-transform:uppercase;
     letter-spacing:.02em;
@@ -434,8 +423,10 @@
     display:grid;
     grid-template-columns:405px 1fr;
     gap:22px;
-    padding:18px
+    padding:18px;
+    align-items:start
 }
+.summary-panel{align-self:start}
 .panel{
     border:1px solid #d8e2ef;
     border-radius:16px;
@@ -468,7 +459,7 @@
     grid-template-columns:135px 8px 1fr;
     gap:8px;
     align-items:center;
-    padding:8px 4px;
+    padding:6px 4px;
     border-bottom:1px solid #edf2f8
 }
 .employee-panel .info-row:last-child{border-bottom:0}
@@ -503,75 +494,6 @@
     font-weight:900
 }
 
-.summary-layout{
-    display:grid;
-    grid-template-columns:repeat(6,minmax(92px,1fr)) 190px;
-    gap:0;
-    align-items:stretch
-}
-.summary-stat{
-    padding:12px 10px;
-    border-right:1px solid #e7eef7;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    min-height:150px
-}
-.summary-stat span{
-    color:#20409a;
-    font-size:10.5px;
-    font-weight:800;
-    text-transform:uppercase;
-    line-height:1.2;
-    min-height:26px
-}
-.summary-stat strong{
-    margin-top:14px;
-    font-size:14px;
-    color:#111827;
-    font-weight:900;
-    white-space:nowrap
-}
-.amount-card{
-    margin:6px 0 6px 14px;
-    border-radius:16px;
-    padding:18px 14px;
-    color:#fff;
-    display:flex;
-    flex-direction:column;
-    justify-content:center;
-    min-height:150px;
-    background:linear-gradient(180deg,#072a72 0%,#0c357f 100%)
-}
-.amount-card span{
-    font-size:14px;
-    font-weight:800;
-    text-transform:uppercase;
-    letter-spacing:.03em;
-    opacity:.95
-}
-.amount-value{
-    margin-top:14px;
-    font-size:18px;
-    font-weight:900;
-    line-height:1.15;
-    white-space:nowrap
-}
-.amount-status{
-    margin-top:12px;
-    background:#f7fff6;
-    color:#2d9b22;
-    border-radius:10px;
-    padding:9px 8px;
-    text-align:center;
-    font-weight:900;
-    font-size:11px;
-    white-space:nowrap
-}
-.amount-card.is-zero .amount-status{
-    color:#6b7280;
-    background:#f3f4f6
-}
 
 .details-panel{margin:0 18px 18px}
 .billing-table{
@@ -624,59 +546,23 @@
 .status-pill.zero{background:#f3f4f6;color:#6b7280}
 
 
-.school-van-charge-panel{margin-top:0}
-.sv-separate-pill{
-    float:right;
-    padding:4px 10px;
-    border-radius:999px;
-    background:#eaf3ff;
-    color:#2764c6;
-    font-size:11px;
-    font-weight:700;
-    letter-spacing:.04em;
-}
 .sv-statement-alert{
     display:flex;
     flex-direction:column;
     gap:4px;
-    margin-bottom:14px;
-    padding:12px 14px;
+    margin-bottom:10px;
+    padding:9px 11px;
     border:1px solid #fdba74;
-    border-radius:12px;
+    border-radius:9px;
     background:#fff7ed;
     color:#9a3412;
 }
-.sv-statement-alert span{font-size:13px}
-.sv-statement-table{margin-bottom:14px}
+.sv-statement-alert span{font-size:11px}
 .status-pill.blocked{background:#fff1f2;color:#be123c}
-.sv-statement-total{
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-    gap:18px;
-    padding-top:13px;
-    border-top:1px solid #e5edf7;
-    font-size:14px;
-}
-.sv-statement-total strong{font-size:17px;color:#12315f}
-.sv-statement-empty{
-    padding:14px;
-    border:1px dashed #d8e2ef;
-    border-radius:12px;
-    color:#64748b;
-}
-.sv-statement-blocker{
-    margin-top:12px;
-    padding:10px 12px;
-    border-radius:10px;
-    background:#fff7ed;
-    color:#9a3412;
-    font-size:13px;
-}
 .sv-statement-note{
-    margin-top:12px;
+    margin-top:6px;
     color:#64748b;
-    font-size:12px;
+    font-size:10px;
 }
 
 @media (max-width: 1400px){
@@ -685,8 +571,6 @@
     .brand-panel::after{display:none}
     .hero-meta{border-left:0;border-top:1px solid #e6edf7;flex-direction:row;flex-wrap:wrap}
     .statement-main-grid{grid-template-columns:1fr}
-    .summary-layout{grid-template-columns:repeat(2,minmax(120px,1fr))}
-    .amount-card{margin:18px 0 0}
     }
 
 @media print{
@@ -714,9 +598,6 @@
     .statement-main-grid{
         grid-template-columns:320px 1fr
     }
-    .summary-layout{
-        grid-template-columns:repeat(6,minmax(90px,1fr)) 180px
-    }
         @page{
         size:A4 landscape;
         margin:8mm
@@ -724,5 +605,177 @@
 }
 
 .table-wrap{overflow:hidden}
+
+
+
+
+
+
+
+/* PROFESSIONAL BILL SUMMARY — ELECTRIC + SCHOOL VAN CURRENT MONTH DETAIL */
+.bill-summary-professional{padding:12px}
+.summary-detail-block{
+    border:1px solid #d9e5f2;
+    border-radius:11px;
+    overflow:hidden;
+    background:#fff
+}
+.summary-detail-title{
+    padding:7px 11px;
+    background:#f1f6fc;
+    border-bottom:1px solid #dfe9f5;
+    color:#123a83;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.06em;
+    text-transform:uppercase
+}
+.summary-detail-grid{display:grid;align-items:stretch}
+.electric-detail-grid{grid-template-columns:repeat(6,minmax(70px,1fr)) 145px}
+.van-detail-grid{grid-template-columns:78px 120px 112px 104px 165px}
+.summary-detail-grid > div{
+    padding:10px 9px;
+    border-right:1px solid #e3ebf5;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:7px;
+    min-height:59px
+}
+.summary-detail-grid > div:last-child{border-right:0}
+.summary-detail-grid span{
+    color:#23498d;
+    font-size:9px;
+    font-weight:900;
+    line-height:1.15;
+    text-transform:uppercase
+}
+.summary-detail-grid strong{
+    color:#111827;
+    font-size:13px;
+    font-weight:900;
+    white-space:nowrap
+}
+.summary-highlight{background:#f5f9ff}
+.summary-highlight strong{color:#123a83;font-size:16px}
+.summary-bottom-row{
+    margin-top:10px;
+    display:grid;
+    grid-template-columns:1fr 190px;
+    gap:10px
+}
+.net-bill-summary{
+    background:linear-gradient(135deg,#072a72 0%,#123f92 100%);
+    border-radius:11px;
+    padding:12px 13px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:5px;
+    color:#fff
+}
+.net-bill-summary span{font-size:10px;font-weight:900;text-transform:uppercase}
+.net-bill-summary strong{font-size:21px;line-height:1;font-weight:900;white-space:nowrap}
+.net-bill-summary small{font-size:9px;color:#dbeafe}
+.net-bill-summary b{
+    display:inline-flex;
+    width:max-content;
+    margin-top:3px;
+    padding:3px 9px;
+    border-radius:999px;
+    background:#e7f5de;
+    color:#338207;
+    font-size:9px;
+    font-weight:900
+}
+@media(max-width:1200px){
+    .electric-detail-grid{grid-template-columns:repeat(4,minmax(100px,1fr))}
+    .summary-bottom-row{grid-template-columns:1fr}
+    .van-detail-grid{grid-template-columns:repeat(3,minmax(112px,1fr))}
+}
+
+
+/* FINAL COMPACT VIEW PASS — DISPLAY SPACING ONLY */
+.statement-page{gap:10px}
+.statement-toolbar{padding:12px 16px}
+.statement-filter-grid{gap:10px}
+.statement-filter-grid .field input,
+.statement-filter-grid .field select{height:36px}
+.statement-load .btn{height:36px}
+.statement-toolbar-actions{margin-top:9px;gap:8px}
+
+.statement-hero{grid-template-columns:250px 1fr 235px}
+.brand-panel{
+    padding:15px 16px 11px;
+    min-height:134px
+}
+.brand-title{font-size:21px}
+.brand-sub{margin-top:5px;font-size:9px}
+.brand-skyline{height:70px}
+.hero-copy{padding:18px 22px 14px}
+.hero-copy h1{font-size:34px;margin:0 0 9px}
+.hero-copy p{font-size:13px;line-height:1.45}
+.hero-meta{padding:14px 16px;gap:12px}
+.meta-box{gap:10px}
+.meta-icon{width:40px;height:40px;font-size:18px}
+.meta-box span{font-size:11px}
+.meta-box strong{font-size:13px;margin-top:2px}
+
+.statement-main-grid{
+    grid-template-columns:315px 1fr;
+    gap:12px;
+    padding:12px
+}
+.panel{border-radius:11px}
+.panel-head{padding:9px 14px;font-size:12px}
+.panel-body{padding:9px 11px}
+
+.employee-panel .info-row{
+    grid-template-columns:112px 6px 1fr;
+    gap:6px;
+    padding:4px 2px
+}
+.employee-panel .info-row span{font-size:10px}
+.employee-panel .info-row span::before{width:5px;height:5px;margin-right:5px}
+.employee-panel .info-row strong{font-size:11px}
+
+.bill-summary-professional{padding:8px}
+.summary-detail-block{border-radius:8px}
+.summary-detail-title{padding:5px 8px;font-size:9px}
+.summary-detail-grid > div{
+    padding:6px 7px;
+    gap:4px;
+    min-height:43px
+}
+.summary-detail-grid span{font-size:8px}
+.summary-detail-grid strong{font-size:11px}
+.summary-highlight strong{font-size:14px}
+.summary-bottom-row{margin-top:6px;gap:7px;grid-template-columns:1fr 166px}
+.net-bill-summary{padding:8px 10px;border-radius:8px;gap:3px}
+.net-bill-summary span{font-size:9px}
+.net-bill-summary strong{font-size:18px}
+.net-bill-summary small{font-size:8px}
+.net-bill-summary b{margin-top:2px;padding:2px 7px;font-size:8px}
+
+.details-panel{margin:0 12px 10px}
+.details-panel .panel-body{padding:7px 9px}
+.billing-table{font-size:11px}
+.billing-table th{padding:6px 5px;font-size:9px;line-height:1.15}
+.billing-table td{padding:6px 5px}
+.billing-table .bill{font-size:13px}
+.status-pill{
+    min-width:86px;
+    padding:5px 9px;
+    border-radius:8px;
+    font-size:10px
+}
+.sv-statement-note{margin-top:6px;font-size:10px}
+
+@media(max-width:1400px){
+    .statement-hero{grid-template-columns:1fr}
+    .hero-copy h1{white-space:normal}
+    .statement-main-grid{grid-template-columns:1fr}
+}
+
 </style>
 @endsection
