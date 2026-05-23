@@ -14,6 +14,7 @@ use App\Http\Controllers\Billing\DataGridController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
+use App\Http\Controllers\Transport\TransportController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -48,8 +49,17 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
+        $requestedMonth = trim((string) $request->query('month_cycle', ''));
+
+        $monthCycle = $requestedMonth !== ''
+            ? $requestedMonth
+            : (string) (\Illuminate\Support\Facades\DB::table('util_month_cycle')
+                ->where('state', 'OPEN')
+                ->orderByDesc('created_at')
+                ->value('month_cycle') ?? '');
+
         return view('ui.transport', [
-            'monthCycle' => (string) ($request->query('month_cycle') ?? ''),
+            'monthCycle' => $monthCycle,
         ]);
     });
     // Hub: Meters & Readings (single sidebar entry)
@@ -110,15 +120,22 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
-    // TEMP deploy-unblock: transport API routes disabled because TransportController is missing on target server.
-    // Route::get('/api/transport/summary', [TransportController::class, 'summary']);
+    Route::get('/api/transport/school-van/enrolments', [TransportController::class, 'schoolVanEnrolments']);
+    Route::post('/api/transport/school-van/enrolments/add', [TransportController::class, 'schoolVanEnrolmentAdd']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/left', [TransportController::class, 'schoolVanEnrolmentLeave']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/cancel', [TransportController::class, 'schoolVanEnrolmentCancel']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/reactivate', [TransportController::class, 'schoolVanEnrolmentReactivate']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/restore-cancellation', [TransportController::class, 'schoolVanEnrolmentRestoreCancellation']);
+    Route::get('/api/transport/summary', [TransportController::class, 'summary']);
+    Route::post('/api/transport/month-cycle/upsert', [TransportController::class, 'monthCycleUpsert']);
+    Route::post('/api/transport/school-van/bill/generate', [TransportController::class, 'generateSchoolVanBill']);
     // Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
     // Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
     // Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
-    // Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
-    // Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
-    // Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
-    // Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
+    Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
+    Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
+    Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
+    Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {

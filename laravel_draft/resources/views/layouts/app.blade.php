@@ -686,6 +686,7 @@
     </style>
     <script defer src="/js/crud-grids.js?v=20260520-1611"></script>
     <link rel="stylesheet" href="{{ asset('css/enterprise-shell.css') }}?v={{ filemtime(public_path('css/enterprise-shell.css')) }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body>
 <div class="app">
@@ -740,7 +741,7 @@
                             <h4>People</h4>
                             <a href="/people-residency">People & Residency</a>
                             <a href="/housing-occupancy">Housing & Occupancy</a>
-                            <a href="/transport">Transport</a>
+                            <a href="/transport">School Van Kids Management</a>
                         </div>
                         <div class="cb-drop-col">
                             <h4>Utilities</h4>
@@ -805,7 +806,7 @@
                 <div class="nav-head">Operations</div>
                 <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency"><span class="nav-ico">P</span>People & Residency</a>
                 <a class="{{ request()->is('active-days-monthly') || request()->is('ui/monthly-active-days') ? 'active' : '' }}" href="/active-days-monthly"><span class="nav-ico">AD</span>Active Days Monthly</a>
-                <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">T</span>Transport</a>
+                <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">S</span>School Van Kids Management</a>
                 <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meters & Readings</a>
                 <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory"><span class="nav-ico">U</span>Unit Directory</a>
                 <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy"><span class="nav-ico">H</span>Housing & Occupancy</a>

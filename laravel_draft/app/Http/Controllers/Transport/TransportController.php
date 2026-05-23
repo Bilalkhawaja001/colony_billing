@@ -25,6 +25,11 @@ class TransportController extends Controller
         return response()->json($result, $code);
     }
 
+    public function monthCycleUpsert(Request $request)
+    {
+        return $this->jsonResult($this->service->monthCycleUpsert($request->all()));
+    }
+
     public function vehicleUpsert(TransportVehicleUpsertRequest $request)
     {
         return $this->jsonResult($this->service->vehicleUpsert($request->validated()));
@@ -43,6 +48,41 @@ class TransportController extends Controller
     public function adjustmentUpsert(TransportAdjustmentUpsertRequest $request)
     {
         return $this->jsonResult($this->service->adjustmentUpsert($request->validated()));
+    }
+
+    public function schoolVanEnrolments()
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolments());
+    }
+
+    public function schoolVanEnrolmentAdd(Request $request)
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolmentAdd($request->all()));
+    }
+
+    public function schoolVanEnrolmentLeave(Request $request, int $enrolmentId)
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolmentLeave($enrolmentId, $request->all()));
+    }
+
+    public function schoolVanEnrolmentCancel(Request $request, int $enrolmentId)
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolmentCancel($enrolmentId, $request->all()));
+    }
+
+    public function schoolVanEnrolmentReactivate(Request $request, int $enrolmentId)
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolmentReactivate($enrolmentId, $request->all()));
+    }
+
+    public function schoolVanEnrolmentRestoreCancellation(Request $request, int $enrolmentId)
+    {
+        return $this->jsonResult($this->service->schoolVanEnrolmentRestoreCancellation($enrolmentId, $request->all()));
+    }
+
+    public function generateSchoolVanBill(Request $request)
+    {
+        return $this->jsonResult($this->service->generateSchoolVanBill($request->all()));
     }
 
     public function exportCsv(Request $request)

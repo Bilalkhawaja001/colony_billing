@@ -14,6 +14,10 @@
     $status = request('status', '');
     $rows = $statement ?? [];
     $sum = $summary ?? [];
+    $schoolVan = $school_van ?? [];
+    $schoolVanRows = $schoolVan['rows'] ?? [];
+    $schoolVanBlocked = (bool)($schoolVan['blocked'] ?? false);
+    $schoolVanGenerated = (bool)($schoolVan['generated'] ?? false);
     $first = $rows[0] ?? [];
 
     $empName = $first['name'] ?? '';
@@ -219,6 +223,80 @@
                         @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel details-panel school-van-charge-panel">
+            <div class="panel-head">
+                School Van Charge
+                <span class="sv-separate-pill">Separate Charge</span>
+            </div>
+            <div class="panel-body">
+                @if($schoolVanBlocked)
+                    <div class="sv-statement-alert">
+                        <strong>Blocked - Expense Correction Required</strong>
+                        <span>School van amount cannot be finalized until the invalid transport expense entry is corrected.</span>
+                    </div>
+                @endif
+
+                @if(count($schoolVanRows))
+                    <div class="table-wrap">
+                        <table class="billing-table sv-statement-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Employee ID</th>
+                                    <th>Children</th>
+                                    <th>Chargeable Units</th>
+                                    <th>School Van Charge (Rs.)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($schoolVanRows as $svRow)
+                                <tr>
+                                    <td>{{ $svRow['month_cycle'] ?? '' }}</td>
+                                    <td>{{ $svRow['company_id'] ?? '' }}</td>
+                                    <td class="num">{{ number_format((float)($svRow['children_count'] ?? 0)) }}</td>
+                                    <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
+                                    <td class="num bill">
+                                        {{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}
+                                    </td>
+                                    <td>
+                                        <span class="status-pill {{ $schoolVanBlocked ? 'blocked' : 'ok' }}">
+                                            {{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="sv-statement-total">
+                        <span>School Van Charge Total</span>
+                        <strong>
+                            {{ $schoolVanBlocked ? 'Pending Expense Correction' : 'Rs. '.number_format((float)($schoolVan['total_amount'] ?? 0), 2) }}
+                        </strong>
+                    </div>
+                @else
+                    <div class="sv-statement-empty">
+                        No school van charge found for the selected employee and billing period.
+                    </div>
+                @endif
+
+                @if($schoolVanBlocked && count($schoolVan['blockers'] ?? []))
+                    @foreach($schoolVan['blockers'] as $blocker)
+                        <div class="sv-statement-blocker">
+                            Correction required: {{ $blocker['vehicle_code'] ?? 'School Van' }} fuel entry dated
+                            {{ $blocker['entry_date'] ?? '-' }} is outside billing cycle {{ $blocker['month_cycle'] ?? '' }}.
+                        </div>
+                    @endforeach
+                @endif
+
+                <div class="sv-statement-note">
+                    {{ $schoolVanGenerated ? 'Official generated charge.' : 'Calculated preview only - generate School Van Bill to make it official.' }} This charge is shown separately and is not merged into the Electric Bill Total.
                 </div>
             </div>
         </section>
@@ -545,6 +623,61 @@
 .status-pill.ok{background:#edf7ea;color:#319325}
 .status-pill.zero{background:#f3f4f6;color:#6b7280}
 
+
+.school-van-charge-panel{margin-top:0}
+.sv-separate-pill{
+    float:right;
+    padding:4px 10px;
+    border-radius:999px;
+    background:#eaf3ff;
+    color:#2764c6;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.04em;
+}
+.sv-statement-alert{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin-bottom:14px;
+    padding:12px 14px;
+    border:1px solid #fdba74;
+    border-radius:12px;
+    background:#fff7ed;
+    color:#9a3412;
+}
+.sv-statement-alert span{font-size:13px}
+.sv-statement-table{margin-bottom:14px}
+.status-pill.blocked{background:#fff1f2;color:#be123c}
+.sv-statement-total{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:18px;
+    padding-top:13px;
+    border-top:1px solid #e5edf7;
+    font-size:14px;
+}
+.sv-statement-total strong{font-size:17px;color:#12315f}
+.sv-statement-empty{
+    padding:14px;
+    border:1px dashed #d8e2ef;
+    border-radius:12px;
+    color:#64748b;
+}
+.sv-statement-blocker{
+    margin-top:12px;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#fff7ed;
+    color:#9a3412;
+    font-size:13px;
+}
+.sv-statement-note{
+    margin-top:12px;
+    color:#64748b;
+    font-size:12px;
+}
 
 @media (max-width: 1400px){
     .statement-filter-grid{grid-template-columns:repeat(2,minmax(180px,1fr))}

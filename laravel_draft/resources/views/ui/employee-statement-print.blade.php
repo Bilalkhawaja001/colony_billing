@@ -124,6 +124,24 @@
             font-weight:800;
             background:#f7f7f7;
         }
+        .school-van-blocked{
+            border:1px solid #d78c2f;
+            background:#fff8ee;
+            color:#874c00;
+            padding:8px 10px;
+            margin:6px 0 9px;
+            font-size:10px;
+        }
+        .school-van-note{
+            font-size:9px;
+            color:#555;
+            margin:7px 0 10px;
+        }
+        .school-van-table td,
+        .school-van-table th{
+            font-size:9px;
+        }
+
         .summary-wrap{
             display:grid;
             grid-template-columns:1fr 330px;
@@ -196,6 +214,10 @@
 @php
     $rows = $statement ?? [];
     $sum = $summary ?? [];
+    $schoolVan = $school_van ?? [];
+    $schoolVanRows = $schoolVan['rows'] ?? [];
+    $schoolVanBlocked = (bool)($schoolVan['blocked'] ?? false);
+    $schoolVanGenerated = (bool)($schoolVan['generated'] ?? false);
     $first = $rows[0] ?? [];
     $empName = $first['name'] ?? '';
     $empId = $first['company_id'] ?? ($company_id ?? '');
@@ -299,6 +321,50 @@
         </tr>
         </tbody>
     </table>
+
+    <div class="section-title">School Van Charge (Separate)</div>
+
+    @if($schoolVanBlocked)
+        <div class="school-van-blocked">
+            <strong>Blocked — Expense Correction Required.</strong>
+            School van amount cannot be finalized until the invalid transport expense entry is corrected.
+        </div>
+    @endif
+
+    <table class="billing-table school-van-table">
+        <thead>
+            <tr>
+                <th>Month</th>
+                <th>Employee ID</th>
+                <th>Children</th>
+                <th>Chargeable Units</th>
+                <th>School Van Charge</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+        @forelse($schoolVanRows as $svRow)
+            <tr>
+                <td class="center">{{ $svRow['month_cycle'] ?? '' }}</td>
+                <td class="center">{{ $svRow['company_id'] ?? '' }}</td>
+                <td class="num">{{ number_format((float)($svRow['children_count'] ?? 0)) }}</td>
+                <td class="num">{{ number_format((float)($svRow['chargeable_units'] ?? 0), 2) }}</td>
+                <td class="num">
+                    {{ $schoolVanBlocked ? 'Pending Correction' : number_format((float)($svRow['payable_amount'] ?? 0), 2) }}
+                </td>
+                <td class="center">{{ $schoolVanBlocked ? 'BLOCKED' : ($schoolVanGenerated ? 'GENERATED' : 'PREVIEW') }}</td>
+            </tr>
+        @empty
+            <tr>
+                <td colspan="6" class="center">No school van charge found for selected employee and period.</td>
+            </tr>
+        @endforelse
+        </tbody>
+    </table>
+
+    <div class="school-van-note">
+        {{ $schoolVanGenerated ? 'Official generated charge.' : 'Calculated preview only - not generated.' }} School Van Charge is displayed separately and is not included in the Electric Net Payable Amount.
+    </div>
 
     <div class="summary-wrap">
         <div class="cert">

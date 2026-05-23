@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Services\Transport\TransportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -458,6 +459,7 @@ class DataGridController extends Controller
 
         $fromMonth = $this->normalizeMonthCycle((string)$request->query('from_month', $request->query('month_cycle', '05-2026')));
         $toMonth = $this->normalizeMonthCycle((string)$request->query('to_month', $request->query('month_cycle', $fromMonth)));
+        $schoolVan = $this->schoolVanStatementPayload($fromMonth, $toMonth, $rows, $request);
 
         return [
             'month_cycle' => (string)$request->query('month_cycle', ''),
@@ -467,6 +469,7 @@ class DataGridController extends Controller
             'unit_id' => (string)$request->query('unit_id', ''),
             'room_no' => (string)$request->query('room_no', ''),
             'statement' => $rows,
+            'school_van' => $schoolVan,
             'summary' => [
                 'rows' => count($rows),
                 'months_count' => count(array_filter($months)),
@@ -478,6 +481,174 @@ class DataGridController extends Controller
             ],
             'total_amount' => $total,
             'note' => 'Payment/recovery not posted yet; Paid = 0 and Outstanding = Bill Amount where recovery rows are unavailable.',
+        ];
+    }
+
+    private function schoolVanStatementPayload(string $fromMonth, string $toMonth, array $electricRows, Request $request): array
+    {
+        $companyId = trim((string) $request->query('company_id', ''));
+
+        $scopeEmployeeIds = $companyId !== ''
+            ? [$companyId]
+            : array_values(array_unique(array_filter(array_map(
+                fn($row) => trim((string) ($row['company_id'] ?? '')),
+                $electricRows
+            ))));
+
+        if (empty($scopeEmployeeIds)) {
+            return [
+                'rows' => [],
+                'blocked' => false,
+                'generated' => false,
+                'allocation_status' => 'NO_MATCHING_EMPLOYEE_SCOPE',
+                'total_amount' => 0.0,
+                'blockers' => [],
+                'note' => 'No employee scope available for school van charge display.',
+            ];
+        }
+
+        try {
+            $cursor = Carbon::createFromFormat('m-Y', $fromMonth)->startOfMonth();
+            $end = Carbon::createFromFormat('m-Y', $toMonth)->startOfMonth();
+        } catch (\Throwable $e) {
+            return [
+                'rows' => [],
+                'blocked' => true,
+                'generated' => false,
+                'allocation_status' => 'INVALID_MONTH_RANGE',
+                'total_amount' => null,
+                'blockers' => [],
+                'note' => 'School van charge cannot be resolved for the selected month range.',
+            ];
+        }
+
+        if ($cursor->gt($end)) {
+            [$cursor, $end] = [$end, $cursor];
+        }
+
+        $service = app(TransportService::class);
+        $chargeRows = [];
+        $blockers = [];
+        $hasBlockedCharge = false;
+        $hasGeneratedCharge = false;
+        $hasPreviewCharge = false;
+        $guard = 0;
+
+        while ($cursor->lte($end) && $guard < 120) {
+            $monthCycle = $cursor->format('m-Y');
+
+            $generatedExists = DB::table('util_school_van_monthly_charge')
+                ->where('month_cycle', $monthCycle)
+                ->where('charged_flag', 1)
+                ->exists();
+
+            if ($generatedExists) {
+                $generatedRows = DB::table('util_school_van_monthly_charge as c')
+                    ->leftJoin('employees_master as e', 'e.company_id', '=', 'c.employee_id')
+                    ->where('c.month_cycle', $monthCycle)
+                    ->where('c.charged_flag', 1)
+                    ->whereIn('c.employee_id', $scopeEmployeeIds)
+                    ->groupBy('c.employee_id', 'e.name')
+                    ->selectRaw('c.employee_id as company_id, e.name as father_name, COUNT(*) as children_count, SUM(c.charge_factor) as chargeable_units, ROUND(SUM(c.amount), 2) as payable_amount')
+                    ->get();
+
+                foreach ($generatedRows as $generated) {
+                    $chargeRows[] = [
+                        'month_cycle' => $monthCycle,
+                        'company_id' => (string) $generated->company_id,
+                        'father_name' => (string) ($generated->father_name ?? ''),
+                        'children_count' => (int) $generated->children_count,
+                        'chargeable_units' => round((float) $generated->chargeable_units, 2),
+                        'payable_amount' => round((float) $generated->payable_amount, 2),
+                        'allocation_status' => 'GENERATED',
+                    ];
+                }
+
+                if ($generatedRows->count() > 0) {
+                    $hasGeneratedCharge = true;
+                }
+
+                $cursor->addMonth();
+                $guard++;
+                continue;
+            }
+
+            $summary = $service->summary($monthCycle);
+            $allocationStatus = (string) ($summary['allocation_status'] ?? 'UNAVAILABLE');
+
+            $matchingAllocations = array_values(array_filter(
+                (array) ($summary['employee_allocations'] ?? []),
+                fn($row) => in_array((string) ($row['company_id'] ?? ''), $scopeEmployeeIds, true)
+            ));
+
+            if (!empty($matchingAllocations)) {
+                $monthBlocked = str_starts_with($allocationStatus, 'BLOCKED_')
+                    || ((int) ($summary['_http'] ?? 200) >= 400);
+
+                foreach ($matchingAllocations as $allocation) {
+                    $chargeRows[] = [
+                        'month_cycle' => $monthCycle,
+                        'company_id' => (string) ($allocation['company_id'] ?? ''),
+                        'father_name' => (string) ($allocation['father_name'] ?? ''),
+                        'children_count' => (int) ($allocation['children_count'] ?? 0),
+                        'chargeable_units' => round((float) ($allocation['chargeable_units'] ?? 0), 2),
+                        'payable_amount' => $monthBlocked ? null : round((float) ($allocation['payable_amount'] ?? 0), 2),
+                        'allocation_status' => $monthBlocked ? $allocationStatus : 'PREVIEW_NOT_GENERATED',
+                    ];
+                }
+
+                if ($monthBlocked) {
+                    $hasBlockedCharge = true;
+
+                    foreach ((array) ($summary['expense_blockers'] ?? []) as $blocker) {
+                        $blockers[] = ['month_cycle' => $monthCycle] + (array) $blocker;
+                    }
+
+                    foreach ((array) ($summary['allocation_blockers'] ?? []) as $blocker) {
+                        $blockers[] = ['month_cycle' => $monthCycle] + (array) $blocker;
+                    }
+                } else {
+                    $hasPreviewCharge = true;
+                }
+            }
+
+            $cursor->addMonth();
+            $guard++;
+        }
+
+        if (empty($chargeRows)) {
+            return [
+                'rows' => [],
+                'blocked' => false,
+                'generated' => false,
+                'allocation_status' => 'NO_SCHOOL_VAN_CHARGE',
+                'total_amount' => 0.0,
+                'blockers' => [],
+                'note' => 'No school van charge found for the selected employee and period.',
+            ];
+        }
+
+        $status = $hasBlockedCharge
+            ? 'BLOCKED_CORRECTION_REQUIRED'
+            : ($hasGeneratedCharge && !$hasPreviewCharge
+                ? 'GENERATED'
+                : 'PREVIEW_NOT_GENERATED');
+
+        return [
+            'rows' => $chargeRows,
+            'blocked' => $hasBlockedCharge,
+            'generated' => $hasGeneratedCharge && !$hasPreviewCharge && !$hasBlockedCharge,
+            'allocation_status' => $status,
+            'total_amount' => $hasBlockedCharge ? null : round(array_sum(array_map(
+                fn($row) => (float) ($row['payable_amount'] ?? 0),
+                $chargeRows
+            )), 2),
+            'blockers' => $blockers,
+            'note' => $hasBlockedCharge
+                ? 'School van charge is blocked until the identified correction is resolved.'
+                : ($status === 'GENERATED'
+                    ? 'Official generated school van charge is displayed separately and is not merged into the electric total.'
+                    : 'Calculated preview only. Generate School Van Bill to create the official charge.'),
         ];
     }
 
