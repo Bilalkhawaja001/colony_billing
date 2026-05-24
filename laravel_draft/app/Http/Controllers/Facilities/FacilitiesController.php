@@ -530,7 +530,15 @@ class FacilitiesController extends Controller
             ->leftJoin('facility_registries as f', 'f.id', '=', 'sr.facility_registry_id')
             ->leftJoin('facility_work_categories as wc', 'wc.id', '=', 'sr.work_category_id')
             ->leftJoin('facility_component_types as ct', 'ct.id', '=', 'sr.facility_component_type_id')
-            ->select('sr.*', 'f.facility_code', 'f.facility_name', 'wc.name as category_name', 'ct.name as affected_component_name')
+            ->leftJoin('facility_work_orders as wo', 'wo.source_request_id', '=', 'sr.id')
+            ->select(
+                'sr.*',
+                'f.facility_code',
+                'f.facility_name',
+                'wc.name as category_name',
+                'ct.name as affected_component_name',
+                'wo.completed_at as completion_date_time'
+            )
             ->when($request->query('status'), fn ($q, $v) => $q->where('sr.status', $v))
             ->when($request->query('priority'), fn ($q, $v) => $q->where('sr.priority', $v))
             ->when($request->query('work_category_id'), fn ($q, $v) => $q->where('sr.work_category_id', $v))
