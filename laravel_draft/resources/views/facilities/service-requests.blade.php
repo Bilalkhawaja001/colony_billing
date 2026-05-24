@@ -10,6 +10,37 @@
         <h3 class="section-title">New Service Request</h3>
         <form method="post" action="/facilities-management/service-requests" class="fm-form">
             @csrf
+            <div class="field"><label class="label">Request Date / Time</label><input value="Auto on submission" readonly></div>
+            <div class="field wide">
+                <label class="label">Requester Employee ID</label>
+                <input id="fm-requester-employee-id" name="requester_employee_id" list="fm-requester-list" value="{{ old('requester_employee_id') }}" placeholder="Search / enter Employee ID" required autocomplete="off">
+                <datalist id="fm-requester-list">
+                    @foreach($requesterEmployees as $employee)
+                        <option value="{{ $employee->company_id }}">{{ $employee->name }} - {{ $employee->designation }}</option>
+                    @endforeach
+                </datalist>
+            </div>
+            <div class="field"><label class="label">Requester Name</label><input id="fm-requester-name" readonly></div>
+            <div class="field"><label class="label">Designation</label><input id="fm-requester-designation" readonly></div>
+            <div class="field"><label class="label">Department</label><input id="fm-requester-department" readonly></div>
+            <div class="field"><label class="label">Section</label><input id="fm-requester-section" readonly></div>
+            <div class="field"><label class="label">Sub Section</label><input id="fm-requester-sub-section" readonly></div>
+            <div class="field"><label class="label">Mobile No.</label><input id="fm-requester-mobile" readonly></div>
+
+            <div id="fm-requester-source" hidden>
+                @foreach($requesterEmployees as $employee)
+                    <span
+                        data-company-id="{{ $employee->company_id }}"
+                        data-name="{{ $employee->name }}"
+                        data-designation="{{ $employee->designation }}"
+                        data-department="{{ $employee->department }}"
+                        data-section="{{ $employee->section }}"
+                        data-sub-section="{{ $employee->sub_section }}"
+                        data-mobile="{{ $employee->mobile_no }}"
+                    ></span>
+                @endforeach
+            </div>
+
             <div class="field"><label class="label">Request Type</label><select name="request_type" required>@foreach($requestTypes as $type)<option>{{ $type }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Priority</label><select name="priority" required>@foreach($priorities as $priority)<option>{{ $priority }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Approval Level</label><select name="approval_required_level" required>@foreach($approvalLevels as $level)<option>{{ $level }}</option>@endforeach</select></div>
@@ -53,20 +84,64 @@
             <div class="field"><label class="label">&nbsp;</label><button class="btn" type="submit">Filter</button></div>
         </form>
         <div class="fm-table-wrap"><table class="fm-table">
-            <thead><tr><th>No</th><th>Type</th><th>Facility / Location</th><th>Category</th><th>Priority</th><th>Status</th><th>Description</th><th>Approval</th><th>Actions</th></tr></thead>
+            <thead><tr><th>No</th><th>Requester</th><th>Type</th><th>Facility / Location</th><th>Affected Item</th><th>Category</th><th>Priority</th><th>Status</th><th>Description</th><th>Approval</th><th>Actions</th></tr></thead>
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->request_no }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
+                    <td>{{ $row->request_no }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
                     <td>
                         @if($row->status === 'APPROVED')<form method="post" action="/facilities-management/service-requests/{{ $row->id }}/convert-work-order">@csrf<button class="btn btn-primary" type="submit">Create Work Order</button></form>@endif
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9" class="muted">No service requests.</td></tr>
+                <tr><td colspan="11" class="muted">No service requests.</td></tr>
             @endforelse
             </tbody>
         </table></div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const employeeInput = document.getElementById('fm-requester-employee-id');
+    const fields = {
+        name: document.getElementById('fm-requester-name'),
+        designation: document.getElementById('fm-requester-designation'),
+        department: document.getElementById('fm-requester-department'),
+        section: document.getElementById('fm-requester-section'),
+        subSection: document.getElementById('fm-requester-sub-section'),
+        mobile: document.getElementById('fm-requester-mobile')
+    };
+
+    const employees = {};
+    document.querySelectorAll('#fm-requester-source [data-company-id]').forEach(function (node) {
+        employees[node.dataset.companyId] = {
+            name: node.dataset.name || '',
+            designation: node.dataset.designation || '',
+            department: node.dataset.department || '',
+            section: node.dataset.section || '',
+            subSection: node.dataset.subSection || '',
+            mobile: node.dataset.mobile || ''
+        };
+    });
+
+    function loadRequester() {
+        const employee = employees[employeeInput.value.trim()] || {
+            name: '', designation: '', department: '', section: '', subSection: '', mobile: ''
+        };
+
+        fields.name.value = employee.name;
+        fields.designation.value = employee.designation;
+        fields.department.value = employee.department;
+        fields.section.value = employee.section;
+        fields.subSection.value = employee.subSection;
+        fields.mobile.value = employee.mobile;
+    }
+
+    employeeInput.addEventListener('input', loadRequester);
+    employeeInput.addEventListener('change', loadRequester);
+    loadRequester();
+});
+</script>
+
 @endsection

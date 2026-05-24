@@ -73,6 +73,7 @@ class FacilitiesController extends Controller
             'rows' => $this->serviceRequestRows($request),
             'facilities' => $this->facilities(),
             'componentTypeRows' => $this->componentTypeRows(),
+            'requesterEmployees' => $this->activeRequesterEmployees(),
             'workCategories' => $this->workCategories(),
             'requestTypes' => self::REQUEST_TYPES,
             'priorities' => self::PRIORITIES,
@@ -195,6 +196,7 @@ class FacilitiesController extends Controller
             'facility_registry_id' => ['nullable', 'integer'],
             'facility_component_id' => ['nullable', 'integer'],
             'facility_component_type_id' => ['required', 'integer'],
+            'requester_employee_id' => ['required', 'string', 'max:40'],
             'location_text' => ['nullable', 'string'],
             'work_category_id' => ['required', 'integer'],
             'problem_description' => ['required', 'string'],
@@ -217,6 +219,17 @@ class FacilitiesController extends Controller
             ->exists()) {
             return back()->withErrors([
                 'facility_component_type_id' => 'Select a valid affected component / item.',
+            ])->withInput();
+        }
+
+        $requester = DB::table('employees_registry')
+            ->where('company_id', trim($data['requester_employee_id']))
+            ->where('active', 'Yes')
+            ->first();
+
+        if (!$requester) {
+            return back()->withErrors([
+                'requester_employee_id' => 'Select a valid active requester employee ID.',
             ])->withInput();
         }
 
@@ -243,7 +256,7 @@ class FacilitiesController extends Controller
             return back()->withErrors(['emergency_reason' => 'Emergency reason is required for emergency requests.'])->withInput();
         }
 
-        DB::transaction(function () use ($data, $request, $facilityId, $componentId, $componentTypeId): void {
+        DB::transaction(function () use ($data, $request, $facilityId, $componentId, $componentTypeId, $requester): void {
             $id = DB::table('facility_service_requests')->insertGetId([
                 'request_no' => 'FSR-PENDING-'.uniqid(),
                 'request_type' => $data['request_type'],
@@ -258,6 +271,13 @@ class FacilitiesController extends Controller
                 'emergency_reason' => $this->nullableTrim($data['emergency_reason'] ?? null),
                 'requested_by_user_id' => $this->actor(),
                 'requested_at' => now(),
+                'requester_employee_id' => $requester->company_id,
+                'requester_name_snapshot' => $requester->name,
+                'requester_designation_snapshot' => $requester->designation,
+                'requester_department_snapshot' => $requester->department,
+                'requester_section_snapshot' => $requester->section,
+                'requester_sub_section_snapshot' => $requester->sub_section,
+                'requester_mobile_no_snapshot' => $requester->mobile_no,
                 'status' => 'SUBMITTED',
                 'material_required' => $request->boolean('material_required') ? 1 : 0,
                 'material_remarks' => $this->nullableTrim($data['material_remarks'] ?? null),
@@ -509,7 +529,8 @@ class FacilitiesController extends Controller
         return DB::table('facility_service_requests as sr')
             ->leftJoin('facility_registries as f', 'f.id', '=', 'sr.facility_registry_id')
             ->leftJoin('facility_work_categories as wc', 'wc.id', '=', 'sr.work_category_id')
-            ->select('sr.*', 'f.facility_code', 'f.facility_name', 'wc.name as category_name')
+            ->leftJoin('facility_component_types as ct', 'ct.id', '=', 'sr.facility_component_type_id')
+            ->select('sr.*', 'f.facility_code', 'f.facility_name', 'wc.name as category_name', 'ct.name as affected_component_name')
             ->when($request->query('status'), fn ($q, $v) => $q->where('sr.status', $v))
             ->when($request->query('priority'), fn ($q, $v) => $q->where('sr.priority', $v))
             ->when($request->query('work_category_id'), fn ($q, $v) => $q->where('sr.work_category_id', $v))
@@ -581,6 +602,26 @@ class FacilitiesController extends Controller
     private function workCategories()
     {
         return Schema::hasTable('facility_work_categories') ? DB::table('facility_work_categories')->where('is_active', 1)->orderBy('sort_order')->get() : collect();
+    }
+
+    private function activeRequesterEmployees()
+    {
+        return Schema::hasTable('employees_registry')
+            ? DB::table('employees_registry')
+                ->where('active', 'Yes')
+                ->whereNotNull('company_id')
+                ->where('company_id', '!=', '')
+                ->orderBy('company_id')
+                ->get([
+                    'company_id',
+                    'name',
+                    'designation',
+                    'department',
+                    'section',
+                    'sub_section',
+                    'mobile_no',
+                ])
+            : collect();
     }
 
     private function componentTypeRows()
