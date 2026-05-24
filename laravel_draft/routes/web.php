@@ -16,6 +16,7 @@ use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
 use App\Http\Controllers\Transport\TransportController;
+use App\Http\Controllers\Facilities\FacilitiesController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -63,6 +64,14 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
             'monthCycle' => $monthCycle,
         ]);
     });
+
+    Route::get('/facilities-management', [FacilitiesController::class, 'overview']);
+    Route::get('/facilities-management/registry', [FacilitiesController::class, 'registry']);
+    Route::get('/facilities-management/inspections', [FacilitiesController::class, 'inspections']);
+    Route::get('/facilities-management/work-orders', [FacilitiesController::class, 'workOrders']);
+    Route::get('/facilities-management/daily-services', [FacilitiesController::class, 'dailyServices']);
+    Route::get('/facilities-management/verification-closure', [FacilitiesController::class, 'verificationClosure']);
+    Route::get('/facilities-management/reports', [FacilitiesController::class, 'reports']);
     // Hub: Meters & Readings (single sidebar entry)
     Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
@@ -258,6 +267,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::post('/api/rooms/cascade', [EmployeesMeterParityController::class, 'roomsCascade']);
     Route::get('/api/rooms/cascade', [EmployeesMeterParityController::class, 'roomsCascade']);
+
+    Route::post('/facilities-management/registry/facilities', [FacilitiesController::class, 'storeFacility']);
+    Route::post('/facilities-management/registry/components', [FacilitiesController::class, 'storeComponent']);
 
     Route::post('/family/details/upsert', [FamilyRegistryResultsController::class, 'familyDetailsUpsert']);
     Route::post('/registry/employees/upsert', [FamilyRegistryResultsController::class, 'registryEmployeesUpsert']);

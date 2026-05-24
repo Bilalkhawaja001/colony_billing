@@ -755,6 +755,11 @@
                             <a href="/active-days-monthly">Active Days Monthly</a>
                             <a href="/imports-validation">Import Validation</a>
                         </div>
+                        <div class="cb-drop-col">
+                            <h4>Maintenance Operations</h4>
+                            <a href="/facilities-management">Facilities Management</a>
+                            <a href="/facilities-management/registry">Facility Registry</a>
+                        </div>
                     </div>
                 </div>
 
@@ -812,6 +817,10 @@
                 <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy"><span class="nav-ico">H</span>Housing & Occupancy</a>
                 <a class="{{ request()->is('electric-v1-lab') || request()->is('electric-v1-lab/*') ? 'active' : '' }}" href="/electric-v1-lab"><span class="nav-ico">E</span>Electric V1 Lab</a>
                 <a class="{{ request()->is('rates') ? 'active' : '' }}" href="/rates"><span class="nav-ico">$</span>Rates</a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-head">Maintenance Operations</div>
+                <a class="{{ request()->is('facilities-management') || request()->is('facilities-management/*') ? 'active' : '' }}" href="/facilities-management"><span class="nav-ico">FM</span>Facilities Management</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Profile</div>
