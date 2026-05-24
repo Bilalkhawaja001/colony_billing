@@ -207,19 +207,37 @@ class FacilitiesController extends Controller
         ]);
 
         $facilityId = $this->nullableInt($data['facility_registry_id'] ?? null);
+        $componentId = $this->nullableInt($data['facility_component_id'] ?? null);
+
         if (!$facilityId && $this->nullableTrim($data['location_text'] ?? null) === null) {
             return back()->withErrors(['location_text' => 'Location text is required when no registered facility is selected.'])->withInput();
         }
+
+        if ($componentId) {
+            $componentBelongsToFacility = $facilityId
+                && DB::table('facility_components')
+                    ->where('id', $componentId)
+                    ->where('facility_id', $facilityId)
+                    ->where('is_active', 1)
+                    ->exists();
+
+            if (!$componentBelongsToFacility) {
+                return back()->withErrors([
+                    'facility_component_id' => 'Select an installed component belonging to the selected facility.',
+                ])->withInput();
+            }
+        }
+
         if ($request->boolean('emergency_flag') && $this->nullableTrim($data['emergency_reason'] ?? null) === null) {
             return back()->withErrors(['emergency_reason' => 'Emergency reason is required for emergency requests.'])->withInput();
         }
 
-        DB::transaction(function () use ($data, $request, $facilityId): void {
+        DB::transaction(function () use ($data, $request, $facilityId, $componentId): void {
             $id = DB::table('facility_service_requests')->insertGetId([
                 'request_no' => 'FSR-PENDING-'.uniqid(),
                 'request_type' => $data['request_type'],
                 'facility_registry_id' => $facilityId,
-                'facility_component_id' => $this->nullableInt($data['facility_component_id'] ?? null),
+                'facility_component_id' => $componentId,
                 'location_text' => $this->nullableTrim($data['location_text'] ?? null),
                 'work_category_id' => (int) $data['work_category_id'],
                 'problem_description' => trim($data['problem_description']),
@@ -508,7 +526,17 @@ class FacilitiesController extends Controller
 
     private function components()
     {
-        return Schema::hasTable('facility_components') ? DB::table('facility_components as c')->leftJoin('facility_registries as f', 'f.id', '=', 'c.facility_id')->select('c.*', 'f.facility_code', 'f.facility_name')->orderByDesc('c.id')->limit(200)->get() : collect();
+        if (!Schema::hasTable('facility_components')) {
+            return collect();
+        }
+
+        return DB::table('facility_components as c')
+            ->leftJoin('facility_registries as f', 'f.id', '=', 'c.facility_id')
+            ->select('c.*', 'f.facility_code', 'f.facility_name')
+            ->where('c.is_active', 1)
+            ->orderBy('f.facility_code')
+            ->orderBy('c.component_type')
+            ->get();
     }
 
     private function loadWorkOrders(?array $statuses = null)

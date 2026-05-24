@@ -14,8 +14,32 @@
             <div class="field"><label class="label">Priority</label><select name="priority" required>@foreach($priorities as $priority)<option>{{ $priority }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Approval Level</label><select name="approval_required_level" required>@foreach($approvalLevels as $level)<option>{{ $level }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Work Category</label><select name="work_category_id" required>@foreach($workCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div>
-            <div class="field wide"><label class="label">Registered Facility</label><select name="facility_registry_id"><option value="">Unregistered / manual location</option>@foreach($facilities as $facility)<option value="{{ $facility->id }}">{{ $facility->facility_code }} - {{ $facility->facility_name }}</option>@endforeach</select></div>
-            <div class="field wide"><label class="label">Component</label><select name="facility_component_id"><option value="">No component selected</option>@foreach($components as $component)<option value="{{ $component->id }}">{{ $component->facility_code }} - {{ $component->component_type }}@if($component->component_name && trim($component->component_name) !== trim($component->component_type)) - {{ $component->component_name }}@endif</option>@endforeach</select></div>
+            <div class="field wide">
+                <label class="label">Registered Facility</label>
+                <select id="fm-facility-select" name="facility_registry_id">
+                    <option value="">Unregistered / manual location</option>
+                    @foreach($facilities as $facility)
+                        <option value="{{ $facility->id }}" @selected((string) old('facility_registry_id') === (string) $facility->id)>{{ $facility->facility_code }} - {{ $facility->facility_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field wide">
+                <label class="label">Installed Component</label>
+                <select id="fm-component-select" name="facility_component_id" disabled>
+                    <option value="">Select registered facility first</option>
+                </select>
+                <span class="muted" id="fm-component-help">Only installed items of the selected facility will appear.</span>
+            </div>
+
+            <div id="fm-component-source" hidden>
+                @foreach($components as $component)
+                    <span
+                        data-component-id="{{ $component->id }}"
+                        data-facility-id="{{ $component->facility_id }}"
+                        data-label="{{ $component->component_type }}@if($component->component_name && trim($component->component_name) !== trim($component->component_type)) - {{ $component->component_name }}@endif@if((float) $component->quantity > 1) (Qty: {{ rtrim(rtrim(number_format((float) $component->quantity, 2, '.', ''), '0'), '.') }})@endif"
+                    ></span>
+                @endforeach
+            </div>
             <div class="field full"><label class="label">Location Text <span class="muted">required if no registered facility</span></label><input name="location_text" placeholder="Exact site/location"></div>
             <div class="field full"><label class="label">Problem Description</label><textarea name="problem_description" rows="3" required></textarea></div>
             <div class="field"><label class="label">Emergency?</label><select name="emergency_flag"><option value="0">No</option><option value="1">Yes</option></select></div>
@@ -52,4 +76,62 @@
         </table></div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const facilitySelect = document.getElementById('fm-facility-select');
+    const componentSelect = document.getElementById('fm-component-select');
+    const componentHelp = document.getElementById('fm-component-help');
+    const previousComponentId = @json((string) old('facility_component_id', ''));
+
+    const installedComponents = Array.from(
+        document.querySelectorAll('#fm-component-source [data-component-id]')
+    ).map(function (node) {
+        return {
+            id: node.dataset.componentId,
+            facilityId: node.dataset.facilityId,
+            label: node.dataset.label
+        };
+    });
+
+    function addOption(value, label, selected = false) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        option.selected = selected;
+        componentSelect.appendChild(option);
+    }
+
+    function refreshComponents() {
+        const facilityId = facilitySelect.value;
+        componentSelect.innerHTML = '';
+
+        if (!facilityId) {
+            componentSelect.disabled = true;
+            addOption('', 'Select registered facility first', true);
+            componentHelp.textContent = 'For manual location, write the affected item in Problem Description.';
+            return;
+        }
+
+        const matching = installedComponents.filter(function (item) {
+            return item.facilityId === facilityId;
+        });
+
+        componentSelect.disabled = false;
+        addOption('', 'No component selected', previousComponentId === '');
+
+        matching.forEach(function (item) {
+            addOption(item.id, item.label, item.id === previousComponentId);
+        });
+
+        componentHelp.textContent = matching.length
+            ? matching.length + ' installed component(s) available for this facility.'
+            : 'No installed component registered for this facility yet.';
+    }
+
+    facilitySelect.addEventListener('change', refreshComponents);
+    refreshComponents();
+});
+</script>
+
 @endsection
