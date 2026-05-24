@@ -222,7 +222,7 @@ class FacilitiesController extends Controller
             ])->withInput();
         }
 
-        $requester = DB::table('employees_registry')
+        $requester = DB::table('employees_master')
             ->where('company_id', trim($data['requester_employee_id']))
             ->where('active', 'Yes')
             ->first();
@@ -606,8 +606,8 @@ class FacilitiesController extends Controller
 
     private function activeRequesterEmployees()
     {
-        return Schema::hasTable('employees_registry')
-            ? DB::table('employees_registry')
+        return Schema::hasTable('employees_master')
+            ? DB::table('employees_master')
                 ->where('active', 'Yes')
                 ->whereNotNull('company_id')
                 ->where('company_id', '!=', '')
