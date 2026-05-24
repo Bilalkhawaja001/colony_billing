@@ -72,7 +72,7 @@ class FacilitiesController extends Controller
         return view('facilities.service-requests', [
             'rows' => $this->serviceRequestRows($request),
             'facilities' => $this->facilities(),
-            'components' => $this->components(),
+            'componentTypeRows' => $this->componentTypeRows(),
             'workCategories' => $this->workCategories(),
             'requestTypes' => self::REQUEST_TYPES,
             'priorities' => self::PRIORITIES,
@@ -194,6 +194,7 @@ class FacilitiesController extends Controller
             'request_type' => ['required', 'in:'.implode(',', self::REQUEST_TYPES)],
             'facility_registry_id' => ['nullable', 'integer'],
             'facility_component_id' => ['nullable', 'integer'],
+            'facility_component_type_id' => ['required', 'integer'],
             'location_text' => ['nullable', 'string'],
             'work_category_id' => ['required', 'integer'],
             'problem_description' => ['required', 'string'],
@@ -208,6 +209,16 @@ class FacilitiesController extends Controller
 
         $facilityId = $this->nullableInt($data['facility_registry_id'] ?? null);
         $componentId = $this->nullableInt($data['facility_component_id'] ?? null);
+        $componentTypeId = $this->nullableInt($data['facility_component_type_id'] ?? null);
+
+        if (!$componentTypeId || !DB::table('facility_component_types')
+            ->where('id', $componentTypeId)
+            ->where('is_active', 1)
+            ->exists()) {
+            return back()->withErrors([
+                'facility_component_type_id' => 'Select a valid affected component / item.',
+            ])->withInput();
+        }
 
         if (!$facilityId && $this->nullableTrim($data['location_text'] ?? null) === null) {
             return back()->withErrors(['location_text' => 'Location text is required when no registered facility is selected.'])->withInput();
@@ -232,12 +243,13 @@ class FacilitiesController extends Controller
             return back()->withErrors(['emergency_reason' => 'Emergency reason is required for emergency requests.'])->withInput();
         }
 
-        DB::transaction(function () use ($data, $request, $facilityId, $componentId): void {
+        DB::transaction(function () use ($data, $request, $facilityId, $componentId, $componentTypeId): void {
             $id = DB::table('facility_service_requests')->insertGetId([
                 'request_no' => 'FSR-PENDING-'.uniqid(),
                 'request_type' => $data['request_type'],
                 'facility_registry_id' => $facilityId,
                 'facility_component_id' => $componentId,
+                'facility_component_type_id' => $componentTypeId,
                 'location_text' => $this->nullableTrim($data['location_text'] ?? null),
                 'work_category_id' => (int) $data['work_category_id'],
                 'problem_description' => trim($data['problem_description']),
@@ -348,6 +360,7 @@ class FacilitiesController extends Controller
                 'work_order_no' => 'FWO-PENDING-'.uniqid(),
                 'facility_id' => $requestRow->facility_registry_id,
                 'facility_component_id' => $requestRow->facility_component_id,
+                'facility_component_type_id' => $requestRow->facility_component_type_id,
                 'facility_work_category_id' => $requestRow->work_category_id,
                 'title' => $title,
                 'work_type' => $requestRow->request_type,
@@ -568,6 +581,17 @@ class FacilitiesController extends Controller
     private function workCategories()
     {
         return Schema::hasTable('facility_work_categories') ? DB::table('facility_work_categories')->where('is_active', 1)->orderBy('sort_order')->get() : collect();
+    }
+
+    private function componentTypeRows()
+    {
+        return Schema::hasTable('facility_component_types')
+            ? DB::table('facility_component_types')
+                ->where('is_active', 1)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['id', 'name'])
+            : collect();
     }
 
     private function componentTypes()
