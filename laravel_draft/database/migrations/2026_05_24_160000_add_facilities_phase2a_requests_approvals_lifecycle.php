@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -107,16 +108,80 @@ return new class extends Migration
         if (!Schema::hasTable('facility_work_order_status_histories')) {
             Schema::create('facility_work_order_status_histories', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('facility_work_order_id')->constrained('facility_work_orders')->cascadeOnDelete();
+                $table->unsignedBigInteger('facility_work_order_id');
                 $table->string('from_status', 40)->nullable();
-                $table->string('to_status', 40)->index();
-                $table->string('action_by_user_id', 120)->nullable()->index();
-                $table->dateTime('action_at')->index();
+                $table->string('to_status', 40);
+                $table->string('action_by_user_id', 120)->nullable();
+                $table->dateTime('action_at');
                 $table->text('remarks')->nullable();
                 $table->timestamps();
 
-                $table->index(['facility_work_order_id', 'action_at'], 'fwo_hist_order_action_idx');
+                $table->foreign('facility_work_order_id', 'fwoh_order_fk')
+                    ->references('id')
+                    ->on('facility_work_orders')
+                    ->cascadeOnDelete();
+
+                $table->index('to_status', 'fwoh_to_status_idx');
+                $table->index('action_by_user_id', 'fwoh_actor_idx');
+                $table->index('action_at', 'fwoh_action_at_idx');
+                $table->index(['facility_work_order_id', 'action_at'], 'fwoh_order_action_idx');
             });
+        } elseif (DB::connection()->getDriverName() === 'mysql') {
+            $tableName = 'facility_work_order_status_histories';
+
+            $hasForeignKey = (int) DB::selectOne(
+                "SELECT COUNT(*) AS aggregate
+                 FROM information_schema.KEY_COLUMN_USAGE
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = ?
+                   AND COLUMN_NAME = 'facility_work_order_id'
+                   AND REFERENCED_TABLE_NAME = 'facility_work_orders'",
+                [$tableName]
+            )->aggregate > 0;
+
+            if (!$hasForeignKey) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->foreign('facility_work_order_id', 'fwoh_order_fk')
+                        ->references('id')
+                        ->on('facility_work_orders')
+                        ->cascadeOnDelete();
+                });
+            }
+
+            $hasIndex = function (string $indexName) use ($tableName): bool {
+                return (int) DB::selectOne(
+                    "SELECT COUNT(*) AS aggregate
+                     FROM information_schema.STATISTICS
+                     WHERE TABLE_SCHEMA = DATABASE()
+                       AND TABLE_NAME = ?
+                       AND INDEX_NAME = ?",
+                    [$tableName, $indexName]
+                )->aggregate > 0;
+            };
+
+            if (!$hasIndex('fwoh_to_status_idx')) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->index('to_status', 'fwoh_to_status_idx');
+                });
+            }
+
+            if (!$hasIndex('fwoh_actor_idx')) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->index('action_by_user_id', 'fwoh_actor_idx');
+                });
+            }
+
+            if (!$hasIndex('fwoh_action_at_idx')) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->index('action_at', 'fwoh_action_at_idx');
+                });
+            }
+
+            if (!$hasIndex('fwoh_order_action_idx')) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->index(['facility_work_order_id', 'action_at'], 'fwoh_order_action_idx');
+                });
+            }
         }
     }
 
