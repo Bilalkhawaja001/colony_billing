@@ -11,6 +11,8 @@
     <div class="col-12">
         <div class="fm-kpi-grid">
             <div class="card soft"><div class="muted">Total Registered Facilities</div><div class="kpi">{{ $kpis['total_registered_facilities'] }}</div></div>
+            <div class="card soft"><div class="muted">Open Service Requests</div><div class="kpi">{{ $kpis['open_service_requests'] ?? 0 }}</div></div>
+            <div class="card soft"><div class="muted">Pending Approvals</div><div class="kpi">{{ $kpis['pending_approvals'] ?? 0 }}</div></div>
             <div class="card soft"><div class="muted">Open Work Orders</div><div class="kpi">{{ $kpis['open_work_orders'] }}</div></div>
             <div class="card soft"><div class="muted">Critical Pending Works</div><div class="kpi">{{ $kpis['critical_pending_works'] }}</div></div>
             <div class="card soft"><div class="muted">Completed & Verified This Month</div><div class="kpi">{{ $kpis['completed_verified_this_month'] }}</div></div>
@@ -34,9 +36,9 @@
         </div>
     </div>
     <div class="col-6 card">
-        <h3 class="section-title">Phase 1 Boundary</h3>
+        <h3 class="section-title">Phase 2A Boundary</h3>
         <div class="fm-note">
-            Built for Maintenance and Routine Services only: plumbing, electrical, civil, HVAC, RO/geyser, sanitation, market/masjid/colony/common-area works, cleaning and pest-control follow-ups. Inventory Control, stock issue/return and duplicate stock masters are explicitly deferred.
+            Service Requests, Approval Queue, linked Work Orders, lifecycle controls and Verification/Closure are active for Facilities only. Inventory, Excel import, full inspections, full daily cleaning execution, pest control workflow and reports expansion remain deferred.
         </div>
     </div>
 </div>

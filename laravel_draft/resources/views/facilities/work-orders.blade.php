@@ -1,27 +1,47 @@
 @extends('layouts.app')
 @section('page_title','Facilities Management - Work Orders')
-@section('page_subtitle','Phase 1 read-only foundation table for future work-order workflow.')
+@section('page_subtitle','Linked work orders with controlled lifecycle and status history.')
 @section('content')
 @include('facilities._tabs')
+@if(session('status'))<div class="card" style="border-color:#bbf7d0;background:#f0fdf4;color:#166534;margin-bottom:12px;">{{ session('status') }}</div>@endif
 <div class="grid">
     <div class="col-12 card">
-        <h3 class="section-title">Work Orders Foundation</h3>
-        <div class="fm-note">Work-order storage is present for Overview counts and future Phase 2 workflow. Material Required, Material Remarks, Estimated Cost and Actual Cost exist as future-ready fields only; no Inventory Control integration is present.</div>
+        <h3 class="section-title">Work Orders</h3>
+        <div class="fm-note">Allowed sequence: OPEN → ASSIGNED → IN_PROGRESS → COMPLETED → VERIFIED → CLOSED. Rework returns to assignment/progress. Cancellation requires reason.</div>
     </div>
     <div class="col-12 card">
-        <h3 class="section-title">Current Work Orders</h3>
-        <div class="fm-table-wrap">
-            <table class="fm-table">
-                <thead><tr><th>No</th><th>Facility</th><th>Category</th><th>Title</th><th>Priority</th><th>Status</th><th>Reported</th><th>Verified</th><th>Estimated</th><th>Actual</th></tr></thead>
-                <tbody>
-                @forelse($rows as $row)
-                    <tr><td>{{ $row->work_order_no }}</td><td>{{ $row->facility_code }} - {{ $row->facility_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->title }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->reported_on }}</td><td>{{ $row->verified_on }}</td><td>{{ $row->estimated_cost }}</td><td>{{ $row->actual_cost }}</td></tr>
-                @empty
-                    <tr><td colspan="10" class="muted">No work orders yet.</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
+        <div class="fm-table-wrap"><table class="fm-table">
+            <thead><tr><th>No</th><th>Request</th><th>Facility</th><th>Category</th><th>Priority</th><th>Status</th><th>Description</th><th>Next Action</th><th>History</th></tr></thead>
+            <tbody>
+            @forelse($rows as $row)
+                <tr>
+                    <td>{{ $row->work_order_no }}</td><td>{{ $row->request_no }}</td><td>{{ $row->facility_code }} - {{ $row->facility_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td><strong>{{ $row->status }}</strong></td><td>{{ $row->description ?? $row->title }}</td>
+                    <td>
+                        @if(in_array($row->status, ['OPEN','REWORK_REQUIRED']))
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="ASSIGNED"><input name="assigned_to" placeholder="Assign to"><button class="btn" type="submit">Assign</button></form>
+                        @elseif($row->status === 'ASSIGNED')
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="IN_PROGRESS"><button class="btn" type="submit">Start</button></form>
+                        @elseif($row->status === 'IN_PROGRESS')
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="COMPLETED"><textarea name="remarks" rows="2" placeholder="Completion remarks"></textarea><input name="actual_cost" type="number" step="0.01" placeholder="Actual cost"><button class="btn btn-primary" type="submit">Complete</button></form>
+                        @elseif($row->status === 'COMPLETED')
+                            <span class="muted">Waiting verification</span>
+                        @elseif($row->status === 'VERIFIED')
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/close">@csrf<textarea name="remarks" rows="2" placeholder="Closure remarks"></textarea><button class="btn btn-primary" type="submit">Close</button></form>
+                        @else
+                            <span class="muted">No action</span>
+                        @endif
+                    </td>
+                    <td>
+                        @foreach(($histories[$row->id] ?? collect()) as $history)
+                            <div class="muted">{{ $history->from_status ?: 'NEW' }} → {{ $history->to_status }}<br>{{ $history->action_at }}</div>
+                        @endforeach
+                    </td>
+                </tr>
+            @empty
+                <tr><td colspan="9" class="muted">No work orders yet. Approve and convert a Service Request first.</td></tr>
+            @endforelse
+            </tbody>
+        </table></div>
     </div>
 </div>
 @endsection

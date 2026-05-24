@@ -68,6 +68,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/facilities-management', [FacilitiesController::class, 'overview']);
     Route::get('/facilities-management/registry', [FacilitiesController::class, 'registry']);
     Route::get('/facilities-management/inspections', [FacilitiesController::class, 'inspections']);
+    Route::get('/facilities-management/service-requests', [FacilitiesController::class, 'serviceRequests']);
+    Route::get('/facilities-management/approval-queue', [FacilitiesController::class, 'approvalQueue']);
     Route::get('/facilities-management/work-orders', [FacilitiesController::class, 'workOrders']);
     Route::get('/facilities-management/daily-services', [FacilitiesController::class, 'dailyServices']);
     Route::get('/facilities-management/verification-closure', [FacilitiesController::class, 'verificationClosure']);
@@ -270,6 +272,13 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::post('/facilities-management/registry/facilities', [FacilitiesController::class, 'storeFacility']);
     Route::post('/facilities-management/registry/components', [FacilitiesController::class, 'storeComponent']);
+    Route::post('/facilities-management/service-requests', [FacilitiesController::class, 'storeServiceRequest']);
+    Route::post('/facilities-management/service-requests/{id}/approve', [FacilitiesController::class, 'approveRequest']);
+    Route::post('/facilities-management/service-requests/{id}/reject', [FacilitiesController::class, 'rejectRequest']);
+    Route::post('/facilities-management/service-requests/{id}/convert-work-order', [FacilitiesController::class, 'convertRequestToWorkOrder']);
+    Route::post('/facilities-management/work-orders/{id}/transition', [FacilitiesController::class, 'transitionWorkOrder']);
+    Route::post('/facilities-management/work-orders/{id}/verify', [FacilitiesController::class, 'verifyWorkOrder']);
+    Route::post('/facilities-management/work-orders/{id}/close', [FacilitiesController::class, 'closeWorkOrder']);
 
     Route::post('/family/details/upsert', [FamilyRegistryResultsController::class, 'familyDetailsUpsert']);
     Route::post('/registry/employees/upsert', [FamilyRegistryResultsController::class, 'registryEmployeesUpsert']);
