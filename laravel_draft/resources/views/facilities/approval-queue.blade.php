@@ -8,7 +8,7 @@
 <div class="grid">
     <div class="col-12 card">
         <h3 class="section-title">Pending Requests</h3>
-        <div class="fm-table-wrap"><table class="fm-table">
+        <div class="fm-table-wrap fm-approval-wrap"><table class="fm-table fm-approval-table">
             <thead><tr><th>No</th><th>Facility / Location</th><th>Category</th><th>Priority</th><th>Level</th><th>Description</th><th>Approve</th><th>Reject</th></tr></thead>
             <tbody>
             @forelse($rows as $row)
@@ -16,8 +16,20 @@
                     <td>{{ $row->request_no }}<br><span class="muted">{{ $row->request_type }}</span></td>
                     <td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td>
                     <td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->approval_required_level }}</td><td>{{ $row->problem_description }}</td>
-                    <td><form method="post" action="/facilities-management/service-requests/{{ $row->id }}/approve">@csrf<textarea name="approval_remarks" rows="2" placeholder="Remarks"></textarea><button class="btn btn-primary" type="submit">Approve</button></form></td>
-                    <td><form method="post" action="/facilities-management/service-requests/{{ $row->id }}/reject">@csrf<textarea name="rejected_reason" rows="2" required placeholder="Required reason"></textarea><button class="btn" type="submit">Reject</button></form></td>
+                    <td class="fm-action-cell">
+                        <form class="fm-approval-action" method="post" action="/facilities-management/service-requests/{{ $row->id }}/approve">
+                            @csrf
+                            <textarea name="approval_remarks" rows="2" placeholder="Approval remarks"></textarea>
+                            <button class="btn btn-primary fm-action-btn" type="submit">Approve</button>
+                        </form>
+                    </td>
+                    <td class="fm-action-cell">
+                        <form class="fm-approval-action" method="post" action="/facilities-management/service-requests/{{ $row->id }}/reject">
+                            @csrf
+                            <textarea name="rejected_reason" rows="2" required placeholder="Rejection reason required"></textarea>
+                            <button class="btn fm-action-btn" type="submit">Reject</button>
+                        </form>
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="8" class="muted">No pending approvals.</td></tr>
@@ -39,4 +51,42 @@
         </table></div>
     </div>
 </div>
+
+<style>
+.fm-approval-wrap{
+    overflow-x:auto;
+}
+.fm-approval-table{
+    min-width:1180px;
+}
+.fm-approval-table th:nth-child(7),
+.fm-approval-table th:nth-child(8),
+.fm-approval-table td.fm-action-cell{
+    min-width:220px;
+    width:220px;
+    vertical-align:top;
+}
+.fm-approval-action{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-width:205px;
+}
+.fm-approval-action textarea{
+    display:block;
+    width:100%;
+    min-height:62px;
+    padding:9px 10px;
+    box-sizing:border-box;
+    resize:vertical;
+}
+.fm-approval-action .fm-action-btn{
+    position:static;
+    display:block;
+    width:100%;
+    min-height:38px;
+    margin:0;
+    white-space:nowrap;
+}
+</style>
 @endsection

@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
+use Illuminate\Validation\ValidationException;
+
 class FacilitiesController extends Controller
 {
     private const FACILITY_TYPES = [
@@ -251,7 +253,11 @@ class FacilitiesController extends Controller
             $row = DB::table('facility_service_requests')->where('id', $id)->first();
             abort_if(!$row, 404);
             abort_if(!in_array($row->status, ['SUBMITTED', 'UNDER_REVIEW'], true), 422, 'Only submitted/under-review requests may be approved.');
-            abort_if($actor !== '' && (string) $row->requested_by_user_id === $actor, 422, 'Request creator cannot approve own request.');
+            if ($actor !== '' && (string) $row->requested_by_user_id === $actor) {
+                throw ValidationException::withMessages([
+                    'approval' => 'You cannot approve a request created by yourself. Please use another authorized approver.',
+                ]);
+            }
 
             DB::table('facility_service_requests')->where('id', $id)->update([
                 'status' => 'APPROVED',
