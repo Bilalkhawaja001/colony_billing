@@ -33,10 +33,22 @@
 
             <div id="fm-component-source" hidden>
                 @foreach($components as $component)
+                    @php
+                        $componentLabel = trim((string) $component->component_type);
+
+                        if ($component->component_name && trim((string) $component->component_name) !== $componentLabel) {
+                            $componentLabel .= ' - '.trim((string) $component->component_name);
+                        }
+
+                        if ((float) $component->quantity > 1) {
+                            $quantityLabel = rtrim(rtrim(number_format((float) $component->quantity, 2, '.', ''), '0'), '.');
+                            $componentLabel .= ' (Qty: '.$quantityLabel.')';
+                        }
+                    @endphp
                     <span
                         data-component-id="{{ $component->id }}"
                         data-facility-id="{{ $component->facility_id }}"
-                        data-label="{{ $component->component_type }}@if($component->component_name && trim($component->component_name) !== trim($component->component_type)) - {{ $component->component_name }}@endif@if((float) $component->quantity > 1) (Qty: {{ rtrim(rtrim(number_format((float) $component->quantity, 2, '.', ''), '0'), '.') }})@endif"
+                        data-label="{{ $componentLabel }}"
                     ></span>
                 @endforeach
             </div>
