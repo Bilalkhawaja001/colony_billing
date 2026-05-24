@@ -10,7 +10,7 @@
         <h3 class="section-title">New Service Request</h3>
         <form method="post" action="/facilities-management/service-requests" class="fm-form">
             @csrf
-            <div class="field"><label class="label">Request Date / Time</label><input value="{{ now()->format('d-m-Y h:i A') }}" readonly><span class="muted">Final timestamp saves on submission.</span></div>
+            <div class="field"><label class="label">Request Date</label><input name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required><span class="muted">Select actual request/work reporting date.</span></div>
             <div class="field wide">
                 <label class="label">Requester Employee ID</label>
                 <input id="fm-requester-employee-id" name="requester_employee_id" list="fm-requester-list" value="{{ old('requester_employee_id') }}" placeholder="Search / enter Employee ID" required autocomplete="off">
@@ -88,7 +88,7 @@
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d-m-Y h:i A') : '-' }}</td><td>{{ $row->completion_date_time ? \Carbon\Carbon::parse($row->completion_date_time)->format('d-m-Y h:i A') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
+                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d-m-Y') : '-' }}</td><td>{{ $row->completion_date ? \Carbon\Carbon::parse($row->completion_date)->format('d-m-Y') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
                     <td>
                         @if($row->status === 'APPROVED')<form method="post" action="/facilities-management/service-requests/{{ $row->id }}/convert-work-order">@csrf<button class="btn btn-primary" type="submit">Create Work Order</button></form>@endif
                     </td>

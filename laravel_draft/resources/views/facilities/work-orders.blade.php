@@ -22,7 +22,7 @@
                         @elseif($row->status === 'ASSIGNED')
                             <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="IN_PROGRESS"><button class="btn" type="submit">Start</button></form>
                         @elseif($row->status === 'IN_PROGRESS')
-                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="COMPLETED"><textarea name="remarks" rows="2" placeholder="Completion remarks"></textarea><input name="actual_cost" type="number" step="0.01" placeholder="Actual cost"><button class="btn btn-primary" type="submit">Complete</button></form>
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="COMPLETED"><input name="completion_date" type="date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required><textarea name="remarks" rows="2" placeholder="Completion remarks"></textarea><input name="actual_cost" type="number" step="0.01" placeholder="Actual cost"><button class="btn btn-primary" type="submit">Complete</button></form>
                         @elseif($row->status === 'COMPLETED')
                             <span class="muted">Waiting verification</span>
                         @elseif($row->status === 'VERIFIED')
