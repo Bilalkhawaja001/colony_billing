@@ -10,7 +10,14 @@
         <h3 class="section-title">New Service Request</h3>
         <form method="post" action="/facilities-management/service-requests" class="fm-form">
             @csrf
-            <div class="field"><label class="label">Request Date</label><input name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required><span class="muted">Select actual request/work reporting date.</span></div>
+            <div class="field">
+                <label class="label">Request Date</label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="fm-request-date-display" value="{{ old('request_date') ? \Carbon\Carbon::parse(old('request_date'))->format('d/m/Y') : now()->format('d/m/Y') }}" placeholder="dd/mm/yyyy" readonly>
+                    <input id="fm-request-date-picker" name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required title="Select date" style="width:48px;min-width:48px;padding:8px;">
+                </div>
+                <span class="muted">Format: dd/mm/yyyy</span>
+            </div>
             <div class="field wide">
                 <label class="label">Requester Employee ID</label>
                 <input id="fm-requester-employee-id" name="requester_employee_id" list="fm-requester-list" value="{{ old('requester_employee_id') }}" placeholder="Search / enter Employee ID" required autocomplete="off">
@@ -88,7 +95,7 @@
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d-m-Y') : '-' }}</td><td>{{ $row->completion_date ? \Carbon\Carbon::parse($row->completion_date)->format('d-m-Y') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
+                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d/m/Y') : '-' }}</td><td>{{ $row->completion_date ? \Carbon\Carbon::parse($row->completion_date)->format('d/m/Y') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
                     <td>
                         @if($row->status === 'APPROVED')<form method="post" action="/facilities-management/service-requests/{{ $row->id }}/convert-work-order">@csrf<button class="btn btn-primary" type="submit">Create Work Order</button></form>@endif
                     </td>
@@ -141,6 +148,27 @@ document.addEventListener('DOMContentLoaded', function () {
     employeeInput.addEventListener('input', loadRequester);
     employeeInput.addEventListener('change', loadRequester);
     loadRequester();
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function fmFormatDate(value) {
+        if (!value) return '';
+        const parts = value.split('-');
+        return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : '';
+    }
+
+    const requestPicker = document.getElementById('fm-request-date-picker');
+    const requestDisplay = document.getElementById('fm-request-date-display');
+
+    if (requestPicker && requestDisplay) {
+        requestDisplay.value = fmFormatDate(requestPicker.value);
+        requestPicker.addEventListener('change', function () {
+            requestDisplay.value = fmFormatDate(requestPicker.value);
+        });
+    }
 });
 </script>
 

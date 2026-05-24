@@ -192,6 +192,7 @@ class FacilitiesController extends Controller
     public function storeServiceRequest(Request $request): RedirectResponse
     {
         $data = $request->validate([
+            'request_date' => ['required', 'date', 'before_or_equal:today'],
             'request_type' => ['required', 'in:'.implode(',', self::REQUEST_TYPES)],
             'facility_registry_id' => ['nullable', 'integer'],
             'facility_component_id' => ['nullable', 'integer'],
@@ -270,7 +271,7 @@ class FacilitiesController extends Controller
                 'emergency_flag' => $request->boolean('emergency_flag') ? 1 : 0,
                 'emergency_reason' => $this->nullableTrim($data['emergency_reason'] ?? null),
                 'requested_by_user_id' => $this->actor(),
-                'requested_at' => now(),
+                'requested_at' => \Carbon\Carbon::parse($data['request_date'])->startOfDay(),
                 'requester_employee_id' => $requester->company_id,
                 'requester_name_snapshot' => $requester->name,
                 'requester_designation_snapshot' => $requester->designation,
@@ -415,7 +416,15 @@ class FacilitiesController extends Controller
             'remarks' => ['nullable', 'string'],
             'assigned_to' => ['nullable', 'string', 'max:160'],
             'actual_cost' => ['nullable', 'numeric'],
+            'completion_date' => ['nullable', 'date', 'before_or_equal:today'],
         ]);
+
+        if ($data['to_status'] === 'COMPLETED' && empty($data['completion_date'])) {
+            return back()->withErrors([
+                'completion_date' => 'Completion date is required when completing a work order.',
+            ])->withInput();
+        }
+
         $this->applyWorkOrderTransition($id, $data['to_status'], $data);
         return back()->with('status', 'Work order status updated.');
     }
@@ -466,7 +475,7 @@ class FacilitiesController extends Controller
                 $update['started_at'] = now();
             }
             if ($toStatus === 'COMPLETED') {
-                $update['completed_on'] = now()->toDateString();
+                $update['completed_on'] = $data['completion_date'];
                 $update['completed_at'] = now();
                 $update['completion_remarks'] = $this->nullableTrim($data['remarks'] ?? null);
                 $update['actual_cost'] = $data['actual_cost'] ?? $row->actual_cost;
@@ -537,7 +546,7 @@ class FacilitiesController extends Controller
                 'f.facility_name',
                 'wc.name as category_name',
                 'ct.name as affected_component_name',
-                'wo.completed_at as completion_date_time'
+                'wo.completed_on as completion_date'
             )
             ->when($request->query('status'), fn ($q, $v) => $q->where('sr.status', $v))
             ->when($request->query('priority'), fn ($q, $v) => $q->where('sr.priority', $v))

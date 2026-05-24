@@ -22,7 +22,7 @@
                         @elseif($row->status === 'ASSIGNED')
                             <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="IN_PROGRESS"><button class="btn" type="submit">Start</button></form>
                         @elseif($row->status === 'IN_PROGRESS')
-                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="COMPLETED"><input name="completion_date" type="date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required><textarea name="remarks" rows="2" placeholder="Completion remarks"></textarea><input name="actual_cost" type="number" step="0.01" placeholder="Actual cost"><button class="btn btn-primary" type="submit">Complete</button></form>
+                            <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="COMPLETED"><label class="label">Completion Date</label><div style="display:flex;gap:8px;align-items:center;"><input id="fm-completion-display-{{ $row->id }}" value="{{ now()->format('d/m/Y') }}" readonly><input class="fm-completion-picker" data-display-id="fm-completion-display-{{ $row->id }}" name="completion_date" type="date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required title="Select completion date" style="width:48px;min-width:48px;padding:8px;"></div><textarea name="remarks" rows="2" placeholder="Completion remarks"></textarea><input name="actual_cost" type="number" step="0.01" placeholder="Actual cost"><button class="btn btn-primary" type="submit">Complete</button></form>
                         @elseif($row->status === 'COMPLETED')
                             <span class="muted">Waiting verification</span>
                         @elseif($row->status === 'VERIFIED')
@@ -44,4 +44,25 @@
         </table></div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function fmFormatDate(value) {
+        if (!value) return '';
+        const parts = value.split('-');
+        return parts.length === 3 ? parts[2] + '/' + parts[1] + '/' + parts[0] : '';
+    }
+
+    document.querySelectorAll('.fm-completion-picker').forEach(function (picker) {
+        const display = document.getElementById(picker.dataset.displayId);
+        if (!display) return;
+
+        display.value = fmFormatDate(picker.value);
+        picker.addEventListener('change', function () {
+            display.value = fmFormatDate(picker.value);
+        });
+    });
+});
+</script>
+
 @endsection
