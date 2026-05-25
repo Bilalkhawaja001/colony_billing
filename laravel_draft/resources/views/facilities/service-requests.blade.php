@@ -65,7 +65,7 @@
 
                 <datalist id="fm-facility-list">
                     @foreach($facilities as $facility)
-                        <option value="{{ $facility->facility_code }} - {{ $facility->facility_name }}"></option>
+                        <option value="{{ $facility->facility_code }} | {{ $facility->facility_name }} | {{ $facility->specific_location }} | {{ $facility->facility_type }}"></option>
                     @endforeach
                 </datalist>
 
@@ -76,7 +76,7 @@
                 @foreach($facilities as $facility)
                     <span
                         data-id="{{ $facility->id }}"
-                        data-label="{{ $facility->facility_code }} - {{ $facility->facility_name }}"
+                        data-label="{{ $facility->facility_code }} | {{ $facility->facility_name }} | {{ $facility->specific_location }} | {{ $facility->facility_type }}"
                     ></span>
                 @endforeach
             </div>
