@@ -55,12 +55,30 @@
             <div class="field"><label class="label">Work Category</label><select name="work_category_id" required>@foreach($workCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div>
             <div class="field wide">
                 <label class="label">Registered Facility</label>
-                <select name="facility_registry_id">
-                    <option value="">Unregistered / manual location</option>
+                <input
+                    id="fm-facility-search"
+                    list="fm-facility-list"
+                    placeholder="Search facility code, department or area"
+                    autocomplete="off"
+                >
+                <input id="fm-facility-id" type="hidden" name="facility_registry_id" value="{{ old('facility_registry_id') }}">
+
+                <datalist id="fm-facility-list">
                     @foreach($facilities as $facility)
-                        <option value="{{ $facility->id }}" @selected((string) old('facility_registry_id') === (string) $facility->id)>{{ $facility->facility_code }} - {{ $facility->facility_name }}</option>
+                        <option value="{{ $facility->facility_code }} - {{ $facility->facility_name }}"></option>
                     @endforeach
-                </select>
+                </datalist>
+
+                <span class="muted" id="fm-facility-help">Search and select a registered facility, or leave blank for manual location.</span>
+            </div>
+
+            <div id="fm-facility-source" hidden>
+                @foreach($facilities as $facility)
+                    <span
+                        data-id="{{ $facility->id }}"
+                        data-label="{{ $facility->facility_code }} - {{ $facility->facility_name }}"
+                    ></span>
+                @endforeach
             </div>
             <div class="field wide">
                 <label class="label">Affected Component / Item</label>
@@ -170,6 +188,51 @@ document.addEventListener('DOMContentLoaded', function () {
             requestDisplay.value = fmFormatDate(requestPicker.value);
         });
     }
+});
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const facilitySearch = document.getElementById('fm-facility-search');
+    const facilityId = document.getElementById('fm-facility-id');
+    const facilityHelp = document.getElementById('fm-facility-help');
+
+    if (!facilitySearch || !facilityId) {
+        return;
+    }
+
+    const facilitiesByLabel = {};
+    let initialLabel = '';
+
+    document.querySelectorAll('#fm-facility-source [data-id]').forEach(function (node) {
+        facilitiesByLabel[node.dataset.label] = node.dataset.id;
+
+        if (node.dataset.id === facilityId.value) {
+            initialLabel = node.dataset.label;
+        }
+    });
+
+    if (initialLabel) {
+        facilitySearch.value = initialLabel;
+    }
+
+    function syncFacilitySelection() {
+        const selectedId = facilitiesByLabel[facilitySearch.value] || '';
+        facilityId.value = selectedId;
+
+        if (!facilitySearch.value) {
+            facilityHelp.textContent = 'Manual location mode: enter exact location below.';
+        } else if (selectedId) {
+            facilityHelp.textContent = 'Registered facility selected.';
+        } else {
+            facilityHelp.textContent = 'Select a facility from the search results, or clear the field for manual location.';
+        }
+    }
+
+    facilitySearch.addEventListener('input', syncFacilitySelection);
+    facilitySearch.addEventListener('change', syncFacilitySelection);
+    syncFacilitySelection();
 });
 </script>
 
