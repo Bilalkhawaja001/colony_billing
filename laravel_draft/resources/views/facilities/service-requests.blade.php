@@ -12,9 +12,10 @@
             @csrf
             <div class="field">
                 <label class="label">Request Date</label>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <input id="fm-request-date-display" value="{{ old('request_date') ? \Carbon\Carbon::parse(old('request_date'))->format('d/m/Y') : now()->format('d/m/Y') }}" placeholder="dd/mm/yyyy" readonly>
-                    <input id="fm-request-date-picker" name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required title="Select date" style="width:48px;min-width:48px;padding:8px;">
+                <div class="fm-single-date-control fm-request-date-control" style="position:relative;width:100%;">
+                    <input id="fm-request-date-display" value="{{ old('request_date') ? \Carbon\Carbon::parse(old('request_date'))->format('d/m/Y') : now()->format('d/m/Y') }}" placeholder="dd/mm/yyyy" readonly style="width:100%;padding-right:44px;">
+                    <span aria-hidden="true" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;">📅</span>
+                    <input id="fm-request-date-picker" name="request_date" type="date" value="{{ old('request_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}" required aria-label="Select request date" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;">
                 </div>
                 <span class="muted">Format: dd/mm/yyyy</span>
             </div>
