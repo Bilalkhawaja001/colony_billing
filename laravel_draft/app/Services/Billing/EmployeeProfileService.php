@@ -99,20 +99,11 @@ class EmployeeProfileService
         $latestRoomMonth = DB::table('util_unit_room_snapshot')->max('month_cycle');
 
         $residenceOptions = DB::table('util_unit_room_snapshot as r')
-            ->where('r.month_cycle', $latestRoomMonth)
-            ->where(function ($query) {
-                $query->whereIn('r.residence_type', ['Bachelor', 'Hostel', 'Container'])
-                    ->orWhere(function ($houseQuery) {
-                        $houseQuery->where('r.residence_type', 'like', 'House%')
-                            ->whereNotExists(function ($occupiedQuery) {
-                                $occupiedQuery->select(DB::raw(1))
-                                    ->from('employee_residence_assignments as a')
-                                    ->whereColumn('a.unit_id', 'r.unit_id')
-                                    ->whereColumn('a.room_no', 'r.room_no')
-                                    ->where('a.status', 'ACTIVE');
-                            });
-                    });
+            ->leftJoin(DB::raw("(SELECT unit_id, room_no, COUNT(*) as active_assigned_count FROM employee_residence_assignments WHERE status = 'ACTIVE' AND end_date IS NULL GROUP BY unit_id, room_no) as occ"), function ($join) {
+                $join->on('occ.unit_id', '=', 'r.unit_id')
+                    ->on('occ.room_no', '=', 'r.room_no');
             })
+            ->where('r.month_cycle', $latestRoomMonth)
             ->orderBy('r.residence_type')
             ->orderBy('r.unit_id')
             ->orderBy('r.room_no')
@@ -122,8 +113,33 @@ class EmployeeProfileService
                 'r.residence_type',
                 'r.category',
                 'r.block_floor',
+                DB::raw('COALESCE(occ.active_assigned_count, 0) as active_assigned_count'),
             ])
-            ->map(fn ($row) => (array) $row)
+            ->map(function ($row) {
+                $option = (array) $row;
+                $assignedCount = (int) ($option['active_assigned_count'] ?? 0);
+                $residenceType = (string) ($option['residence_type'] ?? '');
+                $typeUpper = strtoupper(trim($residenceType));
+                $isHouse = str_starts_with($typeUpper, 'HOUSE');
+                $isEligibleResidence = $isHouse || in_array($typeUpper, ['BACHELOR', 'HOSTEL', 'CONTAINER'], true);
+
+                $unitCode = strtoupper(trim((string) ($option['unit_id'] ?? '')));
+
+                $option['active_assigned_count'] = $assignedCount;
+                $option['dropdown_status'] = $assignedCount > 0 ? 'OCCUPIED' : 'VACANT';
+                $option['is_blocked_for_assignment'] = (!$isEligibleResidence) || ($isHouse && $assignedCount > 0);
+                $option['block_reason'] = !$isEligibleResidence ? 'non-residence item' : (($isHouse && $assignedCount > 0) ? 'already assigned' : '');
+
+                if (str_starts_with($unitCode, 'W')) {
+                    $option['unit_group'] = 'Weaving';
+                } elseif (str_starts_with($unitCode, 'S')) {
+                    $option['unit_group'] = 'Spinning';
+                } else {
+                    $option['unit_group'] = 'Centralized';
+                }
+
+                return $option;
+            })
             ->all();
 
         $linkedMembers = DB::table('family_members')

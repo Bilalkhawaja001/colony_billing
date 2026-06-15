@@ -503,21 +503,32 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
         @csrf
 
         <div id="residenceTargetFields">
-          <label for="residenceTargetSelect">Select Residence</label>
-          <select id="residenceTargetSelect" required>
-            <option value="">Select available residence</option>
-            @foreach(($profile['residence_options'] ?? []) as $option)
-              @if(!($residence['status'] === 'ACTIVE' && $residence['unit_id'] === $option['unit_id'] && $residence['room_no'] === $option['room_no']))
-                <option
-                  value="{{ e($option['unit_id'] . '|' . $option['room_no']) }}"
-                  data-unit-id="{{ e($option['unit_id']) }}"
-                  data-room-no="{{ e($option['room_no']) }}"
-                >
-                  Unit: {{ $option['unit_id'] }} | Room: {{ $option['room_no'] }} — {{ $option['residence_type'] }}{{ $option['block_floor'] ? ' / ' . $option['block_floor'] : '' }}
-                </option>
-              @endif
-            @endforeach
-          </select>
+                      @php
+              $residenceDropdownOptions = collect($profile['residence_options'] ?? [])
+                ->reject(fn ($option) => $residence['status'] === 'ACTIVE' && $residence['unit_id'] === $option['unit_id'] && $residence['room_no'] === $option['room_no'])
+                ->values()
+                ->all();
+            @endphp
+
+            <label for="residenceDivisionSelect">Select Section</label>
+            <select id="residenceDivisionSelect" required>
+              <option value="">Select section</option>
+              <option value="Centralized">Centralized</option>
+              <option value="Spinning">Spinning</option>
+              <option value="Weaving">Weaving</option>
+            </select>
+
+            <label for="residenceUnitSelect">Select Unit</label>
+            <select id="residenceUnitSelect" required disabled>
+              <option value="">Select section first</option>
+            </select>
+
+            <label for="residenceTargetSelect">Select Room / House</label>
+            <select id="residenceTargetSelect" required disabled>
+              <option value="">Select unit first</option>
+            </select>
+
+
           <input type="hidden" name="unit_id" id="residenceUnitId">
           <input type="hidden" name="room_no" id="residenceRoomNo">
         </div>
@@ -652,6 +663,10 @@ const residenceEffectiveDate = document.getElementById('residenceEffectiveDate')
 const residenceRemarks = document.getElementById('residenceRemarks');
 const residenceActionNote = document.getElementById('residenceActionNote');
 const residenceActionSubmit = document.getElementById('residenceActionSubmit');
+const residenceDivisionSelect = document.getElementById('residenceDivisionSelect');
+const residenceUnitSelect = document.getElementById('residenceUnitSelect');
+const residenceDirectoryOptions = @json($residenceDropdownOptions ?? []);
+
 const residenceBasePath = '/employee-profile/{{ rawurlencode($employee['company_id']) }}/residence/';
 
 function syncResidenceTarget(){
@@ -671,6 +686,113 @@ function closeResidenceActionModal(){
   residenceRemarks.value = '';
 }
 
+
+function clearResidenceSelect(select, placeholder){
+  select.innerHTML = '';
+  const option = document.createElement('option');
+  option.value = '';
+  option.textContent = placeholder;
+  select.appendChild(option);
+}
+
+function residenceOptionLabel(option){
+  const assignedCount = Number(option.active_assigned_count || 0);
+  const status = option.dropdown_status || (assignedCount > 0 ? 'OCCUPIED' : 'VACANT');
+  const blockReason = option.block_reason || '';
+
+  let label = `Room: ${option.room_no || ''} — ${option.residence_type || ''}`;
+
+  if(option.block_floor){
+    label += ` / ${option.block_floor}`;
+  }
+
+  label += ` | ${status}`;
+
+  if(assignedCount > 0){
+    label += ` (${assignedCount})`;
+  }
+
+  if(option.is_blocked_for_assignment && blockReason){
+    label += ` — ${blockReason}`;
+  }
+
+  return label;
+}
+
+function populateResidenceUnits(){
+  const division = residenceDivisionSelect.value;
+
+  clearResidenceSelect(residenceUnitSelect, division ? 'Select unit' : 'Select section first');
+  clearResidenceSelect(residenceTargetSelect, 'Select unit first');
+
+  residenceUnitSelect.disabled = !division;
+  residenceTargetSelect.disabled = true;
+
+  residenceUnitId.value = '';
+  residenceRoomNo.value = '';
+
+  if(!division){
+    return;
+  }
+
+  const units = [...new Set(
+    residenceDirectoryOptions
+      .filter(option => (option.unit_group || 'Centralized') === division)
+      .map(option => option.unit_id)
+      .filter(Boolean)
+  )].sort();
+
+  units.forEach(unit => {
+    const option = document.createElement('option');
+    option.value = unit;
+    option.textContent = unit;
+    residenceUnitSelect.appendChild(option);
+  });
+}
+
+function populateResidenceRooms(){
+  const division = residenceDivisionSelect.value;
+  const unit = residenceUnitSelect.value;
+
+  clearResidenceSelect(residenceTargetSelect, unit ? 'Select room / house' : 'Select unit first');
+
+  residenceTargetSelect.disabled = !unit;
+  residenceUnitId.value = '';
+  residenceRoomNo.value = '';
+
+  if(!division || !unit){
+    return;
+  }
+
+  residenceDirectoryOptions
+    .filter(option => (option.unit_group || 'Centralized') === division && option.unit_id === unit)
+    .sort((a, b) => String(a.room_no || '').localeCompare(String(b.room_no || '')))
+    .forEach(item => {
+      const option = document.createElement('option');
+      option.value = `${item.unit_id}|${item.room_no}`;
+      option.dataset.unitId = item.unit_id || '';
+      option.dataset.roomNo = item.room_no || '';
+      option.dataset.status = item.dropdown_status || '';
+      option.dataset.activeAssignedCount = item.active_assigned_count || 0;
+      option.disabled = !!item.is_blocked_for_assignment;
+      option.textContent = residenceOptionLabel(item);
+      residenceTargetSelect.appendChild(option);
+    });
+}
+
+function resetResidenceCascade(){
+  residenceDivisionSelect.value = '';
+  clearResidenceSelect(residenceUnitSelect, 'Select section first');
+  clearResidenceSelect(residenceTargetSelect, 'Select unit first');
+
+  residenceUnitSelect.disabled = true;
+  residenceTargetSelect.disabled = true;
+
+  residenceUnitId.value = '';
+  residenceRoomNo.value = '';
+}
+
+
 function openResidenceActionModal(type){
   closeResidenceActionModal();
 
@@ -681,8 +803,13 @@ function openResidenceActionModal(type){
   residenceActionSub.textContent = 'Date-wise employee residence assignment record.';
   residenceActionForm.setAttribute('action', residenceBasePath + type);
   residenceTargetFields.style.display = isVacate ? 'none' : 'block';
-  residenceTargetSelect.disabled = isVacate;
+  residenceDivisionSelect.disabled = isVacate;
+  residenceDivisionSelect.required = !isVacate;
+  residenceUnitSelect.required = !isVacate;
   residenceTargetSelect.required = !isVacate;
+
+  resetResidenceCascade();
+
   residenceActionSubmit.textContent = label;
   residenceActionSubmit.classList.toggle('return', false);
 
@@ -691,7 +818,7 @@ function openResidenceActionModal(type){
   } else if(type === 'vacate'){
     residenceActionNote.textContent = 'Current residence will close. Household residence will be treated as family sent back.';
   } else {
-    residenceActionNote.textContent = 'Selected available residence will become active for this employee.';
+    residenceActionNote.textContent = 'Select section, then unit, then room/house. Occupied household and non-residence items are shown but blocked.';
   }
 
   residenceActionModal.classList.add('is-open');
@@ -699,7 +826,7 @@ function openResidenceActionModal(type){
   if(isVacate){
     residenceEffectiveDate.focus();
   } else {
-    residenceTargetSelect.focus();
+    residenceDivisionSelect.focus();
   }
 }
 
@@ -707,6 +834,8 @@ document.querySelectorAll('[data-residence-open]').forEach(button => {
   button.addEventListener('click', () => openResidenceActionModal(button.dataset.actionType || 'assign'));
 });
 
+residenceDivisionSelect.addEventListener('change', populateResidenceUnits);
+residenceUnitSelect.addEventListener('change', populateResidenceRooms);
 residenceTargetSelect.addEventListener('change', syncResidenceTarget);
 
 document.querySelectorAll('[data-residence-close]').forEach(button => {
