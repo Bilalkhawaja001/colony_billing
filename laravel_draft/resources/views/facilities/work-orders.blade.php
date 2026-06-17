@@ -15,7 +15,7 @@
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->work_order_no }}</td><td>{{ $row->request_no }}</td><td>{{ $row->facility_code }} - {{ $row->facility_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td><strong>{{ $row->status }}</strong></td><td>{{ $row->description ?? $row->title }}</td>
+                    <td>{{ $row->work_order_no }}</td><td>{{ $row->request_no }}</td><td>{{ $row->facility_code }} - {{ $row->facility_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td><strong>{{ $row->status }}</strong></td><td>{{ $row->description ?? $row->title }}@foreach(($workOrderItems[$row->id] ?? collect()) as $item)<div class="muted"><strong>{{ $item->component_name }}</strong> — {{ str_replace('_', ' ', $item->work_action) }} — {{ $item->problem_detail }} — Est. Cost: {{ number_format($item->estimated_total_cost, 2) }} — {{ str_replace('_', ' ', $item->material_source) }}</div>@endforeach</td>
                     <td>
                         @if(in_array($row->status, ['OPEN','REWORK_REQUIRED']))
                             <form method="post" action="/facilities-management/work-orders/{{ $row->id }}/transition">@csrf<input type="hidden" name="to_status" value="ASSIGNED"><input name="assigned_to" placeholder="Assign to"><button class="btn" type="submit">Assign</button></form>

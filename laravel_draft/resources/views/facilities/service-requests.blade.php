@@ -52,7 +52,7 @@
             <div class="field"><label class="label">Request Type</label><select name="request_type" required>@foreach($requestTypes as $type)<option>{{ $type }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Priority</label><select name="priority" required>@foreach($priorities as $priority)<option>{{ $priority }}</option>@endforeach</select></div>
             <div class="field"><label class="label">Approval Level</label><select name="approval_required_level" required>@foreach($approvalLevels as $level)<option>{{ $level }}</option>@endforeach</select></div>
-            <div class="field"><label class="label">Work Category</label><select name="work_category_id" required>@foreach($workCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div>
+            <div class="field"><label class="label">Work Category</label><select id="fm-work-category-id" name="work_category_id" required><option value="">Select work category</option>@foreach($workCategories as $category)<option value="{{ $category->id }}" @selected((string) old('work_category_id') === (string) $category->id)>{{ $category->name }}</option>@endforeach</select></div>
             <div class="field wide">
                 <label class="label">Registered Facility</label>
                 <input
@@ -80,23 +80,27 @@
                     ></span>
                 @endforeach
             </div>
-            <div class="field wide">
-                <label class="label">Affected Component / Item</label>
-                <select name="facility_component_type_id" required>
-                    <option value="">Select affected component / item</option>
-                    @foreach($componentTypeRows as $componentType)
-                        <option value="{{ $componentType->id }}" @selected((string) old('facility_component_type_id') === (string) $componentType->id)>{{ $componentType->name }}</option>
-                    @endforeach
-                </select>
-                <span class="muted">Complete standard item list for washroom, toilet and bathroom work requests.</span>
+            <div class="field full">
+                <label class="label">Affected Items / Required Work</label>
+                <div id="fm-request-items" class="fm-request-items"></div>
+                <button id="fm-add-request-item" class="btn" type="button" style="margin-top:10px;">+ Add Another Item</button>
+                <span class="muted" style="display:block;margin-top:8px;">Add all affected items for this location and selected work category. Different work categories require separate requests.</span>
+            </div>
+
+            <div id="fm-category-component-source" hidden>
+                @foreach($categoryComponentRows as $mapping)
+                    <span
+                        data-category-id="{{ $mapping->work_category_id }}"
+                        data-component-id="{{ $mapping->component_type_id }}"
+                        data-component-name="{{ $mapping->component_name }}"
+                    ></span>
+                @endforeach
             </div>
             <div class="field full"><label class="label">Location Text <span class="muted">required if no registered facility</span></label><input name="location_text" placeholder="Exact site/location"></div>
-            <div class="field full"><label class="label">Problem Description</label><textarea name="problem_description" rows="3" required></textarea></div>
+            <div class="field full"><label class="label">General Request Description</label><textarea name="problem_description" rows="3" required>{{ old('problem_description') }}</textarea></div>
             <div class="field"><label class="label">Emergency?</label><select name="emergency_flag"><option value="0">No</option><option value="1">Yes</option></select></div>
             <div class="field wide"><label class="label">Emergency Reason</label><input name="emergency_reason" placeholder="Mandatory when emergency = yes"></div>
-            <div class="field"><label class="label">Material Required?</label><select name="material_required"><option value="0">No</option><option value="1">Yes</option></select></div>
-            <div class="field"><label class="label">Estimated Cost</label><input name="estimated_cost" type="number" step="0.01"></div>
-            <div class="field full"><label class="label">Material Remarks</label><textarea name="material_remarks" rows="2" placeholder="Remarks only; no stock issue/return."></textarea></div>
+            <div class="field full"><span class="muted">Material, cost and procurement source will be recorded item-wise above. No inventory transaction is created.</span></div>
             <div class="field full"><button class="btn btn-primary" type="submit">Submit Request</button></div>
         </form>
     </div>
@@ -114,7 +118,7 @@
             <tbody>
             @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d/m/Y') : '-' }}</td><td>{{ $row->completion_date ? \Carbon\Carbon::parse($row->completion_date)->format('d/m/Y') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>{{ $row->affected_component_name }}</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
+                    <td>{{ $row->request_no }}</td><td>{{ $row->requested_at ? \Carbon\Carbon::parse($row->requested_at)->format('d/m/Y') : '-' }}</td><td>{{ $row->completion_date ? \Carbon\Carbon::parse($row->completion_date)->format('d/m/Y') : 'Pending' }}</td><td>{{ $row->requester_employee_id }} - {{ $row->requester_name_snapshot }}</td><td>{{ $row->request_type }}</td><td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td><td>@foreach(($requestItems[$row->id] ?? collect()) as $item)<div><strong>{{ $item->component_name }}</strong> — {{ str_replace('_', ' ', $item->work_action) }}<br><span class="muted">{{ $item->problem_detail }} | Cost: {{ number_format($item->total_cost, 2) }} | {{ str_replace('_', ' ', $item->material_source) }}</span></div>@endforeach</td><td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->status }}</td><td>{{ $row->problem_description }}</td><td>{{ $row->approval_required_level }}</td>
                     <td>
                         @if($row->status === 'APPROVED')<form method="post" action="/facilities-management/service-requests/{{ $row->id }}/convert-work-order">@csrf<button class="btn btn-primary" type="submit">Create Work Order</button></form>@endif
                     </td>
@@ -126,6 +130,198 @@
         </table></div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const categorySelect = document.getElementById('fm-work-category-id');
+    const itemsContainer = document.getElementById('fm-request-items');
+    const addItemButton = document.getElementById('fm-add-request-item');
+    const workActions = @json($itemWorkActions);
+    const materialSources = @json($itemMaterialSources);
+    @php
+        $defaultRequestItems = [[
+            'facility_component_type_id' => '',
+            'work_action' => 'SERVICE',
+            'problem_detail' => '',
+            'part_material_used' => '',
+            'quantity' => '1',
+            'unit' => '',
+            'unit_cost' => '0',
+            'material_source' => 'NOT_REQUIRED',
+            'remarks' => ''
+        ]];
+    @endphp
+    const oldItems = @json(old('items', $defaultRequestItems));
+
+    if (!categorySelect || !itemsContainer || !addItemButton) {
+        return;
+    }
+
+    const componentsByCategory = {};
+
+    document.querySelectorAll('#fm-category-component-source [data-category-id]').forEach(function (node) {
+        const categoryId = node.dataset.categoryId;
+
+        if (!componentsByCategory[categoryId]) {
+            componentsByCategory[categoryId] = [];
+        }
+
+        componentsByCategory[categoryId].push({
+            id: node.dataset.componentId,
+            name: node.dataset.componentName
+        });
+    });
+
+    function label(value) {
+        return value.replaceAll('_', ' ').replace(/\b\w/g, function (letter) {
+            return letter.toUpperCase();
+        });
+    }
+
+    function populateComponents(select, selectedValue) {
+        const options = componentsByCategory[categorySelect.value] || [];
+        select.innerHTML = '<option value="">Select affected item</option>';
+
+        options.forEach(function (item) {
+            const option = document.createElement('option');
+            option.value = item.id;
+            option.textContent = item.name;
+            option.selected = String(selectedValue || '') === String(item.id);
+            select.appendChild(option);
+        });
+
+        if (!options.some(function (item) { return String(item.id) === String(selectedValue || ''); })) {
+            select.value = '';
+        }
+    }
+
+    function createSelect(name, values, selectedValue) {
+        const select = document.createElement('select');
+        select.name = name;
+        select.required = true;
+
+        values.forEach(function (value) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label(value);
+            option.selected = String(value) === String(selectedValue || '');
+            select.appendChild(option);
+        });
+
+        return select;
+    }
+
+    function reindexRows() {
+        itemsContainer.querySelectorAll('.fm-request-item-row').forEach(function (row, index) {
+            row.querySelector('.fm-item-title').textContent = 'Item ' + (index + 1);
+            row.querySelectorAll('[data-field]').forEach(function (field) {
+                field.name = 'items[' + index + '][' + field.dataset.field + ']';
+            });
+        });
+    }
+
+    function syncMaterialFields(row, clearWhenHidden) {
+        const actionSelect = row.querySelector('[data-field="work_action"]');
+        const materialFields = row.querySelector('.fm-material-fields');
+        const showMaterialFields = ['PART_CHANGE', 'INSTALLATION', 'REFILL'].includes(actionSelect.value);
+
+        materialFields.style.display = showMaterialFields ? 'block' : 'none';
+
+        if (!showMaterialFields && clearWhenHidden) {
+            row.querySelector('[data-field="part_material_used"]').value = '';
+            row.querySelector('[data-field="quantity"]').value = '1';
+            row.querySelector('[data-field="unit"]').value = '';
+            row.querySelector('[data-field="unit_cost"]').value = '0';
+            row.querySelector('[data-field="material_source"]').value = 'NOT_REQUIRED';
+            row.querySelector('[data-field="remarks"]').value = '';
+        }
+    }
+
+    function addItem(data) {
+        const row = document.createElement('div');
+        row.className = 'fm-request-item-row card soft';
+        row.style.marginBottom = '10px';
+        row.innerHTML = ''
+            + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">'
+            + '<strong class="fm-item-title"></strong>'
+            + '<button type="button" class="btn fm-remove-item">Remove</button>'
+            + '</div>'
+            + '<div class="fm-form fm-item-grid">'
+            + '<div class="field wide"><label class="label">Affected Component / Item</label><select data-field="facility_component_type_id" required></select></div>'
+            + '<div class="field"><label class="label">Work Action</label><span class="fm-action-holder"></span></div>'
+            + '<div class="field full"><label class="label">Issue / Service / Part Change Detail</label><textarea data-field="problem_detail" rows="2" required></textarea></div>'
+            + '<div class="fm-material-fields field full" style="display:none;">'
+            + '<div class="fm-form">'
+            + '<div class="field wide"><label class="label">Part / Material Used</label><input data-field="part_material_used" placeholder="Part or material used"></div>'
+            + '<div class="field"><label class="label">Quantity</label><input data-field="quantity" type="number" step="0.01" min="0.01" required></div>'
+            + '<div class="field"><label class="label">Unit</label><input data-field="unit" placeholder="Nos / Kg / Ltr"></div>'
+            + '<div class="field"><label class="label">Unit Cost</label><input data-field="unit_cost" type="number" step="0.01" min="0"></div>'
+            + '<div class="field"><label class="label">Source</label><span class="fm-source-holder"></span></div>'
+            + '<div class="field full"><label class="label">Remarks</label><input data-field="remarks" placeholder="Optional"></div>'
+            + '</div>'
+            + '</div>'
+            + '</div>';
+
+        const componentSelect = row.querySelector('[data-field="facility_component_type_id"]');
+        populateComponents(componentSelect, data.facility_component_type_id || '');
+
+        const actionSelect = createSelect('', workActions, data.work_action || 'SERVICE');
+        actionSelect.dataset.field = 'work_action';
+        row.querySelector('.fm-action-holder').appendChild(actionSelect);
+
+        const sourceSelect = createSelect('', materialSources, data.material_source || 'NOT_REQUIRED');
+        sourceSelect.dataset.field = 'material_source';
+        row.querySelector('.fm-source-holder').appendChild(sourceSelect);
+
+        row.querySelector('[data-field="problem_detail"]').value = data.problem_detail || '';
+        row.querySelector('[data-field="part_material_used"]').value = data.part_material_used || '';
+        row.querySelector('[data-field="quantity"]').value = data.quantity || '1';
+        row.querySelector('[data-field="unit"]').value = data.unit || '';
+        row.querySelector('[data-field="unit_cost"]').value = data.unit_cost || '0';
+        row.querySelector('[data-field="remarks"]').value = data.remarks || '';
+
+        actionSelect.addEventListener('change', function () {
+            syncMaterialFields(row, true);
+        });
+        syncMaterialFields(row, false);
+
+        row.querySelector('.fm-remove-item').addEventListener('click', function () {
+            if (itemsContainer.querySelectorAll('.fm-request-item-row').length > 1) {
+                row.remove();
+                reindexRows();
+            }
+        });
+
+        itemsContainer.appendChild(row);
+        reindexRows();
+    }
+
+    categorySelect.addEventListener('change', function () {
+        itemsContainer.querySelectorAll('[data-field="facility_component_type_id"]').forEach(function (select) {
+            populateComponents(select, select.value);
+        });
+    });
+
+    addItemButton.addEventListener('click', function () {
+        addItem({
+            facility_component_type_id: '',
+            work_action: 'SERVICE',
+            problem_detail: '',
+            part_material_used: '',
+            quantity: '1',
+            unit: '',
+            unit_cost: '0',
+            material_source: 'NOT_REQUIRED',
+            remarks: ''
+        });
+    });
+
+    oldItems.forEach(function (item) {
+        addItem(item);
+    });
+});
+</script>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {

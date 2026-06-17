@@ -15,7 +15,7 @@
                 <tr>
                     <td>{{ $row->request_no }}<br><span class="muted">{{ $row->request_type }}</span></td>
                     <td>{{ $row->facility_code ? $row->facility_code.' - '.$row->facility_name : $row->location_text }}</td>
-                    <td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->approval_required_level }}</td><td>{{ $row->problem_description }}</td>
+                    <td>{{ $row->category_name }}</td><td>{{ $row->priority }}</td><td>{{ $row->approval_required_level }}</td><td>{{ $row->problem_description }}@foreach(($requestItems[$row->id] ?? collect()) as $item)<div class="muted"><strong>{{ $item->component_name }}</strong> — {{ str_replace('_', ' ', $item->work_action) }} — {{ $item->problem_detail }} — Cost: {{ number_format($item->total_cost, 2) }} — {{ str_replace('_', ' ', $item->material_source) }}</div>@endforeach</td>
                     <td class="fm-action-cell">
                         <form class="fm-approval-action" method="post" action="/facilities-management/service-requests/{{ $row->id }}/approve">
                             @csrf

@@ -24,6 +24,8 @@ class FacilitiesController extends Controller
     private const REQUEST_TYPES = ['REPAIR', 'PREVENTIVE', 'DEEP_CLEANING', 'EMERGENCY_CLEANING', 'PEST_CONTROL', 'OTHER'];
     private const PRIORITIES = ['LOW', 'NORMAL', 'HIGH', 'CRITICAL'];
     private const APPROVAL_LEVELS = ['SUPERVISOR', 'FACILITIES_MANAGER'];
+    private const ITEM_WORK_ACTIONS = ['SERVICE', 'REPAIR', 'PART_CHANGE', 'INSTALLATION', 'REFILL', 'INSPECTION'];
+    private const ITEM_MATERIAL_SOURCES = ['NOT_REQUIRED', 'LOCAL_MARKET', 'HEAD_OFFICE', 'EXISTING_STOCK', 'CONTRACTOR_SUPPLIED'];
     private const WORK_ORDER_TRANSITIONS = [
         'OPEN' => ['ASSIGNED', 'CANCELLED'],
         'ASSIGNED' => ['IN_PROGRESS', 'CANCELLED'],
@@ -71,13 +73,17 @@ class FacilitiesController extends Controller
     {
         return view('facilities.service-requests', [
             'rows' => $this->serviceRequestRows($request),
+            'requestItems' => $this->requestItemRows(),
             'facilities' => $this->facilities(),
             'componentTypeRows' => $this->componentTypeRows(),
+            'categoryComponentRows' => $this->categoryComponentRows(),
             'requesterEmployees' => $this->activeRequesterEmployees(),
             'workCategories' => $this->workCategories(),
             'requestTypes' => self::REQUEST_TYPES,
             'priorities' => self::PRIORITIES,
             'approvalLevels' => self::APPROVAL_LEVELS,
+            'itemWorkActions' => self::ITEM_WORK_ACTIONS,
+            'itemMaterialSources' => self::ITEM_MATERIAL_SOURCES,
             'filters' => $request->only(['status', 'priority', 'work_category_id']),
         ]);
     }
@@ -86,6 +92,7 @@ class FacilitiesController extends Controller
     {
         return view('facilities.approval-queue', [
             'rows' => $this->pendingApprovalRows(),
+            'requestItems' => $this->requestItemRows(),
             'history' => $this->approvalHistoryRows(),
         ]);
     }
@@ -94,6 +101,7 @@ class FacilitiesController extends Controller
     {
         return view('facilities.work-orders', [
             'rows' => $this->loadWorkOrders(),
+            'workOrderItems' => $this->workOrderItemRows(),
             'histories' => $this->statusHistoryRows(),
             'workCategories' => $this->workCategories(),
         ]);
@@ -196,7 +204,6 @@ class FacilitiesController extends Controller
             'request_type' => ['required', 'in:'.implode(',', self::REQUEST_TYPES)],
             'facility_registry_id' => ['nullable', 'integer'],
             'facility_component_id' => ['nullable', 'integer'],
-            'facility_component_type_id' => ['required', 'integer'],
             'requester_employee_id' => ['required', 'string', 'max:40'],
             'location_text' => ['nullable', 'string'],
             'work_category_id' => ['required', 'integer'],
@@ -204,22 +211,29 @@ class FacilitiesController extends Controller
             'priority' => ['required', 'in:'.implode(',', self::PRIORITIES)],
             'emergency_flag' => ['nullable'],
             'emergency_reason' => ['nullable', 'string'],
-            'material_required' => ['nullable'],
-            'material_remarks' => ['nullable', 'string'],
-            'estimated_cost' => ['nullable', 'numeric'],
             'approval_required_level' => ['required', 'in:'.implode(',', self::APPROVAL_LEVELS)],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.facility_component_type_id' => ['required', 'integer'],
+            'items.*.work_action' => ['required', 'in:'.implode(',', self::ITEM_WORK_ACTIONS)],
+            'items.*.problem_detail' => ['required', 'string'],
+            'items.*.part_material_used' => ['nullable', 'string', 'max:255'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['nullable', 'string', 'max:40'],
+            'items.*.unit_cost' => ['nullable', 'numeric', 'min:0'],
+            'items.*.material_source' => ['required', 'in:'.implode(',', self::ITEM_MATERIAL_SOURCES)],
+            'items.*.remarks' => ['nullable', 'string'],
         ]);
 
         $facilityId = $this->nullableInt($data['facility_registry_id'] ?? null);
         $componentId = $this->nullableInt($data['facility_component_id'] ?? null);
-        $componentTypeId = $this->nullableInt($data['facility_component_type_id'] ?? null);
+        $workCategoryId = $this->nullableInt($data['work_category_id'] ?? null);
 
-        if (!$componentTypeId || !DB::table('facility_component_types')
-            ->where('id', $componentTypeId)
+        if (!$workCategoryId || !DB::table('facility_work_categories')
+            ->where('id', $workCategoryId)
             ->where('is_active', 1)
             ->exists()) {
             return back()->withErrors([
-                'facility_component_type_id' => 'Select a valid affected component / item.',
+                'work_category_id' => 'Select a valid work category.',
             ])->withInput();
         }
 
@@ -257,15 +271,97 @@ class FacilitiesController extends Controller
             return back()->withErrors(['emergency_reason' => 'Emergency reason is required for emergency requests.'])->withInput();
         }
 
-        DB::transaction(function () use ($data, $request, $facilityId, $componentId, $componentTypeId, $requester): void {
+        $lineItems = [];
+        $estimatedTotal = 0.0;
+        $materialRequired = false;
+
+        foreach (array_values($data['items']) as $index => $item) {
+            $lineNo = $index + 1;
+            $componentTypeId = $this->nullableInt($item['facility_component_type_id'] ?? null);
+
+            if (!$componentTypeId || !DB::table('facility_component_types')
+                ->where('id', $componentTypeId)
+                ->where('is_active', 1)
+                ->exists()) {
+                return back()->withErrors([
+                    "items.{$index}.facility_component_type_id" => "Select a valid affected component / item for line {$lineNo}.",
+                ])->withInput();
+            }
+
+            if (!DB::table('facility_work_category_component_types')
+                ->where('work_category_id', $workCategoryId)
+                ->where('component_type_id', $componentTypeId)
+                ->where('is_active', 1)
+                ->exists()) {
+                return back()->withErrors([
+                    "items.{$index}.facility_component_type_id" => "Line {$lineNo} item is not allowed for the selected work category.",
+                ])->withInput();
+            }
+
+            $materialAction = in_array($item['work_action'], ['PART_CHANGE', 'INSTALLATION', 'REFILL'], true);
+            $partMaterialUsed = $this->nullableTrim($item['part_material_used'] ?? null);
+            $materialSource = $item['material_source'];
+            $quantity = round((float) $item['quantity'], 2);
+            $unit = $this->nullableTrim($item['unit'] ?? null);
+            $unitCost = round((float) ($item['unit_cost'] ?? 0), 2);
+            $remarks = $this->nullableTrim($item['remarks'] ?? null);
+
+            if (!$materialAction) {
+                $partMaterialUsed = null;
+                $materialSource = 'NOT_REQUIRED';
+                $quantity = 1.00;
+                $unit = null;
+                $unitCost = 0.00;
+                $remarks = null;
+            }
+
+            $totalCost = round($quantity * $unitCost, 2);
+
+            if ($materialAction && $materialSource === 'NOT_REQUIRED') {
+                return back()->withErrors([
+                    "items.{$index}.material_source" => "Select a procurement source for line {$lineNo} when Part Change, Installation or Refill is selected.",
+                ])->withInput();
+            }
+
+            if ($materialAction && $partMaterialUsed === null) {
+                return back()->withErrors([
+                    "items.{$index}.part_material_used" => "Part / material used is required for line {$lineNo} when Part Change, Installation or Refill is selected.",
+                ])->withInput();
+            }
+
+            if ($materialAction) {
+                $materialRequired = true;
+            }
+
+            $estimatedTotal += $totalCost;
+
+            $lineItems[] = [
+                'line_no' => $lineNo,
+                'facility_component_type_id' => $componentTypeId,
+                'work_action' => $item['work_action'],
+                'problem_detail' => trim($item['problem_detail']),
+                'part_material_used' => $partMaterialUsed,
+                'quantity' => $quantity,
+                'unit' => $unit,
+                'unit_cost' => $unitCost,
+                'total_cost' => $totalCost,
+                'material_source' => $materialSource,
+                'remarks' => $remarks,
+                'status' => 'OPEN',
+            ];
+        }
+
+        $primaryItem = $lineItems[0];
+
+        DB::transaction(function () use ($data, $request, $facilityId, $componentId, $workCategoryId, $requester, $lineItems, $primaryItem, $materialRequired, $estimatedTotal): void {
             $id = DB::table('facility_service_requests')->insertGetId([
                 'request_no' => 'FSR-PENDING-'.uniqid(),
                 'request_type' => $data['request_type'],
                 'facility_registry_id' => $facilityId,
                 'facility_component_id' => $componentId,
-                'facility_component_type_id' => $componentTypeId,
+                'facility_component_type_id' => $primaryItem['facility_component_type_id'],
                 'location_text' => $this->nullableTrim($data['location_text'] ?? null),
-                'work_category_id' => (int) $data['work_category_id'],
+                'work_category_id' => $workCategoryId,
                 'problem_description' => trim($data['problem_description']),
                 'priority' => $data['priority'],
                 'emergency_flag' => $request->boolean('emergency_flag') ? 1 : 0,
@@ -280,19 +376,27 @@ class FacilitiesController extends Controller
                 'requester_sub_section_snapshot' => $requester->sub_section,
                 'requester_mobile_no_snapshot' => $requester->mobile_no,
                 'status' => 'SUBMITTED',
-                'material_required' => $request->boolean('material_required') ? 1 : 0,
-                'material_remarks' => $this->nullableTrim($data['material_remarks'] ?? null),
-                'estimated_cost' => $data['estimated_cost'] ?? null,
+                'material_required' => $materialRequired ? 1 : 0,
+                'material_remarks' => $materialRequired ? 'See item-wise service request lines.' : null,
+                'estimated_cost' => round($estimatedTotal, 2),
                 'approval_required_level' => $data['approval_required_level'],
                 'created_by_user_id' => $this->actor(),
                 'updated_by_user_id' => $this->actor(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
             DB::table('facility_service_requests')->where('id', $id)->update(['request_no' => sprintf('FSR-%06d', $id)]);
+
+            foreach ($lineItems as $line) {
+                $line['facility_service_request_id'] = $id;
+                $line['created_at'] = now();
+                $line['updated_at'] = now();
+                DB::table('facility_service_request_items')->insert($line);
+            }
         });
 
-        return redirect('/facilities-management/service-requests')->with('status', 'Service request submitted.');
+        return redirect('/facilities-management/service-requests')->with('status', 'Service request submitted with item-wise details.');
     }
 
     public function approveRequest(Request $request, int $id): RedirectResponse
@@ -375,13 +479,24 @@ class FacilitiesController extends Controller
             abort_if($requestRow->status !== 'APPROVED', 422, 'Only approved requests may be converted to work orders.');
             abort_if(DB::table('facility_work_orders')->where('source_request_id', $id)->exists(), 422, 'This request already has a linked work order.');
 
+            $requestItems = DB::table('facility_service_request_items')
+                ->where('facility_service_request_id', $id)
+                ->orderBy('line_no')
+                ->get();
+
+            abort_if($requestItems->isEmpty(), 422, 'Request has no item-wise details for work order conversion.');
+
+            $primaryItem = $requestItems->first();
+            $estimatedTotal = round((float) $requestItems->sum('total_cost'), 2);
+            $hasMaterial = $requestItems->contains(fn ($item) => $item->material_source !== 'NOT_REQUIRED');
+
             $title = $requestRow->request_no.' - '.$requestRow->request_type;
             $workOrderId = DB::table('facility_work_orders')->insertGetId([
                 'source_request_id' => $id,
                 'work_order_no' => 'FWO-PENDING-'.uniqid(),
                 'facility_id' => $requestRow->facility_registry_id,
                 'facility_component_id' => $requestRow->facility_component_id,
-                'facility_component_type_id' => $requestRow->facility_component_type_id,
+                'facility_component_type_id' => $primaryItem->facility_component_type_id,
                 'facility_work_category_id' => $requestRow->work_category_id,
                 'title' => $title,
                 'work_type' => $requestRow->request_type,
@@ -389,15 +504,38 @@ class FacilitiesController extends Controller
                 'priority' => $requestRow->priority,
                 'status' => 'OPEN',
                 'reported_on' => now()->toDateString(),
-                'material_required' => $requestRow->material_required ? 'Yes' : 'No',
-                'material_remarks' => $requestRow->material_remarks,
-                'estimated_cost' => $requestRow->estimated_cost,
+                'material_required' => $hasMaterial ? 'Yes' : 'No',
+                'material_remarks' => $hasMaterial ? 'See item-wise work order lines.' : null,
+                'estimated_cost' => $estimatedTotal,
                 'created_by' => $this->actor(),
                 'updated_by' => $this->actor(),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
             DB::table('facility_work_orders')->where('id', $workOrderId)->update(['work_order_no' => sprintf('FWO-%06d', $workOrderId)]);
+
+            foreach ($requestItems as $item) {
+                DB::table('facility_work_order_items')->insert([
+                    'facility_work_order_id' => $workOrderId,
+                    'source_request_item_id' => $item->id,
+                    'line_no' => $item->line_no,
+                    'facility_component_type_id' => $item->facility_component_type_id,
+                    'work_action' => $item->work_action,
+                    'problem_detail' => $item->problem_detail,
+                    'part_material_used' => $item->part_material_used,
+                    'quantity' => $item->quantity,
+                    'unit' => $item->unit,
+                    'estimated_unit_cost' => $item->unit_cost,
+                    'estimated_total_cost' => $item->total_cost,
+                    'material_source' => $item->material_source,
+                    'remarks' => $item->remarks,
+                    'status' => 'OPEN',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
             $this->writeStatusHistory($workOrderId, null, 'OPEN', 'Converted from approved request '.$requestRow->request_no);
             DB::table('facility_service_requests')->where('id', $id)->update([
                 'status' => 'CONVERTED_TO_WORK_ORDER',
@@ -406,7 +544,7 @@ class FacilitiesController extends Controller
             ]);
         });
 
-        return redirect('/facilities-management/work-orders')->with('status', 'Linked work order created.');
+        return redirect('/facilities-management/work-orders')->with('status', 'Linked work order created with item-wise details.');
     }
 
     public function transitionWorkOrder(Request $request, int $id): RedirectResponse
@@ -606,6 +744,32 @@ class FacilitiesController extends Controller
             ->get();
     }
 
+    private function requestItemRows()
+    {
+        return Schema::hasTable('facility_service_request_items')
+            ? DB::table('facility_service_request_items as item')
+                ->join('facility_component_types as ct', 'ct.id', '=', 'item.facility_component_type_id')
+                ->select('item.*', 'ct.name as component_name')
+                ->orderBy('item.facility_service_request_id')
+                ->orderBy('item.line_no')
+                ->get()
+                ->groupBy('facility_service_request_id')
+            : collect();
+    }
+
+    private function workOrderItemRows()
+    {
+        return Schema::hasTable('facility_work_order_items')
+            ? DB::table('facility_work_order_items as item')
+                ->join('facility_component_types as ct', 'ct.id', '=', 'item.facility_component_type_id')
+                ->select('item.*', 'ct.name as component_name')
+                ->orderBy('item.facility_work_order_id')
+                ->orderBy('item.line_no')
+                ->get()
+                ->groupBy('facility_work_order_id')
+            : collect();
+    }
+
     private function statusHistoryRows()
     {
         return Schema::hasTable('facility_work_order_status_histories') ? DB::table('facility_work_order_status_histories')->orderByDesc('id')->limit(100)->get()->groupBy('facility_work_order_id') : collect();
@@ -649,6 +813,24 @@ class FacilitiesController extends Controller
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get(['id', 'name'])
+            : collect();
+    }
+
+    private function categoryComponentRows()
+    {
+        return Schema::hasTable('facility_work_category_component_types') && Schema::hasTable('facility_component_types')
+            ? DB::table('facility_work_category_component_types as map')
+                ->join('facility_component_types as ct', 'ct.id', '=', 'map.component_type_id')
+                ->where('map.is_active', 1)
+                ->where('ct.is_active', 1)
+                ->orderBy('map.work_category_id')
+                ->orderBy('ct.sort_order')
+                ->orderBy('ct.name')
+                ->get([
+                    'map.work_category_id',
+                    'ct.id as component_type_id',
+                    'ct.name as component_name',
+                ])
             : collect();
     }
 
