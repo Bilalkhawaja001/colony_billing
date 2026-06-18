@@ -814,6 +814,7 @@
                 <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">S</span>School Van Kids Management</a>
                 <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meters & Readings</a>
                 <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory"><span class="nav-ico">U</span>Unit Directory</a>
+                <a class="{{ request()->is('ui/residency-master') ? 'active' : '' }}" href="/ui/residency-master"><span class="nav-ico">RM</span>Residency Master</a>
                 <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy"><span class="nav-ico">H</span>Housing & Occupancy</a>
                 <a class="{{ request()->is('electric-v1-lab') || request()->is('electric-v1-lab/*') ? 'active' : '' }}" href="/electric-v1-lab"><span class="nav-ico">E</span>Electric V1 Lab</a>
                 <a class="{{ request()->is('rates') ? 'active' : '' }}" href="/rates"><span class="nav-ico">$</span>Rates</a>
