@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Billing\DepartmentMasterController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthDraftController;
 use App\Http\Controllers\Billing\BillingDraftController;
@@ -427,4 +428,9 @@ Route::get('/get-rooms/{colony}/{block}', function (\Illuminate\Http\Request $re
 
     return $q->orderBy('r.room_no')->get(['r.room_no', 'r.unit_id']);
 });
+});
+
+Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
+    Route::get('/ui/department-master', [DepartmentMasterController::class, 'index'])->name('ui.department-master');
+    Route::get('/department-master/list', [DepartmentMasterController::class, 'list'])->name('department-master.list');
 });
