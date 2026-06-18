@@ -178,10 +178,11 @@
       </div>
 
       <div id="tab-res" class="form-grid" style="display:none">
-        <div class="field col-3"><label class="label">Colony Type</label><input id="e_ColonyType"></div>
-        <div class="field col-3"><label class="label">Block Floor</label><input id="e_BlockFloor"></div>
-        <div class="field col-3"><label class="label">Room No</label><input id="e_RoomNo"></div>
-        <div class="field col-3"><label class="label">Shared Room</label><input id="e_SharedRoom"></div>
+        <div class="field col-3"><label class="label">Residency Type</label><select id="e_ResidencyType"><option value="">Select</option></select></div>
+        <div class="field col-3"><label class="label">Colony Type</label><select id="e_ColonyType"><option value="">Select</option></select></div>
+        <div class="field col-3"><label class="label">Block Floor</label><select id="e_BlockFloor"><option value="">Select</option></select></div>
+        <div class="field col-3"><label class="label">Room No</label><select id="e_RoomNo"><option value="">Select</option></select></div>
+        <div class="field col-3"><label class="label">Shared Room</label><select id="e_SharedRoom"><option value="">No</option><option value="Yes">Yes</option></select></div>
         <div class="field col-3"><label class="label">Unit_ID*</label><input id="e_UnitID"></div>
       </div>
 
@@ -1013,9 +1014,74 @@ async function editRow(id){
 function prevEmpPage(){ if(EMP_PAGE>1){EMP_PAGE--; renderRows();} }
 function nextEmpPage(){ const p=Math.max(1,Math.ceil(EMP_FILTERED.length/PAGE_SIZE)); if(EMP_PAGE<p){EMP_PAGE++; renderRows();} }
 
+
+async function loadResidenceColonies(){
+  const typeEl = document.getElementById('e_ResidencyType');
+  const colonyEl = document.getElementById('e_ColonyType');
+  const blockEl = document.getElementById('e_BlockFloor');
+  const roomEl = document.getElementById('e_RoomNo');
+  const unitEl = document.getElementById('e_UnitID');
+  if(!typeEl || !colonyEl || !blockEl || !roomEl || !unitEl) return;
+
+  function resetBelow(level){
+    if(level <= 1) colonyEl.innerHTML = '<option value="">Select</option>';
+    if(level <= 2) blockEl.innerHTML = '<option value="">Select</option>';
+    if(level <= 3) roomEl.innerHTML = '<option value="">Select</option>';
+    unitEl.value = '';
+  }
+
+  async function fillSelect(el, url){
+    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    const rows = await res.json();
+    el.innerHTML = '<option value="">Select</option>';
+    rows.forEach(x => {
+      const opt = document.createElement('option');
+      opt.value = x;
+      opt.textContent = x === '__uncategorized' ? 'Uncategorized' : x;
+      el.appendChild(opt);
+    });
+  }
+
+  await fillSelect(typeEl, '/get-residence-types');
+
+  typeEl.addEventListener('change', async () => {
+    resetBelow(1);
+    if(!typeEl.value) return;
+    await fillSelect(colonyEl, '/get-colonies?residence_type=' + encodeURIComponent(typeEl.value));
+  });
+
+  colonyEl.addEventListener('change', async () => {
+    resetBelow(2);
+    if(!typeEl.value || !colonyEl.value) return;
+    await fillSelect(blockEl, '/get-blocks/' + encodeURIComponent(colonyEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value));
+  });
+
+  blockEl.addEventListener('change', async () => {
+    resetBelow(3);
+    if(!typeEl.value || !colonyEl.value || !blockEl.value) return;
+
+    const r = await fetch('/get-rooms/' + encodeURIComponent(colonyEl.value) + '/' + encodeURIComponent(blockEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value), {headers:{'Accept':'application/json'}});
+    const rooms = await r.json();
+
+    roomEl.innerHTML = '<option value="">Select</option>';
+    rooms.forEach(x => {
+      const opt = document.createElement('option');
+      opt.value = x.room_no;
+      opt.textContent = x.room_no;
+      opt.dataset.unit = x.unit_id;
+      roomEl.appendChild(opt);
+    });
+  });
+
+  roomEl.addEventListener('change', () => {
+    const opt = roomEl.options[roomEl.selectedIndex];
+    unitEl.value = opt?.dataset?.unit || '';
+  });
+}
+
 document.getElementById('bulk_header_line').textContent=BULK_COLUMNS.join(',');
 document.getElementById('bulk_sample_line').textContent=BULK_SAMPLE_ROW.join(',');
-showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); ensureEmployeesLoaded();
+showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); ensureEmployeesLoaded(); loadResidenceColonies();
 </script>
 {{-- Auto CRUD grids removed from People Residency to prevent double employee grid. --}}
 @endsection

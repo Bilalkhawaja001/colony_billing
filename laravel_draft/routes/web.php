@@ -17,6 +17,7 @@ use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
 use App\Http\Controllers\Transport\TransportController;
 use App\Http\Controllers\Facilities\FacilitiesController;
+use App\Http\Controllers\Billing\ResidencyMasterController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -50,6 +51,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::put('/employee-profile/{companyId}/family-members/{familyMemberId}', [EmployeeProfileController::class, 'updateFamilyMember']);
     Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    Route::get('/ui/residency-master', [ResidencyMasterController::class, 'index']);
+    Route::get('/residency-master/list', [ResidencyMasterController::class, 'list']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
         $requestedMonth = trim((string) $request->query('month_cycle', ''));
 
@@ -338,3 +341,90 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 });
 
 require __DIR__.'/electric_v1.php';
+
+Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
+// Employee residence cascade dropdowns
+Route::get('/get-residence-types', function () {
+    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
+
+    return \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')
+        ->where('month_cycle', $month)
+        ->whereNotNull('residence_type')
+        ->where('residence_type', '<>', '')
+        ->distinct()
+        ->orderBy('residence_type')
+        ->pluck('residence_type');
+});
+
+Route::get('/get-colonies', function (\Illuminate\Http\Request $request) {
+    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
+    $residenceType = trim((string) $request->query('residence_type', ''));
+
+    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
+        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
+        ->where('r.month_cycle', $month);
+
+    if ($residenceType !== '') {
+        $q->where('r.residence_type', $residenceType);
+    }
+
+    return $q->selectRaw("COALESCE(NULLIF(u.colony_type,''), '__uncategorized') as colony_type")
+        ->distinct()
+        ->orderBy('colony_type')
+        ->pluck('colony_type');
+});
+
+Route::get('/get-blocks/{colony}', function (\Illuminate\Http\Request $request, $colony) {
+    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
+    $colony = urldecode($colony);
+    $residenceType = trim((string) $request->query('residence_type', ''));
+
+    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
+        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
+        ->where('r.month_cycle', $month)
+        ->whereNotNull('r.block_floor')
+        ->where('r.block_floor', '<>', '');
+
+    if ($residenceType !== '') {
+        $q->where('r.residence_type', $residenceType);
+    }
+
+    if ($colony === '__uncategorized') {
+        $q->where(function ($w) {
+            $w->whereNull('u.colony_type')->orWhere('u.colony_type', '');
+        });
+    } else {
+        $q->where('u.colony_type', $colony);
+    }
+
+    return $q->distinct()->orderBy('r.block_floor')->pluck('r.block_floor');
+});
+
+Route::get('/get-rooms/{colony}/{block}', function (\Illuminate\Http\Request $request, $colony, $block) {
+    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
+    $colony = urldecode($colony);
+    $block = urldecode($block);
+    $residenceType = trim((string) $request->query('residence_type', ''));
+
+    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
+        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
+        ->where('r.month_cycle', $month)
+        ->where('r.block_floor', $block)
+        ->whereNotNull('r.room_no')
+        ->where('r.room_no', '<>', '');
+
+    if ($residenceType !== '') {
+        $q->where('r.residence_type', $residenceType);
+    }
+
+    if ($colony === '__uncategorized') {
+        $q->where(function ($w) {
+            $w->whereNull('u.colony_type')->orWhere('u.colony_type', '');
+        });
+    } else {
+        $q->where('u.colony_type', $colony);
+    }
+
+    return $q->orderBy('r.room_no')->get(['r.room_no', 'r.unit_id']);
+});
+});
