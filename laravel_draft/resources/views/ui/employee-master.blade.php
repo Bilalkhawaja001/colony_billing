@@ -70,7 +70,21 @@
       </div>
     </div>
 
-    <div id="quick_panel" class="banner" style="margin-bottom:10px">
+
+      <!-- HR_ACTIVE_WORKBOOK_UI_START -->
+      <div class="card soft" id="hr_active_workbook_panel" style="margin-bottom:10px">
+        <div class="toolbar" style="gap:10px;flex-wrap:wrap">
+          <span class="badge">HR Workbook Reference</span>
+          <input type="month" id="hrWorkbookMonth" style="max-width:160px">
+          <input type="file" id="hrWorkbookFile" accept=".xlsx,.csv,.txt" style="max-width:320px">
+          <button class="btn btn-primary" type="button" onclick="uploadHrWorkbook()">Upload Monthly HR Workbook</button>
+          <button class="btn" type="button" onclick="hrReferenceFillForNewEmployee()">Fetch HR Reference</button>
+          <span class="muted" id="hrWorkbookStatus">Reference only for new employees. Existing employees will not be overwritten.</span>
+        </div>
+      </div>
+      <!-- HR_ACTIVE_WORKBOOK_UI_END -->
+
+<div id="quick_panel" class="banner" style="margin-bottom:10px">
       <div class="toolbar">
         <span class="badge">Quick Mode</span>
         <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
@@ -166,9 +180,14 @@
         <div class="field col-3"><label class="label">Father's Name</label><input id="e_Father"></div>
         <div class="field col-3"><label class="label">CNIC_No.*</label><input id="e_CNIC"></div>
         <div class="field col-3"><label class="label">Mobile_No.</label><input id="e_Mobile"></div>
-        <div class="field col-3"><label class="label">Department*</label><input id="e_Department"></div>
-        <div class="field col-3"><label class="label">Section</label><input id="e_Section"></div>
-        <div class="field col-3"><label class="label">Sub Section</label><input id="e_SubSection"></div>
+        <div class="field col-3"><label class="label">Department*</label><input id="e_Department" list="deptOptions" autocomplete="off"></div>
+        <div class="field col-3"><label class="label">Section</label><input id="e_Section" list="sectionOptions" autocomplete="off"></div>
+        <div class="field col-3"><label class="label">Sub Section</label><input id="e_SubSection" list="subSectionOptions" autocomplete="off"></div>
+          <!-- PEOPLE_RESIDENCY_DEPT_CASCADE_DATALISTS_START -->
+          <datalist id="deptOptions"></datalist>
+          <datalist id="sectionOptions"></datalist>
+          <datalist id="subSectionOptions"></datalist>
+          <!-- PEOPLE_RESIDENCY_DEPT_CASCADE_DATALISTS_END -->
         <div class="field col-3"><label class="label">Designation*</label><input id="e_Designation"></div>
         <div class="field col-3"><label class="label">Employee Type</label><input id="e_EmployeeType"></div>
         <div class="field col-3"><label class="label">Join Date</label><input id="e_JoinDate" type="date"></div>
@@ -912,7 +931,100 @@ async function prefillFromRegistry(){
   return fetchById();
 }
 async function saveToRegistry(){ const r=await req('/registry/employees/upsert','POST',payload()); show(r); }
-async function addEmployee(){ const r=await req('/employees/add','POST',payload()); show(r); }
+function peopleMiniPopup(message, ok=true){
+    let box=document.getElementById('peopleMiniPopup');
+    if(!box){
+      box=document.createElement('div');
+      box.id='peopleMiniPopup';
+      box.style.position='fixed';
+      box.style.top='18px';
+      box.style.right='18px';
+      box.style.zIndex='99999';
+      box.style.maxWidth='360px';
+      box.style.padding='14px 18px';
+      box.style.borderRadius='14px';
+      box.style.boxShadow='0 18px 45px rgba(15,23,42,.20)';
+      box.style.fontWeight='800';
+      box.style.fontSize='14px';
+      box.style.lineHeight='1.4';
+      box.style.transition='all .25s ease';
+      document.body.appendChild(box);
+    }
+
+    box.textContent=message;
+    box.style.background=ok?'#ecfdf5':'#fef2f2';
+    box.style.color=ok?'#065f46':'#991b1b';
+    box.style.border=ok?'1px solid #a7f3d0':'1px solid #fecaca';
+    box.style.opacity='1';
+    box.style.transform='translateY(0)';
+
+    clearTimeout(window.__peopleMiniPopupTimer);
+    window.__peopleMiniPopupTimer=setTimeout(()=>{
+      box.style.opacity='0';
+      box.style.transform='translateY(-8px)';
+    },2600);
+  }
+
+  function clearEmployeeEntryFormAfterAdd(){
+    const ids=[
+      'lookup_id',
+      'e_CompanyID','e_Name','e_Father','e_CNIC','e_Mobile',
+      'e_Department','e_Section','e_SubSection','e_Designation','e_EmployeeType',
+      'e_ColonyType','e_BlockFloor','e_RoomNo','e_SharedRoom','e_UnitID',
+      'e_JoinDate','e_LeaveDate','e_Active','e_Remarks',
+      'e_IronCot','e_SingleBed','e_DoubleBed','e_Mattress','e_SofaSet',
+      'e_BedSheet','e_Wardrobe','e_CentreTable','e_WoodenChair',
+      'e_DinningTable','e_DinningChair','e_SideTable','e_Fridge',
+      'e_WaterDispenser','e_WashingMachine','e_AirCooler','e_AC','e_LED',
+      'e_Gyser','e_ElectricKettle','e_WifiRtr','e_WaterBottle','e_LPG',
+      'e_GasStove','e_Crockery','e_KitchenCabinet','e_Mug','e_Bucket',
+      'e_Mirror','e_Dustbin'
+    ];
+
+    ids.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){
+        el.value='';
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
+
+    if(typeof SELECTED_EMPLOYEE_STATE !== 'undefined'){
+      SELECTED_EMPLOYEE_STATE=null;
+    }
+
+    try{
+      if(typeof setEmployeeContextFromForm==='function') setEmployeeContextFromForm(null);
+      if(typeof buildOccupancyWorkspaceHref==='function') buildOccupancyWorkspaceHref();
+      if(typeof showTab==='function') showTab('basic');
+      if(typeof setPeopleTab==='function') setPeopleTab('employee');
+    }catch(e){}
+  }
+
+  async function addEmployee(){
+    const addPayload=payload();
+    const companyId=String(addPayload.CompanyID||'').trim();
+
+    const r=await req('/employees/add','POST',addPayload);
+    show(r);
+
+    const bodyStatus=String(r.body?.status || '').toLowerCase();
+    const success=(r.status>=200 && r.status<300 && bodyStatus!=='error');
+
+    if(success){
+      peopleMiniPopup('Employee successfully added' + (companyId ? ' · ' + companyId : ''), true);
+      clearEmployeeEntryFormAfterAdd();
+
+      try{
+        if(typeof listEmployees==='function' && Array.isArray(EMP_ROWS) && EMP_ROWS.length){
+          await listEmployees(false);
+        }
+      }catch(e){}
+    }else{
+      peopleMiniPopup(r.body?.error || 'Employee add failed. Check technical response.', false);
+    }
+  }
 async function upsertEmployee(){ const r=await req('/employees/upsert','POST',payload()); show(r); }
 async function markLeft(){ const id=v('e_CompanyID'); if(!id){show({status:'error',error:'CompanyID required'});return;} const r=await req('/employees/'+encodeURIComponent(id),'DELETE'); show(r); }
 
@@ -1084,4 +1196,392 @@ document.getElementById('bulk_sample_line').textContent=BULK_SAMPLE_ROW.join(','
 showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContextFromForm(); buildOccupancyWorkspaceHref(); ensureEmployeesLoaded(); loadResidenceColonies();
 </script>
 {{-- Auto CRUD grids removed from People Residency to prevent double employee grid. --}}
+
+<!-- PEOPLE_RESIDENCY_DEPT_CASCADE_SCRIPT_START -->
+<script>
+(function(){
+  const deptEl=document.getElementById('e_Department');
+  const sectionEl=document.getElementById('e_Section');
+  const subEl=document.getElementById('e_SubSection');
+  const deptList=document.getElementById('deptOptions');
+  const sectionList=document.getElementById('sectionOptions');
+  const subList=document.getElementById('subSectionOptions');
+
+  if(!deptEl || !sectionEl || !subEl || !deptList || !sectionList || !subList){return;}
+
+  let DEPT_TREE={};
+
+  function esc(v){
+    return String(v??'').replace(/[&<>"']/g,function(m){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m];
+    });
+  }
+
+  function setOptions(list, values){
+    const clean=[...new Set((values||[]).map(v=>String(v||'').trim()).filter(Boolean))];
+    list.innerHTML=clean.map(v=>`<option value="${esc(v)}"></option>`).join('');
+  }
+
+  function findKey(obj, value){
+    const raw=String(value||'').trim();
+    if(!raw)return '';
+    if(Object.prototype.hasOwnProperty.call(obj, raw))return raw;
+    const lower=raw.toLowerCase();
+    return Object.keys(obj).find(k=>String(k).toLowerCase()===lower) || raw;
+  }
+
+  function deptKey(){
+    return findKey(DEPT_TREE, deptEl.value);
+  }
+
+  function sectionKey(dKey){
+    const sections=DEPT_TREE[dKey] || {};
+    return findKey(sections, sectionEl.value);
+  }
+
+  function refreshSections(clearBad){
+    const dKey=deptKey();
+    const sectionsObj=DEPT_TREE[dKey] || {};
+    const sections=Object.keys(sectionsObj).filter(Boolean);
+    setOptions(sectionList, sections);
+
+    if(clearBad && sectionEl.value && sections.length){
+      const matched=sections.some(x=>x.toLowerCase()===sectionEl.value.trim().toLowerCase());
+      if(!matched){
+        sectionEl.value='';
+        subEl.value='';
+      }
+    }
+
+    refreshSubSections(clearBad);
+  }
+
+  function refreshSubSections(clearBad){
+    const dKey=deptKey();
+    const sKey=sectionKey(dKey);
+    const subs=((DEPT_TREE[dKey]||{})[sKey] || []).filter(Boolean);
+    setOptions(subList, subs);
+
+    if(clearBad && subEl.value && subs.length){
+      const matched=subs.some(x=>x.toLowerCase()===subEl.value.trim().toLowerCase());
+      if(!matched){
+        subEl.value='';
+      }
+    }
+  }
+
+  async function loadDeptCascade(){
+    try{
+      const r=await fetch('/people-residency/dept-cascade',{headers:{'Accept':'application/json'}});
+      const j=await r.json();
+      if(!r.ok || j.status!=='ok')return;
+      DEPT_TREE=j.tree || {};
+      setOptions(deptList, j.departments || Object.keys(DEPT_TREE));
+      refreshSections(false);
+    }catch(e){}
+  }
+
+  deptEl.addEventListener('input',()=>refreshSections(true));
+  deptEl.addEventListener('change',()=>refreshSections(true));
+  sectionEl.addEventListener('input',()=>refreshSubSections(true));
+  sectionEl.addEventListener('change',()=>refreshSubSections(true));
+
+  const oldFillForm=window.fillForm;
+  if(typeof oldFillForm==='function' && !oldFillForm.__deptCascadeWrapped){
+    const wrapped=function(){
+      const out=oldFillForm.apply(this, arguments);
+      setTimeout(()=>{refreshSections(false);refreshSubSections(false);},0);
+      return out;
+    };
+    wrapped.__deptCascadeWrapped=true;
+    window.fillForm=wrapped;
+  }
+
+  loadDeptCascade();
+})();
+</script>
+<!-- PEOPLE_RESIDENCY_DEPT_CASCADE_SCRIPT_END -->
+
+
+<!-- HR_ACTIVE_WORKBOOK_SCRIPT_START -->
+<script>
+(function(){
+  const statusEl = () => document.getElementById('hrWorkbookStatus');
+
+  function setHrStatus(msg, ok=true){
+    const el=statusEl();
+    if(!el)return;
+    el.textContent=msg;
+    el.style.color=ok?'#475569':'#b91c1c';
+  }
+
+  function val(id){
+    return (document.getElementById(id)?.value||'').trim();
+  }
+
+  function setIfEmpty(id, value){
+    const el=document.getElementById(id);
+    if(!el)return;
+    const next=String(value??'').trim();
+    if(next!=='' && String(el.value||'').trim()===''){
+      el.value=next;
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  }
+
+  function setHrReferenceValue(id, value){
+    const el=document.getElementById(id);
+    if(!el)return;
+    const next=String(value??'').trim();
+    el.value=next;
+    el.dispatchEvent(new Event('input',{bubbles:true}));
+    el.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+
+  function clearHrReferenceEmployeeFields(){
+    const ids=[
+      'e_CompanyID','e_Name','e_Father','e_CNIC','e_Mobile',
+      'e_Department','e_Section','e_SubSection','e_Designation','e_EmployeeType',
+      'e_ColonyType','e_BlockFloor','e_RoomNo','e_SharedRoom','e_UnitID',
+      'e_JoinDate','e_LeaveDate','e_Active','e_Remarks'
+    ];
+
+    ids.forEach(id=>{
+      const el=document.getElementById(id);
+      if(el){
+        el.value='';
+        el.dispatchEvent(new Event('input',{bubbles:true}));
+        el.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    });
+
+    if(typeof SELECTED_EMPLOYEE_STATE !== 'undefined'){
+      SELECTED_EMPLOYEE_STATE=null;
+    }
+  }
+
+  function applyHrReference(row){
+    if(!row)return false;
+
+    const map={
+      e_CompanyID:'CompanyID',
+      e_Name:'Name',
+      e_Father:"Father's Name",
+      e_CNIC:'CNIC_No.',
+      e_Mobile:'Mobile_No.',
+      e_Department:'Department',
+      e_Section:'Section',
+      e_SubSection:'Sub Section',
+      e_Designation:'Designation',
+      e_EmployeeType:'Employee Type',
+      e_ColonyType:'Colony Type',
+      e_BlockFloor:'Block Floor',
+      e_RoomNo:'Room No',
+      e_SharedRoom:'Shared Room',
+      e_UnitID:'Unit_ID',
+      e_JoinDate:'Join Date'
+    };
+
+    clearHrReferenceEmployeeFields();
+    Object.keys(map).forEach(id=>setHrReferenceValue(id,row[map[id]]));
+
+    if(row.CompanyID){
+      const lookup=document.getElementById('lookup_id');
+      if(lookup && !lookup.value)lookup.value=row.CompanyID;
+    }
+
+    setTimeout(()=>{
+      ['e_Department','e_Section','e_SubSection'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el) el.dispatchEvent(new Event('change',{bubbles:true}));
+      });
+    },80);
+
+    setHrStatus(`HR reference applied for NEW employee ${row.CompanyID || ''} (${row._hr_month_cycle || ''}). Now press Add New Employee to save.`);
+    return true;
+  }
+
+  async function getHrReference(companyId){
+    companyId=String(companyId||'').trim();
+    if(!companyId)return null;
+
+    const r=await fetch('/hr-active-workbook/reference?company_id='+encodeURIComponent(companyId)+'&_='+Date.now(), {
+      headers:{'Accept':'application/json'}
+    });
+
+    const j=await r.json().catch(()=>({status:'error',error:'non-json'}));
+
+    if(j.employee_exists){
+      setHrStatus('Employee already exists in master. HR workbook reference not applied.', false);
+      return null;
+    }
+
+    if(!r.ok || j.status!=='ok' || !j.reference_allowed){
+      setHrStatus(j.message || ('No HR reference found for '+companyId), false);
+      return null;
+    }
+
+    return j.row || null;
+  }
+
+  window.hrReferenceFillForNewEmployee = async function(){
+    const cid = val('e_CompanyID') || val('lookup_id');
+
+    if(!cid){
+      setHrStatus('CompanyID required for HR reference.', false);
+      return;
+    }
+
+    setHrStatus('Checking employee master and HR workbook reference...');
+
+    const row=await getHrReference(cid);
+
+    if(row){
+      applyHrReference(row);
+    }
+  };
+
+  window.uploadHrWorkbook = async function(){
+    const month=(document.getElementById('hrWorkbookMonth')?.value||'').trim();
+    const fileEl=document.getElementById('hrWorkbookFile');
+    const file=fileEl?.files?.[0]||null;
+
+    if(!month){
+      setHrStatus('Month required.', false);
+      return;
+    }
+
+    if(!file){
+      setHrStatus('Select HR workbook first. XLSX/CSV allowed.', false);
+      return;
+    }
+
+    const fd=new FormData();
+    fd.append('month_cycle', month);
+    fd.append('upload_file', file);
+
+    setHrStatus('Uploading HR workbook reference...');
+
+    const r=await fetch('/hr-active-workbook/upload',{
+      method:'POST',
+      headers:{'X-CSRF-TOKEN':csrf},
+      body:fd
+    });
+
+    const j=await r.json().catch(()=>({status:'error',error:'non-json response'}));
+
+    if(!r.ok || j.status!=='ok'){
+      setHrStatus(j.error || `Upload failed (${r.status}).`, false);
+      return;
+    }
+
+    setHrStatus(`HR workbook reference uploaded. Sheets=${j.sheet_count}, imported rows=${j.imported_rows}.`);
+  };
+
+  const oldFetchById=window.fetchById;
+  if(typeof oldFetchById==='function' && !oldFetchById.__hrReferenceOnlyWrapped){
+    const wrapped=async function(){
+      const before=(val('lookup_id') || val('e_CompanyID'));
+      const out=await oldFetchById.apply(this, arguments);
+      const cid=(val('lookup_id') || val('e_CompanyID') || before);
+      if(cid){
+        const row=await getHrReference(cid);
+        if(row)applyHrReference(row);
+      }
+      return out;
+    };
+    wrapped.__hrReferenceOnlyWrapped=true;
+    window.fetchById=wrapped;
+  }
+
+  let timer=null;
+  function scheduleReferenceLookup(){
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+      const cid=val('e_CompanyID') || val('lookup_id');
+      if(cid && cid.length>=4){
+        getHrReference(cid).then(row=>{ if(row)applyHrReference(row); });
+      }
+    },800);
+  }
+
+  ['e_CompanyID','lookup_id'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){
+      el.addEventListener('change', scheduleReferenceLookup);
+      el.addEventListener('blur', scheduleReferenceLookup);
+    }
+  });
+
+  const monthEl=document.getElementById('hrWorkbookMonth');
+  if(monthEl && !monthEl.value){
+    const d=new Date();
+    monthEl.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  async function loadLatestHrWorkbookStatus(){
+    try{
+      const r=await fetch('/hr-active-workbook/recent', {headers:{'Accept':'application/json'}});
+      const j=await r.json().catch(()=>({status:'error'}));
+      const latest=(j.uploads||[])[0] || null;
+
+      if(latest){
+        const monthEl=document.getElementById('hrWorkbookMonth');
+        if(monthEl && latest.month_cycle){
+          monthEl.value=String(latest.month_cycle).slice(0,7);
+        }
+
+        setHrStatus(
+          `Latest HR workbook already loaded: ${latest.original_file_name || 'uploaded file'} · ${latest.month_cycle || ''} · rows ${latest.imported_rows || 0}. File select box refresh par blank rahega, lekin reference data saved hai.`,
+          true
+        );
+      }else{
+        setHrStatus('No HR workbook uploaded yet. Upload monthly HR workbook first.', false);
+      }
+    }catch(e){
+      setHrStatus('Could not check latest HR workbook status.', false);
+    }
+  }
+
+  loadLatestHrWorkbookStatus();
+})();
+</script>
+<!-- HR_ACTIVE_WORKBOOK_SCRIPT_END -->
+
 @endsection
+
+
+<!-- EMPLOYEE_MASTER_DASHBOARD_QUERY_START -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const qs = new URLSearchParams(window.location.search);
+
+    function clean(v) {
+        return (v || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    }
+
+    function clickByText(patterns) {
+        const els = document.querySelectorAll('button, a, [role="button"], .btn, .nav-link, [class*="tab"]');
+        for (const el of els) {
+            const t = clean(el.innerText || el.textContent || el.getAttribute('aria-label'));
+            if (patterns.some(p => t.includes(p))) {
+                el.click();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    setTimeout(function () {
+        if (qs.get('mode') === 'add') {
+            clickByText(['add employee', 'new employee', 'create employee']);
+        }
+
+        if (qs.get('open') === 'residence') {
+            clickByText(['residence', 'assign residence', 'room', 'unit']);
+        }
+    }, 500);
+});
+</script>
+<!-- EMPLOYEE_MASTER_DASHBOARD_QUERY_END -->

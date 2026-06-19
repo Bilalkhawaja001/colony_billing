@@ -20,6 +20,7 @@ use App\Http\Controllers\Transport\TransportController;
 use App\Http\Controllers\Facilities\FacilitiesController;
 use App\Http\Controllers\Billing\ResidencyMasterController;
 
+use App\Http\Controllers\Billing\HrActiveWorkbookController;
 Route::get('/health', [InfraController::class, 'health']);
 
 Route::get('/', [ParityUiController::class, 'home']);
@@ -43,6 +44,54 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
+
+    /* PEOPLE_RESIDENCY_DEPT_CASCADE_ROUTE_START */
+    Route::get('/people-residency/dept-cascade', function (\App\Services\Billing\DepartmentMasterService $service) {
+        $data = $service->list([]);
+        $rows = $data['rows'] ?? [];
+
+        $tree = [];
+        $departments = [];
+
+        foreach ($rows as $row) {
+            $dept = trim((string) ($row['department'] ?? ''));
+            $section = trim((string) ($row['section'] ?? ''));
+            $sub = trim((string) ($row['sub_section'] ?? ''));
+
+            if ($dept === '') {
+                continue;
+            }
+
+            if (!array_key_exists($dept, $tree)) {
+                $tree[$dept] = [];
+                $departments[] = $dept;
+            }
+
+            if ($section !== '' && !array_key_exists($section, $tree[$dept])) {
+                $tree[$dept][$section] = [];
+            }
+
+            if ($section !== '' && $sub !== '' && !in_array($sub, $tree[$dept][$section], true)) {
+                $tree[$dept][$section][] = $sub;
+            }
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'source' => 'department_master_service',
+            'departments' => $departments,
+            'tree' => $tree,
+            'department_master_rows' => count($rows),
+        ]);
+    });
+    /* PEOPLE_RESIDENCY_DEPT_CASCADE_ROUTE_END */
+
+    /* HR_ACTIVE_WORKBOOK_ROUTES_START */
+    Route::post('/hr-active-workbook/upload', [HrActiveWorkbookController::class, 'upload']);
+    Route::get('/hr-active-workbook/reference', [HrActiveWorkbookController::class, 'reference']);
+    Route::get('/hr-active-workbook/recent', [HrActiveWorkbookController::class, 'recent']);
+    /* HR_ACTIVE_WORKBOOK_ROUTES_END */
+
     Route::get('/employee-profile/{companyId}', [EmployeeProfileController::class, 'show']);
     Route::post('/employee-profile/{companyId}/residence/assign', [EmployeeProfileController::class, 'assignResidence']);
     Route::post('/employee-profile/{companyId}/residence/shift', [EmployeeProfileController::class, 'shiftResidence']);
@@ -233,6 +282,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/water/allocation-preview', [BillingDraftController::class, 'waterAllocationPreview']);
     Route::get('/active-days-monthly/template', [MonthlyActiveDaysController::class, 'template']);
     Route::get('/active-days-monthly/rows', [MonthlyActiveDaysController::class, 'rows']);
+    Route::get('/active-days-monthly/manual-rows', [MonthlyActiveDaysController::class, 'manualRows']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
@@ -259,6 +309,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/employees/import', [EmployeesMeterParityController::class, 'employeesImport']);
     Route::post('/active-days-monthly/preview', [MonthlyActiveDaysController::class, 'preview']);
     Route::post('/active-days-monthly/import', [MonthlyActiveDaysController::class, 'import']);
+    Route::post('/active-days-monthly/manual-save', [MonthlyActiveDaysController::class, 'manualSave']);
+    Route::delete('/active-days-monthly/manual-delete', [MonthlyActiveDaysController::class, 'manualDelete']);
     Route::post('/employees/upsert', [EmployeesMeterParityController::class, 'employeesUpsert']);
     Route::post('/employees/add', [EmployeesMeterParityController::class, 'employeesAdd']);
     Route::patch('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeePatch']);
@@ -434,3 +486,33 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/department-master', [DepartmentMasterController::class, 'index'])->name('ui.department-master');
     Route::get('/department-master/list', [DepartmentMasterController::class, 'list'])->name('department-master.list');
 });
+
+// DASHBOARD_BUTTON_ROUTE_ALIASES_START
+\Illuminate\Support\Facades\Route::get('/employee-master', function () {
+    return redirect('/ui/employee-master');
+});
+
+\Illuminate\Support\Facades\Route::get('/statement', function () {
+    return redirect('/reports/employee-statement');
+});
+
+\Illuminate\Support\Facades\Route::get('/family', function () {
+    return redirect('/ui/family-details');
+});
+
+\Illuminate\Support\Facades\Route::get('/residence', function () {
+    return redirect('/ui/employee-master?open=residence');
+});
+
+\Illuminate\Support\Facades\Route::get('/ui/residence', function () {
+    return redirect('/ui/employee-master?open=residence');
+});
+
+\Illuminate\Support\Facades\Route::get('/school-van', function () {
+    return redirect('/ui/school-van');
+});
+
+\Illuminate\Support\Facades\Route::get('/ui/school-van', function () {
+    return view('ui.school-van');
+});
+// DASHBOARD_BUTTON_ROUTE_ALIASES_END
