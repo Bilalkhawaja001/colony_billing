@@ -245,6 +245,7 @@ class EmployeesMeterParityService
             $this->buildUpsertData($data)
         );
 
+        $this->forceSubmittedDeptDesignation($companyId, $payload);
         return ['status' => 'ok', 'company_id' => $companyId, 'CompanyID' => $companyId];
     }
 
@@ -254,7 +255,7 @@ class EmployeesMeterParityService
 
         // Flask canonical required for Add Employee flow.
         $missing = [];
-        foreach (['company_id', 'name', 'cnic_no', 'department', 'designation', 'unit_id'] as $f) {
+        foreach (['company_id', 'name', 'department', 'designation'] as $f) {
             if (($data[$f] ?? '') === '') {
                 $missing[] = $f;
             }
@@ -269,6 +270,7 @@ class EmployeesMeterParityService
 
         DB::table('employees_master')->insert($this->buildUpsertData($data));
 
+        $this->forceSubmittedDeptDesignation($data['company_id'], $payload);
         return ['status' => 'ok', 'company_id' => $data['company_id'], 'CompanyID' => $data['company_id']];
     }
 
@@ -441,6 +443,37 @@ class EmployeesMeterParityService
             ],
         ];
     }
+
+    private function forceSubmittedDeptDesignation(string $companyId, array $payload): void
+    {
+        $updates = [];
+
+        foreach ([
+            'department' => ['Department', 'department', 'dept'],
+            'designation' => ['Designation', 'designation', 'desig'],
+        ] as $column => $keys) {
+            foreach ($keys as $key) {
+                if (array_key_exists($key, $payload)) {
+                    $value = trim((string) ($payload[$key] ?? ''));
+                    if ($value !== '') {
+                        $updates[$column] = $value;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!$updates) {
+            return;
+        }
+
+        $updates['updated_at'] = now();
+
+        DB::table('employees_master')
+            ->where('company_id', $companyId)
+            ->update($updates);
+    }
+
 
     private function normalizePayload(array $payload): array
     {

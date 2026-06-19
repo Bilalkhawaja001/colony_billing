@@ -503,37 +503,37 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
         @csrf
 
         <div id="residenceTargetFields">
-                      @php
-              $residenceDropdownOptions = collect($profile['residence_options'] ?? [])
-                ->reject(fn ($option) => $residence['status'] === 'ACTIVE' && $residence['unit_id'] === $option['unit_id'] && $residence['room_no'] === $option['room_no'])
-                ->values()
-                ->all();
-            @endphp
+        <label for="residenceTypeSelect">Residency Type</label>
+        <select id="residenceTypeSelect" name="residence_type" required>
+          <option value="">Select residency type</option>
+        </select>
 
-            <label for="residenceDivisionSelect">Select Section</label>
-            <select id="residenceDivisionSelect" required>
-              <option value="">Select section</option>
-              <option value="Centralized">Centralized</option>
-              <option value="Spinning">Spinning</option>
-              <option value="Weaving">Weaving</option>
-            </select>
+        <label for="residenceColonySelect">Colony Type</label>
+        <select id="residenceColonySelect" required>
+          <option value="">Select residency type first</option>
+        </select>
 
-            <label for="residenceUnitSelect">Select Unit</label>
-            <select id="residenceUnitSelect" required disabled>
-              <option value="">Select section first</option>
-            </select>
+        <label for="residenceBlockSelect">Block Floor</label>
+        <select id="residenceBlockSelect" required>
+          <option value="">Select colony first</option>
+        </select>
 
-            <label for="residenceTargetSelect">Select Room / House</label>
-            <select id="residenceTargetSelect" required disabled>
-              <option value="">Select unit first</option>
-            </select>
+        <label for="residenceTargetSelect">Room No / House</label>
+        <select id="residenceTargetSelect" name="room_no" required>
+          <option value="">Select block first</option>
+        </select>
 
+        <input type="hidden" name="unit_id" id="residenceUnitHidden" value="">
+        <input type="hidden" name="category" id="residenceCategoryHidden" value="Room">
+        <input type="hidden" name="block_floor" id="residenceBlockHidden" value="">
+        <input type="hidden" name="occupancy_mode" id="residenceOccupancyHidden" value="ROOM">
 
-          <input type="hidden" name="unit_id" id="residenceUnitId">
-          <input type="hidden" name="room_no" id="residenceRoomNo">
+        <div class="ep-res-hint" id="residenceCascadeHint">
+          Select residency type, colony, block floor, then room/house. Unit_ID will auto-fill from master.
         </div>
+      </div>
 
-        <label for="residenceEffectiveDate">Effective Date</label>
+      <label for="residenceEffectiveDate">Effective Date</label>
         <input type="date" name="effective_date" id="residenceEffectiveDate" max="{{ now()->format('Y-m-d') }}" required>
 
         <div class="ep-res-note" id="residenceActionNote"></div>
@@ -655,143 +655,66 @@ const residenceActionModal = document.getElementById('residenceActionModal');
 const residenceActionForm = document.getElementById('residenceActionForm');
 const residenceActionTitle = document.getElementById('residenceActionTitle');
 const residenceActionSub = document.getElementById('residenceActionSub');
-const residenceTargetFields = document.getElementById('residenceTargetFields');
-const residenceTargetSelect = document.getElementById('residenceTargetSelect');
-const residenceUnitId = document.getElementById('residenceUnitId');
-const residenceRoomNo = document.getElementById('residenceRoomNo');
-const residenceEffectiveDate = document.getElementById('residenceEffectiveDate');
-const residenceRemarks = document.getElementById('residenceRemarks');
-const residenceActionNote = document.getElementById('residenceActionNote');
 const residenceActionSubmit = document.getElementById('residenceActionSubmit');
-const residenceDivisionSelect = document.getElementById('residenceDivisionSelect');
-const residenceUnitSelect = document.getElementById('residenceUnitSelect');
-const residenceDirectoryOptions = @json($residenceDropdownOptions ?? []);
+const residenceActionNote = document.getElementById('residenceActionNote');
+const residenceTargetFields = document.getElementById('residenceTargetFields');
+const residenceEffectiveDate = document.getElementById('residenceEffectiveDate');
+
+const residenceTypeSelect = document.getElementById('residenceTypeSelect');
+const residenceColonySelect = document.getElementById('residenceColonySelect');
+const residenceBlockSelect = document.getElementById('residenceBlockSelect');
+const residenceTargetSelect = document.getElementById('residenceTargetSelect');
+const residenceUnitHidden = document.getElementById('residenceUnitHidden');
+const residenceCategoryHidden = document.getElementById('residenceCategoryHidden');
+const residenceBlockHidden = document.getElementById('residenceBlockHidden');
+const residenceOccupancyHidden = document.getElementById('residenceOccupancyHidden');
+const residenceCascadeHint = document.getElementById('residenceCascadeHint');
 
 const residenceBasePath = '/employee-profile/{{ rawurlencode($employee['company_id']) }}/residence/';
 
-function syncResidenceTarget(){
-  const selected = residenceTargetSelect.options[residenceTargetSelect.selectedIndex];
-  residenceUnitId.value = selected ? (selected.dataset.unitId || '') : '';
-  residenceRoomNo.value = selected ? (selected.dataset.roomNo || '') : '';
+function resetSelectForProfileResidence(el, label){
+  if(!el) return;
+  el.innerHTML = '<option value="">' + label + '</option>';
 }
 
-function closeResidenceActionModal(){
-  residenceActionModal.classList.remove('is-open');
-  residenceActionModal.setAttribute('aria-hidden', 'true');
-  residenceActionForm.setAttribute('action', '#');
-  residenceTargetSelect.value = '';
-  residenceUnitId.value = '';
-  residenceRoomNo.value = '';
-  residenceEffectiveDate.value = '';
-  residenceRemarks.value = '';
+function resetProfileResidenceCascade(){
+  resetSelectForProfileResidence(residenceTypeSelect, 'Select residency type');
+  resetSelectForProfileResidence(residenceColonySelect, 'Select residency type first');
+  resetSelectForProfileResidence(residenceBlockSelect, 'Select colony first');
+  resetSelectForProfileResidence(residenceTargetSelect, 'Select block first');
+
+  if(residenceUnitHidden) residenceUnitHidden.value = '';
+  if(residenceCategoryHidden) residenceCategoryHidden.value = 'Room';
+  if(residenceBlockHidden) residenceBlockHidden.value = '';
+  if(residenceOccupancyHidden) residenceOccupancyHidden.value = 'ROOM';
+  if(residenceCascadeHint) {
+    residenceCascadeHint.textContent = 'Select residency type, colony, block floor, then room/house. Unit_ID will auto-fill from master.';
+    residenceCascadeHint.style.color = '';
+  }
 }
 
-
-function clearResidenceSelect(select, placeholder){
-  select.innerHTML = '';
-  const option = document.createElement('option');
-  option.value = '';
-  option.textContent = placeholder;
-  select.appendChild(option);
-}
-
-function residenceOptionLabel(option){
-  const assignedCount = Number(option.active_assigned_count || 0);
-  const status = option.dropdown_status || (assignedCount > 0 ? 'OCCUPIED' : 'VACANT');
-  const blockReason = option.block_reason || '';
-
-  let label = `Room: ${option.room_no || ''} — ${option.residence_type || ''}`;
-
-  if(option.block_floor){
-    label += ` / ${option.block_floor}`;
-  }
-
-  label += ` | ${status}`;
-
-  if(assignedCount > 0){
-    label += ` (${assignedCount})`;
-  }
-
-  if(option.is_blocked_for_assignment && blockReason){
-    label += ` — ${blockReason}`;
-  }
-
-  return label;
-}
-
-function populateResidenceUnits(){
-  const division = residenceDivisionSelect.value;
-
-  clearResidenceSelect(residenceUnitSelect, division ? 'Select unit' : 'Select section first');
-  clearResidenceSelect(residenceTargetSelect, 'Select unit first');
-
-  residenceUnitSelect.disabled = !division;
-  residenceTargetSelect.disabled = true;
-
-  residenceUnitId.value = '';
-  residenceRoomNo.value = '';
-
-  if(!division){
-    return;
-  }
-
-  const units = [...new Set(
-    residenceDirectoryOptions
-      .filter(option => (option.unit_group || 'Centralized') === division)
-      .map(option => option.unit_id)
-      .filter(Boolean)
-  )].sort();
-
-  units.forEach(unit => {
-    const option = document.createElement('option');
-    option.value = unit;
-    option.textContent = unit;
-    residenceUnitSelect.appendChild(option);
+function setProfileResidenceFieldsEnabled(enabled){
+  [residenceTypeSelect, residenceColonySelect, residenceBlockSelect, residenceTargetSelect].forEach(el => {
+    if(!el) return;
+    el.disabled = !enabled;
+    el.required = enabled;
   });
 }
 
-function populateResidenceRooms(){
-  const division = residenceDivisionSelect.value;
-  const unit = residenceUnitSelect.value;
+function closeResidenceActionModal(){
+  if(!residenceActionModal) return;
+  residenceActionModal.classList.remove('is-open');
+  residenceActionModal.setAttribute('aria-hidden', 'true');
 
-  clearResidenceSelect(residenceTargetSelect, unit ? 'Select room / house' : 'Select unit first');
-
-  residenceTargetSelect.disabled = !unit;
-  residenceUnitId.value = '';
-  residenceRoomNo.value = '';
-
-  if(!division || !unit){
-    return;
+  if(residenceActionForm){
+    residenceActionForm.reset();
+    residenceActionForm.setAttribute('action', '#');
   }
 
-  residenceDirectoryOptions
-    .filter(option => (option.unit_group || 'Centralized') === division && option.unit_id === unit)
-    .sort((a, b) => String(a.room_no || '').localeCompare(String(b.room_no || '')))
-    .forEach(item => {
-      const option = document.createElement('option');
-      option.value = `${item.unit_id}|${item.room_no}`;
-      option.dataset.unitId = item.unit_id || '';
-      option.dataset.roomNo = item.room_no || '';
-      option.dataset.status = item.dropdown_status || '';
-      option.dataset.activeAssignedCount = item.active_assigned_count || 0;
-      option.disabled = !!item.is_blocked_for_assignment;
-      option.textContent = residenceOptionLabel(item);
-      residenceTargetSelect.appendChild(option);
-    });
+  if(residenceTargetFields) residenceTargetFields.style.display = 'block';
+  setProfileResidenceFieldsEnabled(true);
+  resetProfileResidenceCascade();
 }
-
-function resetResidenceCascade(){
-  residenceDivisionSelect.value = '';
-  clearResidenceSelect(residenceUnitSelect, 'Select section first');
-  clearResidenceSelect(residenceTargetSelect, 'Select unit first');
-
-  residenceUnitSelect.disabled = true;
-  residenceTargetSelect.disabled = true;
-
-  residenceUnitId.value = '';
-  residenceRoomNo.value = '';
-}
-
 
 function openResidenceActionModal(type){
   closeResidenceActionModal();
@@ -799,57 +722,58 @@ function openResidenceActionModal(type){
   const isVacate = type === 'vacate';
   const label = type === 'assign' ? 'Assign Residence' : (isVacate ? 'Vacate Residence' : 'Shift Residence');
 
-  residenceActionTitle.textContent = label + ' — {{ addslashes($employee['name']) }}';
-  residenceActionSub.textContent = 'Date-wise employee residence assignment record.';
-  residenceActionForm.setAttribute('action', residenceBasePath + type);
-  residenceTargetFields.style.display = isVacate ? 'none' : 'block';
-  residenceDivisionSelect.disabled = isVacate;
-  residenceDivisionSelect.required = !isVacate;
-  residenceUnitSelect.required = !isVacate;
-  residenceTargetSelect.required = !isVacate;
+  if(residenceActionTitle) residenceActionTitle.textContent = label + ' — {{ addslashes($employee['name']) }}';
+  if(residenceActionSub) residenceActionSub.textContent = 'Date-wise employee residence assignment record.';
+  if(residenceActionForm) residenceActionForm.setAttribute('action', residenceBasePath + type);
 
-  resetResidenceCascade();
+  if(residenceTargetFields) residenceTargetFields.style.display = isVacate ? 'none' : 'block';
+  setProfileResidenceFieldsEnabled(!isVacate);
 
-  residenceActionSubmit.textContent = label;
-  residenceActionSubmit.classList.toggle('return', false);
+  if(residenceActionSubmit){
+    residenceActionSubmit.textContent = label;
+    residenceActionSubmit.classList.toggle('return', false);
+  }
 
-  if(type === 'shift'){
-    residenceActionNote.textContent = 'Current residence will close and selected residence will become active.';
-  } else if(type === 'vacate'){
-    residenceActionNote.textContent = 'Current residence will close. Household residence will be treated as family sent back.';
-  } else {
-    residenceActionNote.textContent = 'Select section, then unit, then room/house. Occupied household and non-residence items are shown but blocked.';
+  if(residenceActionNote){
+    if(type === 'shift'){
+      residenceActionNote.textContent = 'Current residence will close and selected residence will become active.';
+    } else if(type === 'vacate'){
+      residenceActionNote.textContent = 'Current residence will close. Household residence will be treated as family sent back.';
+    } else {
+      residenceActionNote.textContent = 'Select residency type, colony, block floor, then room/house.';
+    }
   }
 
   residenceActionModal.classList.add('is-open');
   residenceActionModal.setAttribute('aria-hidden', 'false');
-  if(isVacate){
-    residenceEffectiveDate.focus();
-  } else {
-    residenceDivisionSelect.focus();
-  }
+
+  setTimeout(() => {
+    if(isVacate && residenceEffectiveDate){
+      residenceEffectiveDate.focus();
+    } else if(residenceTypeSelect){
+      residenceTypeSelect.focus();
+    }
+  }, 30);
 }
 
 document.querySelectorAll('[data-residence-open]').forEach(button => {
   button.addEventListener('click', () => openResidenceActionModal(button.dataset.actionType || 'assign'));
 });
 
-residenceDivisionSelect.addEventListener('change', populateResidenceUnits);
-residenceUnitSelect.addEventListener('change', populateResidenceRooms);
-residenceTargetSelect.addEventListener('change', syncResidenceTarget);
-
 document.querySelectorAll('[data-residence-close]').forEach(button => {
   button.addEventListener('click', closeResidenceActionModal);
 });
 
-residenceActionModal.addEventListener('click', event => {
-  if(event.target === residenceActionModal){
-    closeResidenceActionModal();
-  }
-});
+if(residenceActionModal){
+  residenceActionModal.addEventListener('click', event => {
+    if(event.target === residenceActionModal){
+      closeResidenceActionModal();
+    }
+  });
+}
 
 document.addEventListener('keydown', event => {
-  if(event.key === 'Escape' && residenceActionModal.classList.contains('is-open')){
+  if(event.key === 'Escape' && residenceActionModal && residenceActionModal.classList.contains('is-open')){
     closeResidenceActionModal();
   }
 });
@@ -996,4 +920,198 @@ document.addEventListener('keydown', event => {
 });
 
 </script>
+
+<script>
+/* EP_PROFILE_CASCADE_PATCH_START */
+(function(){
+  const form = document.getElementById('residenceActionForm');
+  const modal = document.getElementById('residenceActionModal');
+
+  const typeEl = document.getElementById('residenceTypeSelect');
+  const colonyEl = document.getElementById('residenceColonySelect');
+  const blockEl = document.getElementById('residenceBlockSelect');
+  const roomEl = document.getElementById('residenceTargetSelect');
+  const unitHidden = document.getElementById('residenceUnitHidden');
+  const categoryHidden = document.getElementById('residenceCategoryHidden');
+  const blockHidden = document.getElementById('residenceBlockHidden');
+  const occupancyHidden = document.getElementById('residenceOccupancyHidden');
+  const hintEl = document.getElementById('residenceCascadeHint');
+
+  if(!typeEl || !colonyEl || !blockEl || !roomEl || !unitHidden) return;
+
+  function setHint(msg, isError){
+    if(!hintEl) return;
+    hintEl.textContent = msg;
+    hintEl.style.color = isError ? '#b42318' : '';
+  }
+
+  function resetSelect(el, label){
+    if(!el) return;
+    el.innerHTML = '<option value="">' + label + '</option>';
+  }
+
+  function resetBelow(level){
+    if(level <= 1) resetSelect(colonyEl, 'Select residency type first');
+    if(level <= 2) resetSelect(blockEl, 'Select colony first');
+    if(level <= 3) resetSelect(roomEl, 'Select block first');
+    unitHidden.value = '';
+    if(blockHidden) blockHidden.value = '';
+    if(categoryHidden) categoryHidden.value = 'Room';
+    if(occupancyHidden) occupancyHidden.value = 'ROOM';
+  }
+
+  async function fetchJson(url){
+    const res = await fetch(url, {headers:{'Accept':'application/json'}});
+    if(!res.ok) throw new Error('Request failed: ' + url + ' HTTP ' + res.status);
+    return await res.json();
+  }
+
+  function fillSimpleSelect(el, rows, emptyLabel){
+    resetSelect(el, emptyLabel);
+    (rows || []).forEach(x => {
+      const val = String(x ?? '').trim();
+      if(!val) return;
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = val === '__uncategorized' ? 'Uncategorized' : val;
+      el.appendChild(opt);
+    });
+  }
+
+  async function loadResidenceTypes(){
+    resetBelow(1);
+    try{
+      const rows = await fetchJson('/get-residence-types?_=' + Date.now());
+      fillSimpleSelect(typeEl, rows, 'Select residency type');
+      setHint('Select residency type, colony, block floor, then room/house.', false);
+    }catch(e){
+      setHint('Unable to load residency types. Refresh page and try again.', true);
+    }
+  }
+
+  typeEl.addEventListener('change', async function(){
+    resetBelow(1);
+    if(!typeEl.value) return;
+
+    try{
+      const rows = await fetchJson('/get-colonies?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+      fillSimpleSelect(colonyEl, rows, 'Select colony');
+      setHint('Now select colony type.', false);
+    }catch(e){
+      setHint('Unable to load colonies.', true);
+    }
+  });
+
+  colonyEl.addEventListener('change', async function(){
+    resetBelow(2);
+    if(!typeEl.value || !colonyEl.value) return;
+
+    try{
+      const rows = await fetchJson('/get-blocks/' + encodeURIComponent(colonyEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+      fillSimpleSelect(blockEl, rows, 'Select block floor');
+      setHint('Now select block floor.', false);
+    }catch(e){
+      setHint('Unable to load block floors.', true);
+    }
+  });
+
+  blockEl.addEventListener('change', async function(){
+    resetBelow(3);
+    if(!typeEl.value || !colonyEl.value || !blockEl.value) return;
+
+    try{
+      const rows = await fetchJson('/get-rooms/' + encodeURIComponent(colonyEl.value) + '/' + encodeURIComponent(blockEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+
+      resetSelect(roomEl, 'Select room/house');
+
+      (rows || []).forEach(x => {
+        const room = String(x?.room_no ?? '').trim();
+        const unit = String(x?.unit_id ?? '').trim();
+        if(!room) return;
+
+        const opt = document.createElement('option');
+        opt.value = room;
+        opt.textContent = room;
+        opt.dataset.unit = unit;
+        opt.dataset.block = blockEl.value;
+        roomEl.appendChild(opt);
+      });
+
+      if(blockHidden) blockHidden.value = blockEl.value;
+      setHint('Now select room/house. Unit_ID will auto-fill.', false);
+    }catch(e){
+      setHint('Unable to load rooms.', true);
+    }
+  });
+
+  roomEl.addEventListener('change', function(){
+    const opt = roomEl.options[roomEl.selectedIndex];
+    const unit = opt ? String(opt.dataset.unit || '').trim() : '';
+
+    unitHidden.value = unit;
+    if(blockHidden) blockHidden.value = blockEl.value || '';
+
+    const rt = String(typeEl.value || '').toLowerCase();
+    const isHouse = rt.includes('house') || rt.includes('family');
+    if(occupancyHidden) occupancyHidden.value = isHouse ? 'HOUSE' : 'ROOM';
+
+    setHint(unit ? ('Selected Unit_ID: ' + unit) : 'Select a valid room/house.', !unit);
+  });
+
+  document.querySelectorAll('[data-residence-open]').forEach(btn => {
+    btn.addEventListener('click', function(){
+      setTimeout(loadResidenceTypes, 50);
+    });
+  });
+
+  if(modal){
+    const observer = new MutationObserver(function(){
+      const visible = modal.getAttribute('aria-hidden') === 'false' || modal.classList.contains('open') || modal.style.display !== 'none';
+      if(visible && typeEl.options.length <= 1) loadResidenceTypes();
+    });
+    observer.observe(modal, {attributes:true, attributeFilter:['aria-hidden','class','style']});
+  }
+
+  if(form){
+    form.addEventListener('submit', function(e){
+      if(!unitHidden.value && roomEl.value){
+        const opt = roomEl.options[roomEl.selectedIndex];
+        unitHidden.value = opt ? String(opt.dataset.unit || '').trim() : '';
+      }
+      if(blockHidden) blockHidden.value = blockEl.value || '';
+    });
+  }
+})();
+/* EP_PROFILE_CASCADE_PATCH_END */
+</script>
+
+
+<style>
+/* EP_PROFILE_MODAL_CENTER_FIX */
+#residenceActionModal{
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 120px 16px 24px !important;
+  box-sizing: border-box !important;
+  z-index: 99999 !important;
+}
+#residenceActionModal.is-open{
+  display: flex !important;
+}
+#residenceActionModal .ep-modal-card{
+  margin: 0 auto !important;
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  max-height: calc(100vh - 150px) !important;
+  overflow-y: auto !important;
+}
+</style>
+
 @endsection

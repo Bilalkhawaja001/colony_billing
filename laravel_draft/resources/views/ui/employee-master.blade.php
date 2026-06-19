@@ -814,7 +814,8 @@ async function req(url, method='GET', payload=null){
 function payload(){
   return {
     CompanyID:v('e_CompanyID'), Name:v('e_Name'), "Father's Name":v('e_Father'), "CNIC_No.":v('e_CNIC'), "Mobile_No.":v('e_Mobile'),
-    Department:v('e_Department'), Section:v('e_Section'), "Sub Section":v('e_SubSection'), Designation:v('e_Designation'), "Employee Type":v('e_EmployeeType'),
+    Department:v('e_Department'), department:v('e_Department'), dept:v('e_Department'), Section:v('e_Section'), "Sub Section":v('e_SubSection'), Designation:v('e_Designation'), designation:v('e_Designation'), desig:v('e_Designation'), "Employee Type":v('e_EmployeeType'),
+      "Residency Type":v('e_ResidencyType'), residence_type:v('e_ResidencyType'),
     "Colony Type":v('e_ColonyType'), "Block Floor":v('e_BlockFloor'), "Room No":v('e_RoomNo'), "Shared Room":v('e_SharedRoom'), Unit_ID:v('e_UnitID'),
     "Join Date":v('e_JoinDate'), "Leave Date":v('e_LeaveDate'), Active:v('e_Active'), Remarks:v('e_Remarks'),
     "Iron Cot":v('e_IronCot'), "Single Bed":v('e_SingleBed'), "Double Bed":v('e_DoubleBed'), "Mattress":v('e_Mattress'), "Sofa Set":v('e_SofaSet'),
@@ -830,6 +831,11 @@ function payload(){
 function fillForm(r){
   const map={e_CompanyID:'CompanyID',e_Name:'Name',e_Father:"Father's Name",e_CNIC:'CNIC_No.',e_Mobile:'Mobile_No.',e_Department:'Department',e_Section:'Section',e_SubSection:'Sub Section',e_Designation:'Designation',e_EmployeeType:'Employee Type',e_ColonyType:'Colony Type',e_BlockFloor:'Block Floor',e_RoomNo:'Room No',e_SharedRoom:'Shared Room',e_UnitID:'Unit_ID',e_JoinDate:'Join Date',e_LeaveDate:'Leave Date',e_Active:'Active',e_Remarks:'Remarks',e_IronCot:'Iron Cot',e_SingleBed:'Single Bed',e_DoubleBed:'Double Bed',e_Mattress:'Mattress',e_SofaSet:'Sofa Set',e_BedSheet:'Bed Sheet',e_Wardrobe:'Wardrobe',e_CentreTable:'Centre Table',e_WoodenChair:'Wooden Chair',e_DinningTable:'Dinning Table',e_DinningChair:'Dinning Chair',e_SideTable:'Side Table',e_Fridge:'Fridge',e_WaterDispenser:'Water Dispenser',e_WashingMachine:'Washing Machine',e_AirCooler:'Air Cooler',e_AC:'A/C',e_LED:'LED',e_Gyser:'Gyser',e_ElectricKettle:'Electric Kettle',e_WifiRtr:'Wifi Rtr',e_WaterBottle:'Water Bottle',e_LPG:'LPG cylinder',e_GasStove:'Gas Stove',e_Crockery:'Crockery',e_KitchenCabinet:'Kitchen Cabinet',e_Mug:'Mug',e_Bucket:'Bucket',e_Mirror:'Mirror',e_Dustbin:'Dustbin'};
   Object.keys(map).forEach(id=>{ const el=document.getElementById(id); if(el) el.value=(r[map[id]]??'');});
+  const residencyTypeEl=document.getElementById('e_ResidencyType');
+  if(residencyTypeEl){
+    const rt = r['Residency Type'] ?? r.residence_type ?? r.ResidencyType ?? '';
+    if(rt) residencyTypeEl.value = rt;
+  }
 }
 
 function showTab(tab){['basic','res','assets'].forEach(t=>document.getElementById('tab-'+t).style.display=(t===tab?'':'none'));}
@@ -919,6 +925,7 @@ async function fetchById(){
     fillForm({
       ...row,
       Unit_ID: row.Unit_ID ?? row.unit_id ?? '',
+        'Residency Type': row['Residency Type'] ?? row.residence_type ?? '',
       'Room No': row['Room No'] ?? row.room_no ?? '',
       'Block Floor': row['Block Floor'] ?? row.block_floor ?? '',
       'Colony Type': row['Colony Type'] ?? row.colony_type ?? '',
@@ -1003,29 +1010,46 @@ function peopleMiniPopup(message, ok=true){
   }
 
   async function addEmployee(){
-    const addPayload=payload();
-    const companyId=String(addPayload.CompanyID||'').trim();
+  const addPayload = (typeof peopleResidencyForceDeptDesigPayload === 'function') ? peopleResidencyForceDeptDesigPayload(payload()) : payload();
+  const r = await req('/employees/add','POST',addPayload);
 
-    const r=await req('/employees/add','POST',addPayload);
+  const err = String(r?.body?.error || r?.body?.message || '').trim();
+  const duplicateCompanyId = Number(r?.status) === 409 || err.toLowerCase().includes('companyid already exists');
+
+  if(duplicateCompanyId){
     show(r);
 
-    const bodyStatus=String(r.body?.status || '').toLowerCase();
-    const success=(r.status>=200 && r.status<300 && bodyStatus!=='error');
-
-    if(success){
-      peopleMiniPopup('Employee successfully added' + (companyId ? ' · ' + companyId : ''), true);
-      clearEmployeeEntryFormAfterAdd();
-
-      try{
-        if(typeof listEmployees==='function' && Array.isArray(EMP_ROWS) && EMP_ROWS.length){
-          await listEmployees(false);
-        }
-      }catch(e){}
-    }else{
-      peopleMiniPopup(r.body?.error || 'Employee add failed. Check technical response.', false);
+    const msg = 'CompanyID already exists. Add New Employee nahi, Update Existing use karo.';
+    const el = document.getElementById('actionStatus');
+    if(el){
+      el.className = 'alert';
+      el.textContent = msg;
     }
+
+    if(typeof peopleMiniPopup === 'function'){
+      peopleMiniPopup(msg, false);
+    }
+
+    const out = document.getElementById('out');
+    if(out){
+      out.textContent = JSON.stringify({
+        status: 409,
+        button: 'Add New Employee',
+        error: msg,
+        original_response: r
+      }, null, 2);
+    }
+    return;
   }
-async function upsertEmployee(){ const r=await req('/employees/upsert','POST',payload()); show(r); }
+
+  show(r);
+
+  const ok = (r?.status >= 200 && r?.status < 300) || r?.body?.status === 'ok';
+  if(ok && typeof peopleMiniPopup === 'function'){
+    peopleMiniPopup('New employee added successfully.', true);
+  }
+}
+async function upsertEmployee(){ const p=(typeof peopleResidencyForceDeptDesigPayload === 'function') ? peopleResidencyForceDeptDesigPayload(payload()) : payload(); const r=await req('/employees/upsert','POST',p); show(r); }
 async function markLeft(){ const id=v('e_CompanyID'); if(!id){show({status:'error',error:'CompanyID required'});return;} const r=await req('/employees/'+encodeURIComponent(id),'DELETE'); show(r); }
 
 let BULK_PREVIEW_CACHE=null;
@@ -1303,6 +1327,89 @@ showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContext
 <!-- PEOPLE_RESIDENCY_DEPT_CASCADE_SCRIPT_END -->
 
 
+
+<script>
+/* PEOPLE_RESIDENCY_DEPT_DESIG_USER_LOCK_START */
+(function(){
+  let hrApplying = false;
+  const userEdited = { e_Department:false, e_Designation:false };
+  const userValue = { e_Department:'', e_Designation:'' };
+
+  function getEl(id){ return document.getElementById(id); }
+
+  function restoreIfNeeded(id){
+    const el = getEl(id);
+    if(!el || !userEdited[id]) return;
+    const wanted = userValue[id] ?? '';
+    if(String(el.value || '') !== wanted){
+      el.value = wanted;
+    }
+  }
+
+  ['e_Department','e_Designation'].forEach(function(id){
+    document.addEventListener('keydown', function(e){
+      if(!e.target || e.target.id !== id) return;
+      if(hrApplying) return;
+      userEdited[id] = true;
+      setTimeout(function(){
+        const el=getEl(id);
+        userValue[id]=el ? String(el.value || '') : '';
+        restoreIfNeeded(id);
+      }, 0);
+    }, true);
+
+    document.addEventListener('input', function(e){
+      if(!e.target || e.target.id !== id) return;
+
+      if(hrApplying){
+        return;
+      }
+
+      if(e.isTrusted){
+        userEdited[id] = true;
+        userValue[id] = String(e.target.value || '');
+        setTimeout(function(){ restoreIfNeeded(id); }, 30);
+        setTimeout(function(){ restoreIfNeeded(id); }, 120);
+        return;
+      }
+
+      if(userEdited[id]){
+        restoreIfNeeded(id);
+      }
+    }, true);
+
+    document.addEventListener('change', function(e){
+      if(!e.target || e.target.id !== id) return;
+      if(hrApplying) return;
+
+      if(e.isTrusted){
+        userEdited[id] = true;
+        userValue[id] = String(e.target.value || '');
+      } else if(userEdited[id]){
+        restoreIfNeeded(id);
+      }
+    }, true);
+  });
+
+  window.peopleResidencyHrApplyStart = function(){
+    hrApplying = true;
+    userEdited.e_Department = false;
+    userEdited.e_Designation = false;
+    userValue.e_Department = '';
+    userValue.e_Designation = '';
+  };
+
+  window.peopleResidencyHrApplyEnd = function(){
+    setTimeout(function(){ hrApplying = false; }, 200);
+  };
+
+  window.peopleResidencyCanAutoSetField = function(id){
+    return !userEdited[id];
+  };
+})();
+/* PEOPLE_RESIDENCY_DEPT_DESIG_USER_LOCK_END */
+</script>
+
 <!-- HR_ACTIVE_WORKBOOK_SCRIPT_START -->
 <script>
 (function(){
@@ -1331,13 +1438,20 @@ showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContext
   }
 
   function setHrReferenceValue(id, value){
-    const el=document.getElementById(id);
-    if(!el)return;
-    const next=String(value??'').trim();
-    el.value=next;
-    el.dispatchEvent(new Event('input',{bubbles:true}));
-    el.dispatchEvent(new Event('change',{bubbles:true}));
-  }
+      const el=document.getElementById(id);
+      if(!el)return;
+
+      if((id==='e_Department' || id==='e_Designation') &&
+        typeof window.peopleResidencyCanAutoSetField === 'function' &&
+        !window.peopleResidencyCanAutoSetField(id)){
+        return;
+      }
+
+      const next=String(value??'').trim();
+      el.value=next;
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    }
 
   function clearHrReferenceEmployeeFields(){
     const ids=[
@@ -1363,6 +1477,10 @@ showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContext
 
   function applyHrReference(row){
     if(!row)return false;
+      var __hrCid = String((row && row.CompanyID) || '').trim();
+      if(__hrCid && window.__lastHrAppliedCompanyId === __hrCid){ return false; }
+      window.__lastHrAppliedCompanyId = __hrCid;
+      if(typeof window.peopleResidencyHrApplyStart === 'function') window.peopleResidencyHrApplyStart();
 
     const map={
       e_CompanyID:'CompanyID',
@@ -1399,7 +1517,8 @@ showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContext
     },80);
 
     setHrStatus(`HR reference applied for NEW employee ${row.CompanyID || ''} (${row._hr_month_cycle || ''}). Now press Add New Employee to save.`);
-    return true;
+    if(typeof window.peopleResidencyHrApplyEnd === 'function') window.peopleResidencyHrApplyEnd();
+      return true;
   }
 
   async function getHrReference(companyId){
@@ -1548,6 +1667,98 @@ showTab('basic'); setMode('quick'); setPeopleTab('employee'); setEmployeeContext
 })();
 </script>
 <!-- HR_ACTIVE_WORKBOOK_SCRIPT_END -->
+
+
+<script>
+/* PEOPLE_RESIDENCY_FETCHED_EDITABLE_PATCH_START */
+(function(){
+  function enableFetchedEmployeeFields(){
+    document.querySelectorAll('[id^="e_"], #quickCompanyId').forEach(function(el){
+      if(!el) return;
+      if(el.type === 'hidden') return;
+
+      el.removeAttribute('readonly');
+      el.readOnly = false;
+
+      el.removeAttribute('disabled');
+      el.disabled = false;
+
+      el.classList.remove('readonly');
+      el.classList.remove('is-readonly');
+      el.classList.remove('disabled');
+      el.classList.remove('is-disabled');
+    });
+
+    const msg = document.getElementById('actionStatus');
+    if(msg && /HR reference applied|Fetch/i.test(String(msg.textContent || ''))){
+      msg.textContent = msg.textContent + ' Fields are editable before save.';
+    }
+  }
+
+  let timer = null;
+  function scheduleEnable(){
+    clearTimeout(timer);
+    timer = setTimeout(enableFetchedEmployeeFields, 80);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    enableFetchedEmployeeFields();
+
+    document.addEventListener('click', function(e){
+      const t = e.target;
+      if(!t) return;
+      const text = String(t.textContent || '').trim().toLowerCase();
+      if(text.includes('fetch by id') || text.includes('add new employee') || text.includes('update existing')){
+        setTimeout(enableFetchedEmployeeFields, 250);
+        setTimeout(enableFetchedEmployeeFields, 700);
+      }
+    });
+
+    const obs = new MutationObserver(scheduleEnable);
+    obs.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['disabled','readonly','value']
+    });
+  });
+
+  window.enableFetchedEmployeeFields = enableFetchedEmployeeFields;
+})();
+/* PEOPLE_RESIDENCY_FETCHED_EDITABLE_PATCH_END */
+</script>
+
+
+<script>
+/* PEOPLE_RESIDENCY_FORCE_DEPT_DESIG_PATCH_START */
+(function(){
+  function currentVal(id){
+    const el = document.getElementById(id);
+    return el ? String(el.value || '').trim() : '';
+  }
+
+  window.peopleResidencyForceDeptDesigPayload = function(p){
+    p = p || {};
+    const dept = currentVal('e_Department');
+    const desig = currentVal('e_Designation');
+
+    if(dept){
+      p.Department = dept;
+      p.department = dept;
+      p.dept = dept;
+    }
+
+    if(desig){
+      p.Designation = desig;
+      p.designation = desig;
+      p.desig = desig;
+    }
+
+    return p;
+  };
+})();
+/* PEOPLE_RESIDENCY_FORCE_DEPT_DESIG_PATCH_END */
+</script>
 
 @endsection
 
