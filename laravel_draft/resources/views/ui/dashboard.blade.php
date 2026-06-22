@@ -8,49 +8,7 @@
     $hasPeriod = trim((string)($monthCycle ?? '')) !== '';
     $mc = urlencode((string)($monthCycle ?? ''));
 @endphp
-<div class="grid">
-
-    <!-- 1. CURRENT RUN / CURRENT PERIOD (pinned) -->
-    <div class="col-12 cb-run-card">
-        <div class="cb-run-top">
-            <div>
-                <div class="cb-run-eyebrow">Current Billing Period</div>
-                <div class="cb-run-period">{{ $hasPeriod ? $monthCycle : 'No month selected' }}</div>
-                <p class="cb-run-hint">
-                    @if($hasPeriod)
-                        Set the period below, then work through readiness before running billing.
-                    @else
-                        Enter a month cycle (MM-YYYY) to load this period's readiness.
-                    @endif
-                </p>
-            </div>
-            <div class="cb-run-side">
-                @if($hasPeriod)
-                    <span class="cb-status-pill is-pending">Readiness not yet checked</span>
-                @else
-                    <span class="cb-status-pill is-blocked">No active period</span>
-                @endif
-                <div class="cb-run-actions">
-                    <a class="cb-btn-ghost" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Cycle</a>
-                    <a class="cb-btn-ghost" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing</a>
-                </div>
-            </div>
-        </div>
-
-        <form method="get" action="/dashboard" class="cb-run-form">
-            <div class="field">
-                <label class="label">Month Cycle</label>
-                <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
-            </div>
-            <button class="btn btn-primary" type="submit">Reload Dashboard</button>
-            <div class="cb-run-quicklinks">
-                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reports</a>
-                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reconciliation</a>
-                <a class="cb-btn-ghost" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
-                <a class="cb-btn-ghost" href="/rates?month_cycle={{ $mc }}">Rates</a>
-            </div>
-        </form>
-    </div>
+<div class="grid dashboard-command-console">
 
     <!-- DASHBOARD_COMMAND_PILLS_START -->
     <div class="col-12 command-row" id="dashboardCommandRow">
@@ -92,6 +50,48 @@
         </button>
     </div>
     <!-- DASHBOARD_COMMAND_PILLS_END -->
+
+    <!-- 1. CURRENT RUN / CURRENT PERIOD -->
+    <div class="col-12 cb-run-card">
+        <div class="cb-run-top">
+            <div>
+                <div class="cb-run-eyebrow">Current Billing Period</div>
+                <div class="cb-run-period">{{ $hasPeriod ? $monthCycle : 'No month selected' }}</div>
+                <p class="cb-run-hint">
+                    @if($hasPeriod)
+                        Set the period below, then work through readiness before running billing.
+                    @else
+                        Enter a month cycle (MM-YYYY) to load this period's readiness.
+                    @endif
+                </p>
+            </div>
+            <div class="cb-run-side">
+                @if($hasPeriod)
+                    <span class="cb-status-pill is-pending">Readiness not yet checked</span>
+                @else
+                    <span class="cb-status-pill is-blocked">No active period</span>
+                @endif
+                <div class="cb-run-actions">
+                    <a class="cb-btn-ghost" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Cycle</a>
+                    <a class="cb-btn-ghost" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing</a>
+                </div>
+            </div>
+        </div>
+
+        <form method="get" action="/dashboard" class="cb-run-form">
+            <div class="field">
+                <label class="label">Month Cycle</label>
+                <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
+            </div>
+            <button class="btn btn-primary" type="submit">Reload Dashboard</button>
+            <div class="cb-run-quicklinks">
+                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reports</a>
+                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reconciliation</a>
+                <a class="cb-btn-ghost" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
+                <a class="cb-btn-ghost" href="/rates?month_cycle={{ $mc }}">Rates</a>
+            </div>
+        </form>
+    </div>
 
     <!-- 2. READINESS TILES -->
     <div class="col-12 card">
@@ -324,6 +324,14 @@
 </div>
 <style>
 
+/* Dashboard-only header replacement: hide default page-head and use sticky commands as the first rail. */
+.main .container > .page-head{
+    display:none;
+}
+.dashboard-command-console{
+    margin-top:0;
+}
+
 .kpi-link-card{
     display:block;
     text-decoration:none;
@@ -339,12 +347,21 @@
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
 .command-row{
     grid-column:span 12;
+    position:sticky;
+    top:72px;
+    z-index:80;
     display:grid;
     grid-template-columns:84px repeat(7,minmax(0,1fr));
     align-items:center;
     gap:9px;
-    min-height:52px;
-    margin:0 0 10px;
+    min-height:64px;
+    margin:0 0 14px;
+    padding:9px 11px;
+    border:1px solid rgba(148,163,184,.28);
+    border-radius:16px;
+    background:rgba(248,250,252,.94);
+    box-shadow:0 16px 38px rgba(15,23,42,.12);
+    backdrop-filter:blur(14px);
 }
 .command-row-label{
     height:46px;
@@ -454,10 +471,19 @@
 @media(max-width:1250px){
     .command-row{
         grid-template-columns:repeat(4,minmax(0,1fr));
+        top:66px;
     }
     .command-row-label{
         grid-column:1 / -1;
         height:22px;
+    }
+}
+@media(max-width:720px){
+    .command-row{
+        grid-template-columns:1fr;
+        top:58px;
+        max-height:calc(100vh - 70px);
+        overflow:auto;
     }
 }
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_END */
