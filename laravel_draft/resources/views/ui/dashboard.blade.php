@@ -157,8 +157,8 @@
         </div>
     </div>
 
-    <!-- 3. MISSING DATA / BLOCKERS  +  4. NEXT ACTION -->
-    <div class="col-7 card">
+    <!-- 3. MISSING DATA / BLOCKERS -->
+    <div class="col-12 card cb-blockers-card">
         <div class="cb-card-head">
             <h3 class="section-title">Missing Data &amp; Blockers</h3>
         </div>
@@ -174,29 +174,6 @@
             <li class="cb-list-row"><span class="cb-dot"></span>Rates approved before the billing run.</li>
             <li class="cb-list-row"><span class="cb-dot"></span>Reconciliation reviewed before lock.</li>
         </ul>
-    </div>
-
-    <div class="col-5 card soft cb-next-card">
-        <div class="cb-card-head">
-            <h3 class="section-title">Next Action</h3>
-        </div>
-        <div class="cb-next">
-            @if(!$hasPeriod)
-                <p class="cb-next-step">Select a billing month</p>
-                <p class="cb-next-why">No active period is set. Enter a month cycle above and reload to begin.</p>
-                <div class="split">
-                    <a class="btn btn-primary" href="/month-lifecycle">Open Month Lifecycle</a>
-                </div>
-            @else
-                <p class="cb-next-step">Review month inputs &amp; preview</p>
-                <p class="cb-next-why">Confirm readings, attendance, allowance and rates for {{ $monthCycle }}, then preview before running billing.</p>
-                <div class="split">
-                    <a class="btn btn-primary" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Lifecycle</a>
-                    <a class="btn" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
-                    <a class="btn" href="/billing-run-lock?month_cycle={{ $mc }}">Billing Run</a>
-                </div>
-            @endif
-        </div>
     </div>
 
     <!-- 5. SNAPSHOT (real KPI data) -->
@@ -573,53 +550,6 @@
     }
 }
 /* DASHBOARD_PREMIUM_READINESS_END */
-
-/* DASHBOARD_COMPACT_NEXT_ACTION_START */
-.cb-next-card{
-    align-self:start !important;
-    min-height:0 !important;
-    padding:16px 18px !important;
-    border-radius:18px !important;
-}
-.cb-next-card .cb-card-head{
-    margin-bottom:8px !important;
-}
-.cb-next-card .section-title{
-    margin:0 !important;
-    font-size:16px !important;
-}
-.cb-next{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-}
-.cb-next-step{
-    margin:0 !important;
-    font-size:18px !important;
-    line-height:1.2 !important;
-}
-.cb-next-why{
-    margin:0 !important;
-    max-width:460px;
-    font-size:13px !important;
-    line-height:1.45 !important;
-}
-.cb-next-card .split{
-    margin-top:4px !important;
-    gap:8px !important;
-}
-.cb-next-card .btn{
-    min-height:36px !important;
-    padding:8px 12px !important;
-    font-size:13px !important;
-    line-height:1 !important;
-}
-@media(max-width:900px){
-    .cb-next-card{
-        align-self:stretch !important;
-    }
-}
-/* DASHBOARD_COMPACT_NEXT_ACTION_END */
 
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
 .command-row{
