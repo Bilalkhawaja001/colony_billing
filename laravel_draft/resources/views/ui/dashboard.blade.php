@@ -176,7 +176,7 @@
         </ul>
     </div>
 
-    <div class="col-5 card soft">
+    <div class="col-5 card soft cb-next-card">
         <div class="cb-card-head">
             <h3 class="section-title">Next Action</h3>
         </div>
@@ -573,6 +573,53 @@
     }
 }
 /* DASHBOARD_PREMIUM_READINESS_END */
+
+/* DASHBOARD_COMPACT_NEXT_ACTION_START */
+.cb-next-card{
+    align-self:start !important;
+    min-height:0 !important;
+    padding:16px 18px !important;
+    border-radius:18px !important;
+}
+.cb-next-card .cb-card-head{
+    margin-bottom:8px !important;
+}
+.cb-next-card .section-title{
+    margin:0 !important;
+    font-size:16px !important;
+}
+.cb-next{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.cb-next-step{
+    margin:0 !important;
+    font-size:18px !important;
+    line-height:1.2 !important;
+}
+.cb-next-why{
+    margin:0 !important;
+    max-width:460px;
+    font-size:13px !important;
+    line-height:1.45 !important;
+}
+.cb-next-card .split{
+    margin-top:4px !important;
+    gap:8px !important;
+}
+.cb-next-card .btn{
+    min-height:36px !important;
+    padding:8px 12px !important;
+    font-size:13px !important;
+    line-height:1 !important;
+}
+@media(max-width:900px){
+    .cb-next-card{
+        align-self:stretch !important;
+    }
+}
+/* DASHBOARD_COMPACT_NEXT_ACTION_END */
 
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
 .command-row{
