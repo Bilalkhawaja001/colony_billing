@@ -94,10 +94,10 @@
     </div>
 
     <!-- 2. READINESS TILES -->
-    <div class="col-12 card">
+    <div class="col-12 card cb-readiness-card">
         <div class="cb-card-head">
             <h3 class="section-title">Readiness</h3>
-            <span class="cb-status-pill is-pending">Live status not wired</span>
+            <span class="cb-status-pill is-pending">Checks not automated yet</span>
         </div>
         <div class="cb-readiness-grid">
             <div class="cb-tile is-pending">
@@ -438,6 +438,141 @@
     }
 }
 /* DASHBOARD_COMPACT_CURRENT_PERIOD_END */
+
+/* DASHBOARD_PREMIUM_READINESS_START */
+.cb-readiness-card{
+    position:relative;
+    overflow:hidden;
+    padding:16px !important;
+    border-radius:18px !important;
+    border:1px solid rgba(148,163,184,.24) !important;
+    background:
+        radial-gradient(circle at top left, rgba(59,130,246,.10), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,251,255,.90)) !important;
+    box-shadow:0 14px 34px rgba(15,23,42,.08) !important;
+}
+.cb-readiness-card::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto;
+    height:3px;
+    background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981,#f59e0b);
+    opacity:.82;
+}
+.cb-readiness-card .cb-card-head{
+    align-items:center;
+    margin-bottom:12px !important;
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(148,163,184,.18);
+}
+.cb-readiness-card .section-title{
+    margin:0 !important;
+    font-size:16px !important;
+    letter-spacing:-.01em;
+}
+.cb-readiness-card .cb-card-head .cb-status-pill{
+    font-size:11px !important;
+    padding:6px 10px !important;
+    border-radius:999px !important;
+}
+.cb-readiness-grid{
+    counter-reset:readiness-step;
+    display:grid !important;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:10px !important;
+}
+.cb-readiness-grid .cb-tile{
+    counter-increment:readiness-step;
+    position:relative;
+    min-height:132px;
+    padding:14px 13px 12px !important;
+    border-radius:16px !important;
+    border:1px solid rgba(148,163,184,.22) !important;
+    background:rgba(255,255,255,.84) !important;
+    box-shadow:0 8px 18px rgba(15,23,42,.05) !important;
+    transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.cb-readiness-grid .cb-tile::before{
+    content:"0" counter(readiness-step);
+    position:absolute;
+    top:12px;
+    right:12px;
+    min-width:26px;
+    height:22px;
+    display:grid;
+    place-items:center;
+    border-radius:999px;
+    background:rgba(15,23,42,.055);
+    color:#64748b;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.04em;
+}
+.cb-readiness-grid .cb-tile:hover{
+    transform:translateY(-2px);
+    border-color:rgba(37,99,235,.24) !important;
+    box-shadow:0 12px 26px rgba(15,23,42,.09) !important;
+}
+.cb-readiness-grid .cb-tile-head{
+    display:flex !important;
+    flex-direction:column;
+    align-items:flex-start !important;
+    gap:7px !important;
+    padding-right:34px;
+    margin-bottom:8px !important;
+}
+.cb-readiness-grid .cb-tile-name{
+    font-size:14px !important;
+    font-weight:900 !important;
+    color:#0f172a !important;
+    letter-spacing:-.01em;
+}
+.cb-readiness-grid .cb-tile .cb-status-pill{
+    font-size:10px !important;
+    padding:5px 8px !important;
+    border-radius:999px !important;
+}
+.cb-readiness-grid .cb-tile-desc{
+    margin:0 0 12px !important;
+    min-height:34px;
+    color:#64748b !important;
+    font-size:12px !important;
+    line-height:1.42 !important;
+}
+.cb-readiness-grid .cb-tile-foot{
+    margin-top:auto !important;
+}
+.cb-readiness-grid .cb-tile-link{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:30px;
+    padding:7px 10px;
+    border-radius:999px;
+    background:rgba(37,99,235,.08);
+    color:#1d4ed8 !important;
+    font-size:12px;
+    font-weight:850;
+    text-decoration:none;
+}
+.cb-readiness-grid .cb-tile-link:hover{
+    background:rgba(37,99,235,.13);
+    text-decoration:none;
+}
+@media(max-width:1250px){
+    .cb-readiness-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+}
+@media(max-width:760px){
+    .cb-readiness-grid{
+        grid-template-columns:1fr;
+    }
+    .cb-readiness-grid .cb-tile{
+        min-height:auto;
+    }
+}
+/* DASHBOARD_PREMIUM_READINESS_END */
 
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
 .command-row{
