@@ -12,6 +12,7 @@ use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
 use App\Http\Controllers\Transport\TransportController;
+use App\Http\Controllers\Billing\V2\BillRunPreflightController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -120,6 +121,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])-
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
     Route::get('/billing-run-lock', [ParityUiController::class, 'billing']);
     Route::get('/month-lifecycle', [ParityUiController::class, 'monthCycle']);
+    Route::get('/api/v2/bill-runs/preflight', [BillRunPreflightController::class, 'show']);
 
     // Backward-compatible /ui redirects
     Route::get('/ui/billing', fn () => redirect('/billing-run-lock'));
@@ -143,6 +145,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/billing/print/<month_cycle>/<employee_id>', [BillingDraftController::class, 'printEmployeeLiteral']);
     Route::post('/billing/lock', [BillingDraftController::class, 'lock']);
     Route::post('/billing/approve', [BillingDraftController::class, 'approve']);
+    Route::post('/api/v2/bill-runs/preflight/save', [BillRunPreflightController::class, 'save']);
 
     // Adjustments / recovery (evidence shows removed/disabled flow -> explicit real 410 parity behavior).
     Route::post('/billing/adjustments/create', [BillingDraftController::class, 'adjustmentCreate']);
