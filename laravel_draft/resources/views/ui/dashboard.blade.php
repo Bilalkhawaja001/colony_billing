@@ -330,7 +330,7 @@
 }
 .dashboard-command-console{
     margin-top:0;
-    padding-top:92px;
+    padding-top:58px;
 }
 
 .kpi-link-card{
@@ -471,7 +471,7 @@
 }
 @media(max-width:1250px){
     .dashboard-command-console{
-        padding-top:172px;
+        padding-top:154px;
     }
     .command-row{
         grid-template-columns:repeat(4,minmax(0,1fr));
