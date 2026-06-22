@@ -324,12 +324,13 @@
 </div>
 <style>
 
-/* Dashboard-only header replacement: hide default page-head and use sticky commands as the first rail. */
+/* Dashboard-only header replacement: hide default page-head and use fixed commands as the first rail. */
 .main .container > .page-head{
     display:none;
 }
 .dashboard-command-console{
     margin-top:0;
+    padding-top:92px;
 }
 
 .kpi-link-card{
@@ -347,21 +348,24 @@
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
 .command-row{
     grid-column:span 12;
-    position:sticky;
-    top:72px;
-    z-index:80;
+    position:fixed;
+    top:128px;
+    left:50%;
+    width:min(calc(100vw - 56px), 1424px);
+    z-index:99;
     display:grid;
     grid-template-columns:84px repeat(7,minmax(0,1fr));
     align-items:center;
     gap:9px;
     min-height:64px;
-    margin:0 0 14px;
+    margin:0;
     padding:9px 11px;
     border:1px solid rgba(148,163,184,.28);
     border-radius:16px;
-    background:rgba(248,250,252,.94);
+    background:rgba(248,250,252,.96);
     box-shadow:0 16px 38px rgba(15,23,42,.12);
     backdrop-filter:blur(14px);
+    transform:translateX(-50%);
 }
 .command-row-label{
     height:46px;
@@ -402,22 +406,19 @@
         inset 0 1px 0 rgba(255,255,255,.75),
         0 2px 0 var(--depth),
         0 5px 9px rgba(15,23,42,.06);
-    transform:translateY(-1px);
-    transition:transform .14s ease, box-shadow .14s ease;
+    transition:box-shadow .14s ease;
 }
 .command-pill::before,
 .command-pill::after{
     display:none;
 }
 .command-pill:hover{
-    transform:translateY(-2px);
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.82),
         0 3px 0 var(--depth),
         0 7px 13px rgba(15,23,42,.09);
 }
 .command-pill:active{
-    transform:translateY(1px);
     box-shadow:
         inset 0 1px 3px rgba(15,23,42,.10),
         0 1px 0 var(--depth);
@@ -469,9 +470,12 @@
     stroke:#fff;
 }
 @media(max-width:1250px){
+    .dashboard-command-console{
+        padding-top:172px;
+    }
     .command-row{
         grid-template-columns:repeat(4,minmax(0,1fr));
-        top:66px;
+        top:116px;
     }
     .command-row-label{
         grid-column:1 / -1;
@@ -479,11 +483,17 @@
     }
 }
 @media(max-width:720px){
+    .dashboard-command-console{
+        padding-top:0;
+    }
     .command-row{
+        position:static;
+        width:auto;
+        transform:none;
         grid-template-columns:1fr;
-        top:58px;
-        max-height:calc(100vh - 70px);
-        overflow:auto;
+        max-height:none;
+        overflow:visible;
+        margin:0 0 14px;
     }
 }
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_END */
