@@ -7,7 +7,6 @@ use App\Services\Todo\TodoTaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 use InvalidArgumentException;
 
 class TodoTasksController extends Controller
@@ -16,16 +15,11 @@ class TodoTasksController extends Controller
     {
     }
 
-    public function index(Request $request): View
+    public function index(Request $request): JsonResponse
     {
-        return view('ui.todo-tasks', [
-            'filters' => [
-                'status' => (string)$request->query('status', ''),
-                'priority' => (string)$request->query('priority', ''),
-                'month_cycle' => (string)$request->query('month_cycle', ''),
-                'category' => (string)$request->query('category', ''),
-                'search' => (string)$request->query('search', ''),
-            ],
+        return response()->json([
+            'page' => 'Work To-Do',
+            'description' => 'V2 task layer for billing readiness, blockers and follow-ups.',
             'payload' => $this->tasks->list($request->query()),
         ]);
     }
@@ -79,14 +73,22 @@ class TodoTasksController extends Controller
 
     public function complete(Request $request, int $id): JsonResponse|RedirectResponse
     {
-        $task = $this->tasks->complete($id, $this->currentUserId());
+        try {
+            $task = $this->tasks->complete($id, $this->currentUserId());
+        } catch (InvalidArgumentException $exception) {
+            return $this->errorResponse($request, $exception->getMessage());
+        }
 
         return $this->successResponse($request, 'Task completed.', $task);
     }
 
     public function archive(Request $request, int $id): JsonResponse|RedirectResponse
     {
-        $task = $this->tasks->archive($id, $this->currentUserId());
+        try {
+            $task = $this->tasks->archive($id, $this->currentUserId());
+        } catch (InvalidArgumentException $exception) {
+            return $this->errorResponse($request, $exception->getMessage());
+        }
 
         return $this->successResponse($request, 'Task archived.', $task);
     }
