@@ -13,6 +13,7 @@ use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
 use App\Http\Controllers\Transport\TransportController;
 use App\Http\Controllers\Billing\V2\BillRunPreflightController;
+use App\Http\Controllers\Billing\V2\BillRunGateController;
 
 Route::get('/health', [InfraController::class, 'health']);
 
@@ -122,6 +123,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/billing-run-lock', [ParityUiController::class, 'billing']);
     Route::get('/month-lifecycle', [ParityUiController::class, 'monthCycle']);
     Route::get('/api/v2/bill-runs/preflight', [BillRunPreflightController::class, 'show']);
+    Route::get('/api/v2/bill-runs/gates', [BillRunGateController::class, 'show']);
 
     // Backward-compatible /ui redirects
     Route::get('/ui/billing', fn () => redirect('/billing-run-lock'));
@@ -146,6 +148,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/billing/lock', [BillingDraftController::class, 'lock']);
     Route::post('/billing/approve', [BillingDraftController::class, 'approve']);
     Route::post('/api/v2/bill-runs/preflight/save', [BillRunPreflightController::class, 'save']);
+    Route::post('/api/v2/bill-runs/gates/transition', [BillRunGateController::class, 'transition']);
 
     // Adjustments / recovery (evidence shows removed/disabled flow -> explicit real 410 parity behavior).
     Route::post('/billing/adjustments/create', [BillingDraftController::class, 'adjustmentCreate']);
@@ -218,7 +221,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::patch('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
     Route::patch('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
     Route::delete('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeeDelete']);
-    Route::delete('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
+    Route::delete('/employees/{company_id}', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
     Route::delete('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
 
     Route::post('/meter-reading/upsert', [EmployeesMeterParityController::class, 'meterReadingUpsert']);
