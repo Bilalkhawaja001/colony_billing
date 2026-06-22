@@ -14,40 +14,40 @@
     <div class="col-12 command-row" id="dashboardCommandRow">
         <div class="command-row-label">Commands</div>
 
-        <button class="command-pill pill-blue" type="button">
+        <a class="command-pill pill-blue" href="/unit-directory">
             <svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M9 8h2m2 0h2M9 12h2m2 0h2M10 21v-5h4v5"/></svg>
             <span>Unit Directory</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-purple" type="button">
+        <a class="command-pill pill-purple" href="/people-residency?mode=manage">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-3.6 3.2-5.3 7-5.3s6 1.7 7 5.3"/></svg>
             <span>Employee Profile</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-green primary" type="button">
+        <a class="command-pill pill-green primary" href="/people-residency?action=add&mode=quick">
             <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M3.5 19c.7-3 2.3-4.5 4.5-4.5M18 11v10m-5-5h10"/></svg>
             <span>Add Employee</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-orange" type="button">
+        <a class="command-pill pill-orange" href="/reports/employee-statement?month_cycle={{ $mc }}">
             <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 12h6m-6 4h6"/></svg>
             <span>Statement</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-cyan" type="button">
+        <a class="command-pill pill-cyan" href="/people-residency?tab=occupancy">
             <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10.5V20h13v-9.5M10 20v-5h4v5"/></svg>
             <span>Residence</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-pink" type="button">
+        <a class="command-pill pill-pink" href="/people-residency?tab=family">
             <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.2"/><path d="M3.5 20c.7-3.5 2.4-5.2 5.5-5.2s4.8 1.7 5.5 5.2M15 15c2.5.2 4 1.8 4.5 5"/></svg>
             <span>Family</span>
-        </button>
+        </a>
 
-        <button class="command-pill pill-yellow" type="button">
+        <a class="command-pill pill-yellow" href="/transport?month_cycle={{ $mc }}">
             <svg viewBox="0 0 24 24"><path d="M4 16V8c0-2 1.5-3 3.5-3h7c2.3 0 4.2 2 5.5 5v6M4 13h16"/><circle cx="7" cy="17.5" r="1"/><circle cx="17" cy="17.5" r="1"/></svg>
             <span>School Van</span>
-        </button>
+        </a>
     </div>
     <!-- DASHBOARD_COMMAND_PILLS_END -->
 
@@ -401,7 +401,8 @@
     font-weight:750;
     white-space:nowrap;
     text-align:left;
-    cursor:default;
+    cursor:pointer;
+    text-decoration:none;
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.75),
         0 2px 0 var(--depth),
@@ -413,10 +414,15 @@
     display:none;
 }
 .command-pill:hover{
+    text-decoration:none;
     box-shadow:
         inset 0 1px 0 rgba(255,255,255,.82),
         0 3px 0 var(--depth),
         0 7px 13px rgba(15,23,42,.09);
+}
+.command-pill:focus-visible{
+    outline:3px solid rgba(59,130,246,.22);
+    outline-offset:2px;
 }
 .command-pill:active{
     box-shadow:
