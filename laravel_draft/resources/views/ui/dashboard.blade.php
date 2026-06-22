@@ -1,8 +1,57 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('page_title','Billing Command Dashboard')
-@section('page_subtitle','Enterprise operational control center for month-cycle billing, transport data, reports and reconciliation health.')
+@section('page_subtitle','Readiness console for the billing month — what is ready, what is missing, and the next action.')
 @section('content')
+@php
+    // Honest, derived-only signals. No backend readiness feed is wired to this
+    // view yet, so status tiles default to PENDING and no values are fabricated.
+    $hasPeriod = trim((string)($monthCycle ?? '')) !== '';
+    $mc = urlencode((string)($monthCycle ?? ''));
+@endphp
 <div class="grid">
+
+    <!-- 1. CURRENT RUN / CURRENT PERIOD (pinned) -->
+    <div class="col-12 cb-run-card">
+        <div class="cb-run-top">
+            <div>
+                <div class="cb-run-eyebrow">Current Billing Period</div>
+                <div class="cb-run-period">{{ $hasPeriod ? $monthCycle : 'No month selected' }}</div>
+                <p class="cb-run-hint">
+                    @if($hasPeriod)
+                        Set the period below, then work through readiness before running billing.
+                    @else
+                        Enter a month cycle (MM-YYYY) to load this period's readiness.
+                    @endif
+                </p>
+            </div>
+            <div class="cb-run-side">
+                @if($hasPeriod)
+                    <span class="cb-status-pill is-pending">Readiness not yet checked</span>
+                @else
+                    <span class="cb-status-pill is-blocked">No active period</span>
+                @endif
+                <div class="cb-run-actions">
+                    <a class="cb-btn-ghost" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Cycle</a>
+                    <a class="cb-btn-ghost" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing</a>
+                </div>
+            </div>
+        </div>
+
+        <form method="get" action="/dashboard" class="cb-run-form">
+            <div class="field">
+                <label class="label">Month Cycle</label>
+                <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
+            </div>
+            <button class="btn btn-primary" type="submit">Reload Dashboard</button>
+            <div class="cb-run-quicklinks">
+                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reports</a>
+                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reconciliation</a>
+                <a class="cb-btn-ghost" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
+                <a class="cb-btn-ghost" href="/rates?month_cycle={{ $mc }}">Rates</a>
+            </div>
+        </form>
+    </div>
+
     <!-- DASHBOARD_COMMAND_PILLS_START -->
     <div class="col-12 command-row" id="dashboardCommandRow">
         <div class="command-row-label">Commands</div>
@@ -44,6 +93,113 @@
     </div>
     <!-- DASHBOARD_COMMAND_PILLS_END -->
 
+    <!-- 2. READINESS TILES -->
+    <div class="col-12 card">
+        <div class="cb-card-head">
+            <h3 class="section-title">Readiness</h3>
+            <span class="cb-status-pill is-pending">Live status not wired</span>
+        </div>
+        <div class="cb-readiness-grid">
+            <div class="cb-tile is-pending">
+                <div class="cb-tile-head">
+                    <span class="cb-tile-name">Readings</span>
+                    <span class="cb-status-pill is-pending">Pending</span>
+                </div>
+                <p class="cb-tile-desc">Meter readings for this period. Open to review and import.</p>
+                <div class="cb-tile-foot">
+                    <a class="cb-tile-link" href="/meters-readings/readings?month_cycle={{ $mc }}">Open readings →</a>
+                </div>
+            </div>
+
+            <div class="cb-tile is-pending">
+                <div class="cb-tile-head">
+                    <span class="cb-tile-name">Attendance</span>
+                    <span class="cb-status-pill is-pending">Pending</span>
+                </div>
+                <p class="cb-tile-desc">Active days / attendance import for the month.</p>
+                <div class="cb-tile-foot">
+                    <a class="cb-tile-link" href="/active-days-monthly?month_cycle={{ $mc }}">Open attendance →</a>
+                </div>
+            </div>
+
+            <div class="cb-tile is-pending">
+                <div class="cb-tile-head">
+                    <span class="cb-tile-name">Allowance</span>
+                    <span class="cb-status-pill is-pending">Pending</span>
+                </div>
+                <p class="cb-tile-desc">House allowance inputs &amp; corrections.</p>
+                <div class="cb-tile-foot">
+                    <a class="cb-tile-link" href="/imports-validation?month_cycle={{ $mc }}">Open imports →</a>
+                </div>
+            </div>
+
+            <div class="cb-tile is-pending">
+                <div class="cb-tile-head">
+                    <span class="cb-tile-name">Rates</span>
+                    <span class="cb-status-pill is-pending">Pending</span>
+                </div>
+                <p class="cb-tile-desc">Approved rate set must be in place before the run.</p>
+                <div class="cb-tile-foot">
+                    <a class="cb-tile-link" href="/rates?month_cycle={{ $mc }}">Open rates →</a>
+                </div>
+            </div>
+
+            <div class="cb-tile is-pending">
+                <div class="cb-tile-head">
+                    <span class="cb-tile-name">Integrity</span>
+                    <span class="cb-status-pill is-pending">Pending</span>
+                </div>
+                <p class="cb-tile-desc">Reconciliation &amp; integrity checks before locking.</p>
+                <div class="cb-tile-foot">
+                    <a class="cb-tile-link" href="/reporting?month_cycle={{ $mc }}">Open reconciliation →</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MISSING DATA / BLOCKERS  +  4. NEXT ACTION -->
+    <div class="col-7 card">
+        <div class="cb-card-head">
+            <h3 class="section-title">Missing Data &amp; Blockers</h3>
+        </div>
+        <div class="empty" style="margin-bottom:12px">
+            No automated blocker feed is connected to this view yet — nothing is being flagged automatically.
+            Use the manual pre-run checks below until live checks are wired in.
+        </div>
+        <div class="muted" style="margin-bottom:8px;font-weight:800">Manual pre-run checks</div>
+        <ul class="cb-list">
+            <li class="cb-list-row"><span class="cb-dot"></span>Readings imported and validated for this period.</li>
+            <li class="cb-list-row"><span class="cb-dot"></span>Attendance / active days uploaded and reviewed.</li>
+            <li class="cb-list-row"><span class="cb-dot"></span>House allowance inputs and corrections confirmed.</li>
+            <li class="cb-list-row"><span class="cb-dot"></span>Rates approved before the billing run.</li>
+            <li class="cb-list-row"><span class="cb-dot"></span>Reconciliation reviewed before lock.</li>
+        </ul>
+    </div>
+
+    <div class="col-5 card soft">
+        <div class="cb-card-head">
+            <h3 class="section-title">Next Action</h3>
+        </div>
+        <div class="cb-next">
+            @if(!$hasPeriod)
+                <p class="cb-next-step">Select a billing month</p>
+                <p class="cb-next-why">No active period is set. Enter a month cycle above and reload to begin.</p>
+                <div class="split">
+                    <a class="btn btn-primary" href="/month-lifecycle">Open Month Lifecycle</a>
+                </div>
+            @else
+                <p class="cb-next-step">Review month inputs &amp; preview</p>
+                <p class="cb-next-why">Confirm readings, attendance, allowance and rates for {{ $monthCycle }}, then preview before running billing.</p>
+                <div class="split">
+                    <a class="btn btn-primary" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Lifecycle</a>
+                    <a class="btn" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
+                    <a class="btn" href="/billing-run-lock?month_cycle={{ $mc }}">Billing Run</a>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- 5. SNAPSHOT (real KPI data) -->
     <div class="col-3 card">
         <div class="muted">Employees Billed</div>
         <div class="kpi">{{ $kpis['employees_billed'] ?? 0 }}</div>
@@ -101,48 +257,68 @@
         </div>
     </div>
 
-    <div class="col-8 card">
-        <h3 class="section-title">Month Control + Quick Actions</h3>
-        <form method="get" action="/dashboard" class="form-grid" style="margin-bottom:12px;">
-            <div class="field col-4">
-                <label class="label">Month Cycle</label>
-                <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
-            </div>
-            <div class="field col-8" style="justify-content:flex-end;display:flex;align-items:flex-end;">
-                <div class="split">
-                    <button class="btn btn-primary" type="submit">Reload Dashboard</button>
-                    <a class="btn" href="/month-lifecycle?month_cycle={{ urlencode((string)$monthCycle) }}">Open Month Cycle</a>
-                    <a class="btn" href="/billing-run-lock?month_cycle={{ urlencode((string)$monthCycle) }}">Open Billing</a>
-                </div>
-            </div>
-        </form>
-        <div class="split">
-            <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Reports</a>
-            <a class="btn" href="/reporting?month_cycle={{ urlencode((string)$monthCycle) }}">Reconciliation</a>
-            <a class="btn" href="/imports-validation?month_cycle={{ urlencode((string)$monthCycle) }}">Imports</a>
-            <a class="btn" href="/rates?month_cycle={{ urlencode((string)$monthCycle) }}">Rates</a>
+    <!-- FAMILY & VAN OVERVIEW (real backend data: $familyRows / $vanRows) -->
+    <div class="col-6 card">
+        <div class="cb-card-head">
+            <h3 class="section-title">Family Members</h3>
+            <span class="badge">{{ count($familyRows ?? []) }} rows</span>
         </div>
+        @if(!empty($familyRows))
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Employee</th><th>Member</th><th>Relation</th><th>Age</th></tr></thead>
+                    <tbody>
+                    @foreach($familyRows as $row)
+                        <tr>
+                            <td>{{ $row->employee_id ?? '' }}</td>
+                            <td>{{ $row->family_member_name ?? '' }}</td>
+                            <td>{{ $row->relation ?? '' }}</td>
+                            <td>{{ $row->age ?? '' }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="empty">No family member records for this period.</div>
+        @endif
     </div>
 
-    <div class="col-4 card soft">
-        <h3 class="section-title">Workflow Attention</h3>
-        <div class="muted" style="margin-bottom:8px">Month Context</div>
-        <div><strong>{{ $monthCycle ?? 'N/A' }}</strong></div>
-        <div class="muted" style="margin-top:10px">Operator Checks</div>
-        <ul style="margin:8px 0 0 18px;padding:0;color:#334155;font-size:13px;line-height:1.6">
-            <li>Rates approved before billing run</li>
-            <li>Imports validated and errors reviewed</li>
-            <li>Reports and reconciliation reviewed</li>
-        </ul>
+    <div class="col-6 card">
+        <div class="cb-card-head">
+            <h3 class="section-title">School Van Kids</h3>
+            <span class="badge warn">{{ count($vanRows ?? []) }} rows</span>
+        </div>
+        @if(!empty($vanRows))
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Employee</th><th>Child</th><th>School</th><th>Class</th><th>Amount</th></tr></thead>
+                    <tbody>
+                    @foreach($vanRows as $row)
+                        <tr>
+                            <td>{{ $row->employee_id ?? '' }}</td>
+                            <td>{{ $row->child_name ?? '' }}</td>
+                            <td>{{ $row->school_name ?? '' }}</td>
+                            <td>{{ $row->class_level ?? '' }}</td>
+                            <td>PKR {{ number_format((float)($row->amount ?? 0), 2) }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="empty">No school van records for this period.</div>
+        @endif
     </div>
 
+    <!-- 6. LAST RUN / RECENT RUNS -->
     <div class="col-12 card">
-        <h3 class="section-title">Recent Workflow Summary</h3>
-        <div class="grid" style="gap:10px">
-            <div class="col-3 card soft"><div class="muted">Billing</div><div style="font-weight:700">Run + lock control ready</div></div>
-            <div class="col-3 card soft"><div class="muted">Month Cycle</div><div style="font-weight:700">State transitions available</div></div>
-            <div class="col-3 card soft"><div class="muted">Reports</div><div style="font-weight:700">JSON + export endpoints linked</div></div>
-            <div class="col-3 card soft"><div class="muted">Data Inputs</div><div style="font-weight:700">Mapping / HR / Readings / RO access</div></div>
+        <div class="cb-card-head">
+            <h3 class="section-title">Last Run &amp; Recent Runs</h3>
+            <a class="cb-tile-link" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing Run &amp; Lock →</a>
+        </div>
+        <div class="empty">
+            No run history is connected to this view yet. Previous runs and reprint actions appear here once a run feed is wired in.
         </div>
     </div>
 </div>

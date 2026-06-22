@@ -787,6 +787,12 @@
             </nav>
 
             <div class="cb-actions">
+                @php($cbEnv = app()->environment())
+                @if($cbEnv === 'production')
+                    <span class="cb-env-chip" title="Environment: {{ $cbEnv }}">Live</span>
+                @else
+                    <span class="cb-env-chip is-staging" title="Environment: {{ $cbEnv }}">{{ strtoupper($cbEnv) }}</span>
+                @endif
                 <a class="cb-action-hot" href="/people-residency">People</a>
                 <span class="cb-user-chip">User #{{ session('user_id', 'N/A') }} · {{ session('role', 'N/A') }}</span>
             </div>

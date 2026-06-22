@@ -436,3 +436,293 @@ summary{
   .card{padding:14px}
   th,td{padding:9px}
 }
+
+/* ============================================================
+   Blueprint Readiness Console — Phase 2
+   Scope: visual + layout only. No billing/formula logic.
+   Real data only; status tiles default to PENDING when no
+   backend signal is wired (honest empty state, never faked).
+   ============================================================ */
+
+/* Environment / staging visibility chip (real app env, not faked) */
+.cb-env-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 11px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:#065f46;
+  background:#dcfce7;
+  border:1px solid #86efac;
+  white-space:nowrap;
+}
+.cb-env-chip.is-staging{
+  color:#ffffff;
+  background:linear-gradient(135deg,#dc2626,#ef4444);
+  border-color:#b91c1c;
+  box-shadow:0 4px 12px rgba(220,38,38,.28);
+}
+.cb-env-chip.is-staging::before{
+  content:"";
+  width:7px;
+  height:7px;
+  border-radius:999px;
+  background:#fff;
+  box-shadow:0 0 0 3px rgba(255,255,255,.35);
+}
+
+/* Status pill — shared OK / WARN / BLOCKED / PENDING vocabulary */
+.cb-status-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:5px 11px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+  border:1px solid transparent;
+  white-space:nowrap;
+}
+.cb-status-pill::before{
+  content:"";
+  width:8px;
+  height:8px;
+  border-radius:999px;
+  background:currentColor;
+  flex:0 0 8px;
+}
+.cb-status-pill.is-ok{color:#15803d;background:#dcfce7;border-color:#86efac;}
+.cb-status-pill.is-warn{color:#b45309;background:#fef3c7;border-color:#fcd34d;}
+.cb-status-pill.is-blocked{color:#b91c1c;background:#fee2e2;border-color:#fca5a5;}
+.cb-status-pill.is-pending{color:#475569;background:#f1f5f9;border-color:#cbd5e1;}
+
+/* Current Run / Current Period pinned card */
+.cb-run-card{
+  background:linear-gradient(135deg,#0f2a44 0%,#0b2137 55%,#081827 100%);
+  color:#e2e8f0;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:var(--cb-radius-lg);
+  box-shadow:var(--cb-shadow-lg);
+  padding:20px 22px;
+}
+.cb-run-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.cb-run-eyebrow{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:#7dd3fc;
+}
+.cb-run-period{
+  font-size:30px;
+  font-weight:900;
+  letter-spacing:-.03em;
+  color:#ffffff;
+  margin:6px 0 2px;
+  line-height:1.1;
+}
+.cb-run-hint{
+  font-size:13px;
+  color:#94a3b8;
+  margin:0;
+}
+.cb-run-side{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
+}
+.cb-run-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.cb-run-card .cb-run-form{
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+  flex-wrap:wrap;
+  margin:16px 0 0;
+  padding-top:16px;
+  border-top:1px solid rgba(148,163,184,.18);
+}
+.cb-run-card .cb-run-form .field{flex:0 0 220px}
+.cb-run-card .cb-run-form .label{color:#cbd5e1}
+.cb-run-card .cb-run-form input{
+  background:rgba(255,255,255,.96);
+}
+.cb-run-quicklinks{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-left:auto;
+}
+.cb-btn-ghost{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  min-height:36px;
+  padding:8px 13px;
+  border-radius:10px;
+  border:1px solid rgba(148,163,184,.35);
+  background:rgba(255,255,255,.06);
+  color:#e2e8f0;
+  font-weight:800;
+  font-size:13px;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.cb-btn-ghost:hover{
+  background:rgba(255,255,255,.14);
+  border-color:rgba(125,211,252,.5);
+}
+
+/* Readiness tiles */
+.cb-readiness-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:14px;
+}
+.cb-tile{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:16px;
+  border-radius:var(--cb-radius-md);
+  border:1px solid var(--cb-slate-200);
+  background:#ffffff;
+  box-shadow:var(--cb-shadow-sm);
+  position:relative;
+  overflow:hidden;
+  transition:box-shadow .15s ease, border-color .15s ease, transform .15s ease;
+}
+.cb-tile::before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  background:var(--cb-slate-300);
+}
+.cb-tile.is-ok::before{background:var(--cb-green)}
+.cb-tile.is-warn::before{background:var(--cb-amber)}
+.cb-tile.is-blocked::before{background:var(--cb-red)}
+.cb-tile.is-pending::before{background:var(--cb-slate-300)}
+.cb-tile:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--cb-shadow-md);
+  border-color:#bfdbfe;
+}
+.cb-tile-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.cb-tile-name{
+  font-size:13px;
+  font-weight:900;
+  color:var(--cb-slate-800);
+  letter-spacing:-.01em;
+}
+.cb-tile-desc{
+  font-size:12px;
+  color:var(--cb-slate-500);
+  line-height:1.45;
+  margin:0;
+  flex:1;
+}
+.cb-tile-foot{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:auto;
+  padding-top:6px;
+}
+.cb-tile-link{
+  font-size:12px;
+  font-weight:800;
+  color:var(--cb-blue-600);
+  text-decoration:none;
+  white-space:nowrap;
+}
+.cb-tile-link:hover{text-decoration:underline}
+
+/* Blockers / Next Action / Recent Runs shared list */
+.cb-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.cb-list-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:11px 12px;
+  border:1px solid var(--cb-slate-200);
+  border-radius:var(--cb-radius-sm);
+  background:#f8fafc;
+  font-size:13px;
+  color:var(--cb-slate-700);
+}
+.cb-list-row .cb-dot{
+  width:8px;height:8px;border-radius:999px;margin-top:5px;flex:0 0 8px;
+  background:var(--cb-slate-400,#94a3b8);
+}
+.cb-list-row.is-warn .cb-dot{background:var(--cb-amber)}
+.cb-list-row.is-blocked .cb-dot{background:var(--cb-red)}
+
+/* Next Action emphasis card */
+.cb-next{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.cb-next-step{
+  font-size:18px;
+  font-weight:850;
+  letter-spacing:-.01em;
+  color:var(--cb-slate-950);
+  margin:0;
+}
+.cb-next-why{
+  font-size:13px;
+  color:var(--cb-slate-500);
+  margin:0;
+}
+
+/* Section heading with status alignment */
+.cb-card-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 14px;
+}
+.cb-card-head .section-title{margin:0}
+
+@media (max-width:1100px){
+  .cb-readiness-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cb-run-period{font-size:26px}
+}
+@media (max-width:720px){
+  .cb-readiness-grid{grid-template-columns:1fr}
+  .cb-run-card{padding:16px}
+  .cb-run-quicklinks{margin-left:0;width:100%}
+}
