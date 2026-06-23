@@ -21,4 +21,8 @@ body{margin:0;background:var(--bc-bg);color:var(--bc-ink);font-family:Inter,Aria
 .bc-form input,.bc-form select{padding:11px;border:1px solid var(--bc-line);border-radius:12px;background:#fff}
 .bc-btn{border:0;background:#111827;color:#fff;padding:11px 15px;border-radius:12px;font-weight:700;cursor:pointer}
 .bc-btn:disabled{opacity:.45;cursor:not-allowed}
+.bc-table-wrap{overflow:auto;border:1px solid var(--bc-line);border-radius:14px;margin-top:12px;background:#fff}
+.bc-table{width:100%;border-collapse:collapse;background:#fff}
+.bc-table th,.bc-table td{padding:10px 12px;border-bottom:1px solid var(--bc-line);text-align:left;white-space:nowrap}
+.bc-table th{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--bc-muted);background:#f9fafb}
 @media(max-width:850px){.bc-shell{padding:14px}.bc-topbar{align-items:flex-start;flex-direction:column}.bc-grid{grid-template-columns:1fr}}
