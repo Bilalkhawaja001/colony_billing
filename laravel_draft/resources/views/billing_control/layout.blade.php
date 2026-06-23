@@ -16,7 +16,7 @@
         <div class="bc-alert">{{ session('status') }}</div>
     @endif
 
-    @if($errors->any())
+    @if(isset($errors) && $errors->any())
         <div class="bc-alert bc-alert-danger">
             @foreach($errors->all() as $error)
                 <div>{{ $error }}</div>
