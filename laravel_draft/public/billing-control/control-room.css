@@ -1,0 +1,24 @@
+:root{--bc-bg:#f6f7fb;--bc-card:#fff;--bc-ink:#111827;--bc-muted:#6b7280;--bc-line:#e5e7eb;--bc-danger:#b91c1c;--bc-radius:18px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bc-bg);color:var(--bc-ink);font-family:Inter,Arial,sans-serif}
+.bc-shell{max-width:1180px;margin:0 auto;padding:22px}
+.bc-topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+.bc-kicker{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--bc-muted)}
+.bc-topbar h1{margin:4px 0 0;font-size:26px}
+.bc-top-actions,.bc-actions,.bc-form{display:flex;gap:10px;flex-wrap:wrap}
+.bc-top-actions a,.bc-btn-link{background:#fff;border:1px solid var(--bc-line);padding:10px 13px;border-radius:999px;color:var(--bc-ink);text-decoration:none}
+.bc-stepper{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.bc-stepper a{padding:9px 11px;border-radius:999px;background:#eef2ff;color:#111827;text-decoration:none;font-size:13px}
+.bc-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}
+.bc-card,.bc-panel,.bc-issue{background:var(--bc-card);border:1px solid var(--bc-line);border-radius:var(--bc-radius);padding:16px;box-shadow:0 10px 30px rgba(15,23,42,.04)}
+.bc-card-title,.bc-muted{color:var(--bc-muted)}
+.bc-card-value{font-size:24px;font-weight:800;margin:8px 0}
+.bc-panel{margin-bottom:16px}
+.bc-alert{background:#ecfdf5;border:1px solid #a7f3d0;border-radius:14px;padding:12px;margin-bottom:14px}
+.bc-alert-danger{background:#fef2f2;border-color:#fecaca;color:var(--bc-danger)}
+.bc-issue{border-color:#fbbf24;background:#fffbeb;margin:10px 0}
+.bc-form{margin:14px 0}
+.bc-form input,.bc-form select{padding:11px;border:1px solid var(--bc-line);border-radius:12px;background:#fff}
+.bc-btn{border:0;background:#111827;color:#fff;padding:11px 15px;border-radius:12px;font-weight:700;cursor:pointer}
+.bc-btn:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:850px){.bc-shell{padding:14px}.bc-topbar{align-items:flex-start;flex-direction:column}.bc-grid{grid-template-columns:1fr}}

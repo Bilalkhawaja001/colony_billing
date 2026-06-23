@@ -1,26 +1,21 @@
 <?php
 
-use App\Http\Controllers\Billing\DepartmentMasterController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthDraftController;
+use App\Http\Controllers\Auth\SsoConsumeController;
 use App\Http\Controllers\Billing\BillingDraftController;
 use App\Http\Controllers\Billing\ImportsMonthlySetupController;
 use App\Http\Controllers\Billing\MasterDataDraftController;
 use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Billing\FamilyRegistryResultsController;
-use App\Http\Controllers\Billing\EmployeeProfileController;
 use App\Http\Controllers\Billing\EmployeesMeterParityController;
-use App\Http\Controllers\Billing\MonthlyActiveDaysController;
-use App\Http\Controllers\Billing\DataGridController;
-use App\Http\Controllers\Billing\HouseAllowanceCorrectionController;
 use App\Http\Controllers\Ui\ParityUiController;
 use App\Http\Controllers\Infra\InfraController;
 use App\Http\Controllers\Billing\UnitReferenceParityController;
 use App\Http\Controllers\Transport\TransportController;
-use App\Http\Controllers\Facilities\FacilitiesController;
-use App\Http\Controllers\Billing\ResidencyMasterController;
+use App\Http\Controllers\Billing\V2\BillRunPreflightController;
+use App\Http\Controllers\Billing\V2\BillRunGateController;
 
-use App\Http\Controllers\Billing\HrActiveWorkbookController;
 Route::get('/health', [InfraController::class, 'health']);
 
 Route::get('/', [ParityUiController::class, 'home']);
@@ -28,6 +23,7 @@ Route::get('/', [ParityUiController::class, 'home']);
 Route::get('/login', [AuthDraftController::class, 'showLogin']);
 Route::post('/login', [AuthDraftController::class, 'login']);
 Route::get('/logout', [AuthDraftController::class, 'logout']);
+Route::get('/sso/consume', SsoConsumeController::class);
 
 Route::get('/forgot-password', [AuthDraftController::class, 'showForgotPassword']);
 Route::post('/forgot-password', [AuthDraftController::class, 'forgotPassword']);
@@ -44,89 +40,12 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
-
-    /* PEOPLE_RESIDENCY_DEPT_CASCADE_ROUTE_START */
-    Route::get('/people-residency/dept-cascade', function (\App\Services\Billing\DepartmentMasterService $service) {
-        $data = $service->list([]);
-        $rows = $data['rows'] ?? [];
-
-        $tree = [];
-        $departments = [];
-
-        foreach ($rows as $row) {
-            $dept = trim((string) ($row['department'] ?? ''));
-            $section = trim((string) ($row['section'] ?? ''));
-            $sub = trim((string) ($row['sub_section'] ?? ''));
-
-            if ($dept === '') {
-                continue;
-            }
-
-            if (!array_key_exists($dept, $tree)) {
-                $tree[$dept] = [];
-                $departments[] = $dept;
-            }
-
-            if ($section !== '' && !array_key_exists($section, $tree[$dept])) {
-                $tree[$dept][$section] = [];
-            }
-
-            if ($section !== '' && $sub !== '' && !in_array($sub, $tree[$dept][$section], true)) {
-                $tree[$dept][$section][] = $sub;
-            }
-        }
-
-        return response()->json([
-            'status' => 'ok',
-            'source' => 'department_master_service',
-            'departments' => $departments,
-            'tree' => $tree,
-            'department_master_rows' => count($rows),
-        ]);
-    });
-    /* PEOPLE_RESIDENCY_DEPT_CASCADE_ROUTE_END */
-
-    /* HR_ACTIVE_WORKBOOK_ROUTES_START */
-    Route::post('/hr-active-workbook/upload', [HrActiveWorkbookController::class, 'upload']);
-    Route::get('/hr-active-workbook/reference', [HrActiveWorkbookController::class, 'reference']);
-    Route::get('/hr-active-workbook/recent', [HrActiveWorkbookController::class, 'recent']);
-    /* HR_ACTIVE_WORKBOOK_ROUTES_END */
-
-    Route::get('/employee-profile/{companyId}', [EmployeeProfileController::class, 'show']);
-    Route::post('/employee-profile/{companyId}/residence/assign', [EmployeeProfileController::class, 'assignResidence']);
-    Route::post('/employee-profile/{companyId}/residence/shift', [EmployeeProfileController::class, 'shiftResidence']);
-    Route::post('/employee-profile/{companyId}/residence/vacate', [EmployeeProfileController::class, 'vacateResidence']);
-    Route::post('/employee-profile/{companyId}/family-members/{familyMemberId}/movement', [EmployeeProfileController::class, 'recordFamilyMovement']);
-    Route::post('/employee-profile/{companyId}/family-members', [EmployeeProfileController::class, 'storeFamilyMember']);
-    Route::put('/employee-profile/{companyId}/family-members/{familyMemberId}', [EmployeeProfileController::class, 'updateFamilyMember']);
-    Route::get('/active-days-monthly', [MonthlyActiveDaysController::class, 'index']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
-    Route::get('/ui/residency-master', [ResidencyMasterController::class, 'index']);
-    Route::get('/residency-master/list', [ResidencyMasterController::class, 'list']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
-        $requestedMonth = trim((string) $request->query('month_cycle', ''));
-
-        $monthCycle = $requestedMonth !== ''
-            ? $requestedMonth
-            : (string) (\Illuminate\Support\Facades\DB::table('util_month_cycle')
-                ->where('state', 'OPEN')
-                ->orderByDesc('created_at')
-                ->value('month_cycle') ?? '');
-
         return view('ui.transport', [
-            'monthCycle' => $monthCycle,
+            'monthCycle' => (string) ($request->query('month_cycle') ?? ''),
         ]);
     });
-
-    Route::get('/facilities-management', [FacilitiesController::class, 'overview']);
-    Route::get('/facilities-management/registry', [FacilitiesController::class, 'registry']);
-    Route::get('/facilities-management/inspections', [FacilitiesController::class, 'inspections']);
-    Route::get('/facilities-management/service-requests', [FacilitiesController::class, 'serviceRequests']);
-    Route::get('/facilities-management/approval-queue', [FacilitiesController::class, 'approvalQueue']);
-    Route::get('/facilities-management/work-orders', [FacilitiesController::class, 'workOrders']);
-    Route::get('/facilities-management/daily-services', [FacilitiesController::class, 'dailyServices']);
-    Route::get('/facilities-management/verification-closure', [FacilitiesController::class, 'verificationClosure']);
-    Route::get('/facilities-management/reports', [FacilitiesController::class, 'reports']);
     // Hub: Meters & Readings (single sidebar entry)
     Route::get('/meters-readings', [ParityUiController::class, 'metersHub']);
 
@@ -148,7 +67,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/ui/results/unit-wise', fn () => redirect('/reporting'));
     Route::get('/ui/logs', fn () => redirect('/reporting'));
     Route::get('/ui/employee-master', fn () => redirect('/people-residency'));
-    Route::get('/ui/monthly-active-days', fn () => redirect('/active-days-monthly'));
     Route::get('/ui/employees', fn () => redirect('/people-residency'));
     Route::get('/ui/employee-helper', fn () => redirect('/people-residency'));
     Route::get('/ui/inputs/hr', fn () => redirect('/people-residency'));
@@ -185,18 +103,10 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/dashboard/colony-kpis', [ParityUiController::class, 'colonyKpis']);
     Route::get('/api/dashboard/family-members', [ParityUiController::class, 'familyMembers']);
     Route::get('/api/dashboard/van-kids', [ParityUiController::class, 'vanKids']);
-    Route::get('/api/transport/school-van/enrolments', [TransportController::class, 'schoolVanEnrolments']);
-    Route::post('/api/transport/school-van/enrolments/add', [TransportController::class, 'schoolVanEnrolmentAdd']);
-    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/left', [TransportController::class, 'schoolVanEnrolmentLeave']);
-    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/cancel', [TransportController::class, 'schoolVanEnrolmentCancel']);
-    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/reactivate', [TransportController::class, 'schoolVanEnrolmentReactivate']);
-    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/restore-cancellation', [TransportController::class, 'schoolVanEnrolmentRestoreCancellation']);
     Route::get('/api/transport/summary', [TransportController::class, 'summary']);
-    Route::post('/api/transport/month-cycle/upsert', [TransportController::class, 'monthCycleUpsert']);
-    Route::post('/api/transport/school-van/bill/generate', [TransportController::class, 'generateSchoolVanBill']);
-    // Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
-    // Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
-    // Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
+    Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
+    Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
+    Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
     Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
     Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
     Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
@@ -214,6 +124,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])-
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
     Route::get('/billing-run-lock', [ParityUiController::class, 'billing']);
     Route::get('/month-lifecycle', [ParityUiController::class, 'monthCycle']);
+    Route::get('/api/v2/bill-runs/preflight', [BillRunPreflightController::class, 'show']);
+    Route::get('/api/v2/bill-runs/gates', [BillRunGateController::class, 'show']);
 
     // Backward-compatible /ui redirects
     Route::get('/ui/billing', fn () => redirect('/billing-run-lock'));
@@ -228,8 +140,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/api/billing/precheck', [BillingDraftController::class, 'precheck']);
     Route::post('/api/billing/finalize', [BillingDraftController::class, 'finalize']);
     Route::post('/billing/elec/compute', [BillingDraftController::class, 'elecCompute']);
-    Route::post('/billing/electric/house-allowance/preview', [HouseAllowanceCorrectionController::class, 'preview']);
-    Route::post('/billing/electric/house-allowance/apply', [HouseAllowanceCorrectionController::class, 'apply']);
     Route::post('/billing/water/compute', [BillingDraftController::class, 'waterCompute']);
     Route::post('/billing/run', [BillingDraftController::class, 'run']);
     Route::post('/billing/fingerprint', [BillingDraftController::class, 'fingerprint']);
@@ -239,6 +149,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/billing/print/<month_cycle>/<employee_id>', [BillingDraftController::class, 'printEmployeeLiteral']);
     Route::post('/billing/lock', [BillingDraftController::class, 'lock']);
     Route::post('/billing/approve', [BillingDraftController::class, 'approve']);
+    Route::post('/api/v2/bill-runs/preflight/save', [BillRunPreflightController::class, 'save']);
+    Route::post('/api/v2/bill-runs/gates/transition', [BillRunGateController::class, 'transition']);
 
     // Adjustments / recovery (evidence shows removed/disabled flow -> explicit real 410 parity behavior).
     Route::post('/billing/adjustments/create', [BillingDraftController::class, 'adjustmentCreate']);
@@ -280,9 +192,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/api/water/occupancy-snapshot', [BillingDraftController::class, 'waterOccupancySnapshot']);
     Route::get('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsGet']);
     Route::get('/api/water/allocation-preview', [BillingDraftController::class, 'waterAllocationPreview']);
-    Route::get('/active-days-monthly/template', [MonthlyActiveDaysController::class, 'template']);
-    Route::get('/active-days-monthly/rows', [MonthlyActiveDaysController::class, 'rows']);
-    Route::get('/active-days-monthly/manual-rows', [MonthlyActiveDaysController::class, 'manualRows']);
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
@@ -307,17 +216,14 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::post('/api/water/zone-adjustments', [BillingDraftController::class, 'waterZoneAdjustmentsUpsert']);
 
     Route::post('/employees/import', [EmployeesMeterParityController::class, 'employeesImport']);
-    Route::post('/active-days-monthly/preview', [MonthlyActiveDaysController::class, 'preview']);
-    Route::post('/active-days-monthly/import', [MonthlyActiveDaysController::class, 'import']);
-    Route::post('/active-days-monthly/manual-save', [MonthlyActiveDaysController::class, 'manualSave']);
-    Route::delete('/active-days-monthly/manual-delete', [MonthlyActiveDaysController::class, 'manualDelete']);
+    Route::post('/imports/active-days/import', [EmployeesMeterParityController::class, 'activeDaysImport']);
     Route::post('/employees/upsert', [EmployeesMeterParityController::class, 'employeesUpsert']);
     Route::post('/employees/add', [EmployeesMeterParityController::class, 'employeesAdd']);
     Route::patch('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeePatch']);
     Route::patch('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
     Route::patch('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeePatchCompat']);
     Route::delete('/employees/{companyId>', [EmployeesMeterParityController::class, 'employeeDelete']);
-    Route::delete('/employees/{company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
+    Route::delete('/employees/{company_id}', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
     Route::delete('/employees/<company_id>', [EmployeesMeterParityController::class, 'employeeDeleteCompat']);
 
     Route::post('/meter-reading/upsert', [EmployeesMeterParityController::class, 'meterReadingUpsert']);
@@ -325,16 +231,6 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::post('/api/rooms/cascade', [EmployeesMeterParityController::class, 'roomsCascade']);
     Route::get('/api/rooms/cascade', [EmployeesMeterParityController::class, 'roomsCascade']);
-
-    Route::post('/facilities-management/registry/facilities', [FacilitiesController::class, 'storeFacility']);
-    Route::post('/facilities-management/registry/components', [FacilitiesController::class, 'storeComponent']);
-    Route::post('/facilities-management/service-requests', [FacilitiesController::class, 'storeServiceRequest']);
-    Route::post('/facilities-management/service-requests/{id}/approve', [FacilitiesController::class, 'approveRequest']);
-    Route::post('/facilities-management/service-requests/{id}/reject', [FacilitiesController::class, 'rejectRequest']);
-    Route::post('/facilities-management/service-requests/{id}/convert-work-order', [FacilitiesController::class, 'convertRequestToWorkOrder']);
-    Route::post('/facilities-management/work-orders/{id}/transition', [FacilitiesController::class, 'transitionWorkOrder']);
-    Route::post('/facilities-management/work-orders/{id}/verify', [FacilitiesController::class, 'verifyWorkOrder']);
-    Route::post('/facilities-management/work-orders/{id}/close', [FacilitiesController::class, 'closeWorkOrder']);
 
     Route::post('/family/details/upsert', [FamilyRegistryResultsController::class, 'familyDetailsUpsert']);
     Route::post('/registry/employees/upsert', [FamilyRegistryResultsController::class, 'registryEmployeesUpsert']);
@@ -355,15 +251,14 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
 
     Route::get('/family/details/context', [FamilyRegistryResultsController::class, 'familyDetailsContext']);
     Route::get('/family/details', [FamilyRegistryResultsController::class, 'familyDetails']);
-    Route::get('/family/members/master', [FamilyRegistryResultsController::class, 'familyMembersMaster']);
-    Route::get('/family/members/registry', [FamilyRegistryResultsController::class, 'familyMembersRegistry']);
+    Route::get('/registry/employees/{companyId}', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
     Route::get('/registry/employees/{company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGet']);
     Route::get('/registry/employees/<company_id>', [FamilyRegistryResultsController::class, 'registryEmployeeGetLiteral']);
     Route::get('/api/results/employee-wise', [FamilyRegistryResultsController::class, 'resultsEmployeeWise']);
     Route::get('/api/results/unit-wise', [FamilyRegistryResultsController::class, 'resultsUnitWise']);
 });
 
-Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER'])->group(function () {
+Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,VIEWER'])->group(function () {
     Route::get('/reports/reconciliation', [BillingDraftController::class, 'reconciliationReport']);
     Route::get('/reports/monthly-summary', [BillingDraftController::class, 'monthlySummary']);
     Route::get('/reports/recovery', [BillingDraftController::class, 'recoveryReport']);
@@ -373,146 +268,12 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/export/excel/reconciliation', [BillingDraftController::class, 'exportExcelReconciliation']);
     Route::get('/export/excel/monthly-summary', [BillingDraftController::class, 'exportExcelMonthlySummary']);
     Route::get('/export/pdf/monthly-summary', [BillingDraftController::class, 'exportPdfMonthlySummary']);
-    Route::get('/billing/electric/export', [BillingDraftController::class, 'exportElectricBillExcel']);
-    Route::get('/billing/electric/export-complete', [BillingDraftController::class, 'exportCompleteElectricBillExcel']);
-    Route::get('/billing/electric/alerts-audit', [BillingDraftController::class, 'exportElectricAlertsAuditExcel']);
-    Route::get('/billing/electric/missing-skipped-audit', [BillingDraftController::class, 'exportElectricMissingSkippedAuditExcel']);
-    Route::get('/api/units/resident-groups', [DataGridController::class, 'unitResidentGroups']);
-    Route::get('/api/units/resident-rooms', [DataGridController::class, 'unitResidentRooms']);
-    Route::get('/api/units/residents', [DataGridController::class, 'unitResidents']);
-    Route::get('/api/grids/{module}', [DataGridController::class, 'list']);
-    Route::get('/meter-reading/list', [DataGridController::class, 'list'])->defaults('module', 'meter-readings');
-    Route::get('/export/{module}', [DataGridController::class, 'export']);
-    Route::get('/reports/employee-statement', [DataGridController::class, 'employeeStatement']);
-    Route::get('/reports/employee-statement/print', [DataGridController::class, 'employeeStatementPrint']);
-    Route::get('/reports/employee-statement/export', [DataGridController::class, 'employeeStatementExport']);
-    Route::get('/reports/employee-statements/export-all', [DataGridController::class, 'employeeStatementsExportAll']);
-});
-
-Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY'])->group(function () {
-    Route::post('/api/grids/{module}/upsert', [DataGridController::class, 'upsert']);
 });
 
 require __DIR__.'/electric_v1.php';
 
-Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
-// Employee residence cascade dropdowns
-Route::get('/get-residence-types', function () {
-    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
-
-    return \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')
-        ->where('month_cycle', $month)
-        ->whereNotNull('residence_type')
-        ->where('residence_type', '<>', '')
-        ->distinct()
-        ->orderBy('residence_type')
-        ->pluck('residence_type');
-});
-
-Route::get('/get-colonies', function (\Illuminate\Http\Request $request) {
-    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
-    $residenceType = trim((string) $request->query('residence_type', ''));
-
-    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
-        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
-        ->where('r.month_cycle', $month);
-
-    if ($residenceType !== '') {
-        $q->where('r.residence_type', $residenceType);
-    }
-
-    return $q->selectRaw("COALESCE(NULLIF(u.colony_type,''), '__uncategorized') as colony_type")
-        ->distinct()
-        ->orderBy('colony_type')
-        ->pluck('colony_type');
-});
-
-Route::get('/get-blocks/{colony}', function (\Illuminate\Http\Request $request, $colony) {
-    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
-    $colony = urldecode($colony);
-    $residenceType = trim((string) $request->query('residence_type', ''));
-
-    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
-        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
-        ->where('r.month_cycle', $month)
-        ->whereNotNull('r.block_floor')
-        ->where('r.block_floor', '<>', '');
-
-    if ($residenceType !== '') {
-        $q->where('r.residence_type', $residenceType);
-    }
-
-    if ($colony === '__uncategorized') {
-        $q->where(function ($w) {
-            $w->whereNull('u.colony_type')->orWhere('u.colony_type', '');
-        });
-    } else {
-        $q->where('u.colony_type', $colony);
-    }
-
-    return $q->distinct()->orderBy('r.block_floor')->pluck('r.block_floor');
-});
-
-Route::get('/get-rooms/{colony}/{block}', function (\Illuminate\Http\Request $request, $colony, $block) {
-    $month = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot')->max('month_cycle');
-    $colony = urldecode($colony);
-    $block = urldecode($block);
-    $residenceType = trim((string) $request->query('residence_type', ''));
-
-    $q = \Illuminate\Support\Facades\DB::table('util_unit_room_snapshot as r')
-        ->leftJoin('util_unit as u', 'u.unit_id', '=', 'r.unit_id')
-        ->where('r.month_cycle', $month)
-        ->where('r.block_floor', $block)
-        ->whereNotNull('r.room_no')
-        ->where('r.room_no', '<>', '');
-
-    if ($residenceType !== '') {
-        $q->where('r.residence_type', $residenceType);
-    }
-
-    if ($colony === '__uncategorized') {
-        $q->where(function ($w) {
-            $w->whereNull('u.colony_type')->orWhere('u.colony_type', '');
-        });
-    } else {
-        $q->where('u.colony_type', $colony);
-    }
-
-    return $q->orderBy('r.room_no')->get(['r.room_no', 'r.unit_id']);
-});
-});
-
-Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group(function () {
-    Route::get('/ui/department-master', [DepartmentMasterController::class, 'index'])->name('ui.department-master');
-    Route::get('/department-master/list', [DepartmentMasterController::class, 'list'])->name('department-master.list');
-});
-
-// DASHBOARD_BUTTON_ROUTE_ALIASES_START
-\Illuminate\Support\Facades\Route::get('/employee-master', function () {
-    return redirect('/ui/employee-master');
-});
-
-\Illuminate\Support\Facades\Route::get('/statement', function () {
-    return redirect('/reports/employee-statement');
-});
-
-\Illuminate\Support\Facades\Route::get('/family', function () {
-    return redirect('/ui/family-details');
-});
-
-\Illuminate\Support\Facades\Route::get('/residence', function () {
-    return redirect('/ui/employee-master?open=residence');
-});
-
-\Illuminate\Support\Facades\Route::get('/ui/residence', function () {
-    return redirect('/ui/employee-master?open=residence');
-});
-
-\Illuminate\Support\Facades\Route::get('/school-van', function () {
-    return redirect('/ui/school-van');
-});
-
-\Illuminate\Support\Facades\Route::get('/ui/school-van', function () {
-    return view('ui.school-van');
-});
-// DASHBOARD_BUTTON_ROUTE_ALIASES_END
+// BEGIN billing-control-route-loader
+if (file_exists(__DIR__ . '/billing_control.php')) {
+    require __DIR__ . '/billing_control.php';
+}
+// END billing-control-route-loader
