@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing\ControlRoom;
 
 use App\Http\Controllers\Controller;
+use App\Services\Billing\ControlRoom\GenerateDryRunService;
 use App\Services\Billing\ControlRoom\ReadinessService;
 use Illuminate\Http\Request;
 
@@ -16,10 +17,15 @@ class BillRunController extends Controller
         ]);
     }
 
-    public function store(Request $request, ReadinessService $readiness)
+    public function store(Request $request, GenerateDryRunService $dryRunService)
     {
-        return back()->withErrors([
-            'generate' => 'Generate blocked. Phase 1C only; real queued job requires Phase 1D approval.',
+        $dryRun = $dryRunService->run($request->input('month_cycle'));
+
+        return view('billing_control.result', [
+            'pageTitle' => 'Generate Dry Run Result',
+            'run' => $dryRun['dry_run_id'],
+            'dryRun' => $dryRun,
+            'rows' => [],
         ]);
     }
 
@@ -27,8 +33,8 @@ class BillRunController extends Controller
     {
         return response()->json([
             'run' => $run,
-            'status' => 'SCAFFOLD_ONLY',
-            'message' => 'Real queued job status pending Phase 1D.',
+            'status' => 'DRY_RUN_ONLY',
+            'message' => 'Phase 1D dry run only. Real queue status requires Phase 1E approval.',
         ]);
     }
 
@@ -46,7 +52,7 @@ class BillRunController extends Controller
         return response()->json([
             'run' => $run,
             'row' => $row,
-            'status' => 'SCAFFOLD_ONLY',
+            'status' => 'DRY_RUN_ONLY',
         ]);
     }
 }
