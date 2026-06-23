@@ -38,7 +38,7 @@ class OrchestrationService
 
         $runId = 'RUN-'.substr(bin2hex(random_bytes(8)), 0, 12);
         $runStart = gmdate('c');
-        $billingMonthDays = (new \DateTimeImmutable($cycleStart))->diff(new \DateTimeImmutable($cycleEnd))->days + 1;
+        $billingMonthDays = ExplicitElectricBillingCalculator::billingMonthDays($billingMonthDate);
         $monthCycle = date('Y-m', strtotime($billingMonthDate));
         $monthlyActiveDays = ElectricActiveDaysMonthly::query()
             ->whereDate('billing_month_date', $billingMonthDate)
@@ -48,17 +48,6 @@ class OrchestrationService
 
         $empRows = $this->master->listEmployees();
         $allowRows = $this->allowance->listAllowances();
-        $roomAllowanceRows = $this->allowance->listRoomAllowances();
-        $roomAllowanceMap = [];
-        foreach ($roomAllowanceRows as $roomAllow) {
-            $roomAllowanceMap[strtoupper((string) $roomAllow['unit_id']) . '||' . strtoupper((string) $roomAllow['room_no'])] = (float) $roomAllow['room_free_allowance'];
-        }
-
-        $fullAllowanceUnitIds = [];
-        foreach ($this->allowance->listFullAllowanceUnits() as $fullAllow) {
-            $fullAllowanceUnitIds[strtoupper((string) $fullAllow['unit_id'])] = true;
-        }
-
         $readRows = $this->readings->listCycleReadings($cycleStart, $cycleEnd);
         $attRows = $this->attendance->listCycleAttendance($cycleStart, $cycleEnd);
         $occRows = $this->occupancy->listOccupancy();
@@ -90,7 +79,19 @@ class OrchestrationService
         $finalMap=[]; $drill=[]; $processed=0; $skipped=0;
         $units = array_keys($allowByUnit); sort($units);
 
+        $excludedUnitIds = [];
+        if (\Illuminate\Support\Facades\Schema::hasTable('electric_v1_unit_exclusions')) {
+            foreach (\Illuminate\Support\Facades\DB::table('electric_v1_unit_exclusions')->where('is_active', true)->pluck('unit_id') as $excludedUnitId) {
+                $excludedUnitIds[strtoupper((string) $excludedUnitId)] = true;
+            }
+        }
+
         foreach ($units as $unitId) {
+            if (isset($excludedUnitIds[strtoupper((string) $unitId)])) {
+                $skipped++;
+                continue;
+            }
+
             $allow = $allowByUnit[$unitId];
             $resType = strtoupper(trim((string)($allow['residence_type'] ?? 'ROOM')));
 
@@ -188,7 +189,7 @@ class OrchestrationService
             $employeeIds = array_values(array_filter($employeeIds, fn($cid) => array_key_exists($cid, $activeDaysByEmployee)));
             $roomShared = $resType === 'HOUSE'
                 ? ['presence' => [], 'gross' => [], 'allowance' => []]
-                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays, $roomAllowanceMap, $fullAllowanceUnitIds, (string) $allow['unit_id']);
+                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays);
 
             foreach ($employeeIds as $index => $companyId) {
                 $employeeActiveDays = (float)($activeDaysByEmployee[$companyId] ?? 0.0);
