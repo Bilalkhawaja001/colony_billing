@@ -38,7 +38,8 @@ class OrchestrationService
 
         $runId = 'RUN-'.substr(bin2hex(random_bytes(8)), 0, 12);
         $runStart = gmdate('c');
-        $billingMonthDays = ExplicitElectricBillingCalculator::billingMonthDays($billingMonthDate);
+        $billingMonthDays = (new \DateTimeImmutable($cycleStart))->diff(new \DateTimeImmutable($cycleEnd))->days + 1;
+        $monthCycle = date('Y-m', strtotime($billingMonthDate));
         $monthlyActiveDays = ElectricActiveDaysMonthly::query()
             ->whereDate('billing_month_date', $billingMonthDate)
             ->pluck('active_days', 'company_id')
@@ -47,6 +48,17 @@ class OrchestrationService
 
         $empRows = $this->master->listEmployees();
         $allowRows = $this->allowance->listAllowances();
+        $roomAllowanceRows = $this->allowance->listRoomAllowances();
+        $roomAllowanceMap = [];
+        foreach ($roomAllowanceRows as $roomAllow) {
+            $roomAllowanceMap[strtoupper((string) $roomAllow['unit_id']) . '||' . strtoupper((string) $roomAllow['room_no'])] = (float) $roomAllow['room_free_allowance'];
+        }
+
+        $fullAllowanceUnitIds = [];
+        foreach ($this->allowance->listFullAllowanceUnits() as $fullAllow) {
+            $fullAllowanceUnitIds[strtoupper((string) $fullAllow['unit_id'])] = true;
+        }
+
         $readRows = $this->readings->listCycleReadings($cycleStart, $cycleEnd);
         $attRows = $this->attendance->listCycleAttendance($cycleStart, $cycleEnd);
         $occRows = $this->occupancy->listOccupancy();
@@ -94,6 +106,22 @@ class OrchestrationService
             if (!$cons['result']) { $skipped++; continue; }
 
             $unitOccupancy = $occByUnit[$unitId] ?? [];
+            if (count($unitOccupancy) === 0) {
+                $skipped++;
+                continue;
+            }
+
+            $roomByEmployee = [];
+            $roomPersonsByRoom = [];
+            foreach ($unitOccupancy as $o) {
+                $cidForRoom = trim((string)($o['company_id'] ?? ''));
+                $roomForEmployee = trim((string)($o['room_id'] ?? ''));
+                if ($cidForRoom !== '' && $roomForEmployee !== '') {
+                    $roomByEmployee[$cidForRoom][$roomForEmployee] = true;
+                    $roomPersonsByRoom[$roomForEmployee][$cidForRoom] = true;
+                }
+            }
+
             $roomPersons = $resType === 'HOUSE' ? 1 : ExplicitElectricBillingCalculator::roomPersons($unitOccupancy);
             if ($roomPersons <= 0) {
                 $issues[] = ['code' => 'E_ROOM_PERSONS_INVALID', 'message' => 'Room_Persons must be greater than zero', 'severity' => 'ERROR', 'unit_id' => $unitId];
@@ -160,7 +188,7 @@ class OrchestrationService
             $employeeIds = array_values(array_filter($employeeIds, fn($cid) => array_key_exists($cid, $activeDaysByEmployee)));
             $roomShared = $resType === 'HOUSE'
                 ? ['presence' => [], 'gross' => [], 'allowance' => []]
-                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays);
+                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays, $roomAllowanceMap, $fullAllowanceUnitIds, (string) $allow['unit_id']);
 
             foreach ($employeeIds as $index => $companyId) {
                 $employeeActiveDays = (float)($activeDaysByEmployee[$companyId] ?? 0.0);
@@ -169,11 +197,18 @@ class OrchestrationService
                     : round((float)($roomShared['gross'][$companyId] ?? 0.0), 4);
                 $eligibleUnits = $resType === 'HOUSE'
                     ? round($unitFreeElectric, 4)
-                    : ExplicitElectricBillingCalculator::eligibleUnits($unitFreeElectric, 1, $billingMonthDays, $employeeActiveDays);
+                    : round((float)($roomShared['allowance'][$companyId] ?? 0.0), 4);
                 $billableUnits = ExplicitElectricBillingCalculator::billableUnits($empUsedElec, $eligibleUnits);
                 $adj = (float)($adjMap[$companyId.'|'.$unitId] ?? 0.0);
                 $netAfterAdj = round(max(0.0, $billableUnits + $adj), 4);
                 $amountBefore = ExplicitElectricBillingCalculator::amount($netAfterAdj, $flatRate);
+
+                $roomsForEmployee = array_keys($roomByEmployee[$companyId] ?? []);
+                sort($roomsForEmployee);
+                $roomNo = count($roomsForEmployee) === 1 ? $roomsForEmployee[0] : (count($roomsForEmployee) > 1 ? 'MULTI' : '');
+                $displayRoomPersons = ($roomNo !== '' && isset($roomPersonsByRoom[$roomNo]))
+                    ? count($roomPersonsByRoom[$roomNo])
+                    : ($resType === 'HOUSE' ? 1 : $roomPersons);
 
                 $drill[] = [
                     'cycle_start_date'=>$cycleStart,'cycle_end_date'=>$cycleEnd,'run_id'=>$runId,'company_id'=>$companyId,'unit_id'=>$unitId,
@@ -181,7 +216,12 @@ class OrchestrationService
                     'free_allowance_units'=>$eligibleUnits,'net_units_before_adj'=>$billableUnits,'adjustment_units'=>$adj,
                     'net_units_after_adj'=>$netAfterAdj,'amount_before_rounding'=>$amountBefore,'is_estimated'=>!empty($cons['result']['is_estimated']) ? 'Y':'N',
                     'estimate_source_cycle1'=>$cons['result']['estimate_source_cycle1'] ?? null,'estimate_source_cycle2'=>$cons['result']['estimate_source_cycle2'] ?? null,
-                    'estimate_source_cycle3'=>$cons['result']['estimate_source_cycle3'] ?? null,'estimated_from_valid_cycle_count'=>$cons['result']['estimated_from_valid_cycle_count'] ?? 0
+                    'estimate_source_cycle3'=>$cons['result']['estimate_source_cycle3'] ?? null,'estimated_from_valid_cycle_count'=>$cons['result']['estimated_from_valid_cycle_count'] ?? 0,
+                    'month_cycle'=>$monthCycle,'name'=>$empByCompany[$companyId]['name'] ?? $companyId,'room_no'=>$roomNo,
+                    'room_persons'=>$displayRoomPersons,'active_days'=>$employeeActiveDays,'month_days'=>$billingMonthDays,
+                    'unit_used_elec'=>round($grossUnits, 4),'unit_total_attendance'=>round($unitActiveDays, 4),
+                    'room_free_units'=>$eligibleUnits,'emp_used_units'=>$empUsedElec,'eligible_units'=>$eligibleUnits,
+                    'billable_units'=>$billableUnits,'rate'=>$flatRate,'amount'=>round($amountBefore, 2)
                 ];
 
                 if (!isset($finalMap[$companyId])) {
