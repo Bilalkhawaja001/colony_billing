@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Billing\ControlRoom;
 use App\Http\Controllers\Controller;
 use App\Services\Billing\ControlRoom\GenerateDryRunService;
 use App\Services\Billing\ControlRoom\ReadinessService;
+use App\Services\Billing\ControlRoom\RealGenerateSafetyAuditService;
 use Illuminate\Http\Request;
 
 class BillRunController extends Controller
 {
-    public function index(Request $request, ReadinessService $readiness)
+    public function index(Request $request, ReadinessService $readiness, RealGenerateSafetyAuditService $safetyAudit)
     {
+        $monthCycle = $request->query('month_cycle');
+
         return view('billing_control.generate', [
             'pageTitle' => 'Generate Bill',
-            'readiness' => $readiness->summary($request->query('month_cycle')),
+            'readiness' => $readiness->summary($monthCycle),
+            'safetyAudit' => $safetyAudit->audit($monthCycle),
         ]);
     }
 
@@ -34,7 +38,7 @@ class BillRunController extends Controller
         return response()->json([
             'run' => $run,
             'status' => 'DRY_RUN_ONLY',
-            'message' => 'Phase 1D dry run only. Real queue status requires Phase 1E approval.',
+            'message' => 'Phase 1E safety audit only. Real queue status requires Phase 1F approval.',
         ]);
     }
 
