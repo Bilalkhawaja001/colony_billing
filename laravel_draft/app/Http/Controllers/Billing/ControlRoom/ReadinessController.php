@@ -10,7 +10,7 @@ class ReadinessController extends Controller
 {
     public function index(Request $request, ReadinessService $readiness)
     {
-        $data = $readiness->summary();
+        $data = $readiness->summary($request->query('month_cycle'));
 
         if ($request->wantsJson()) {
             return response()->json($data);
