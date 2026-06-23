@@ -8,18 +8,18 @@ use Illuminate\Http\Request;
 
 class BillRunController extends Controller
 {
-    public function index(ReadinessService $readiness)
+    public function index(Request $request, ReadinessService $readiness)
     {
         return view('billing_control.generate', [
             'pageTitle' => 'Generate Bill',
-            'readiness' => $readiness->summary(),
+            'readiness' => $readiness->summary($request->query('month_cycle')),
         ]);
     }
 
     public function store(Request $request, ReadinessService $readiness)
     {
         return back()->withErrors([
-            'generate' => 'Generate blocked. Phase 1A scaffold only; real queued job not wired yet.',
+            'generate' => 'Generate blocked. Phase 1C only; real queued job requires Phase 1D approval.',
         ]);
     }
 
@@ -28,7 +28,7 @@ class BillRunController extends Controller
         return response()->json([
             'run' => $run,
             'status' => 'SCAFFOLD_ONLY',
-            'message' => 'Real queued job status pending Phase 2.',
+            'message' => 'Real queued job status pending Phase 1D.',
         ]);
     }
 
