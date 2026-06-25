@@ -1,50 +1,29 @@
 @extends('billing_control.layout')
 
 @section('content')
-<section class="bc-panel">
-    <h2>{{ $pageTitle ?? 'Bill Result' }}</h2>
-    <p class="bc-muted">Run: {{ $run }}</p>
+@php
+    $data = $dryRun ?? [];
+    $runLabel = $run ?? data_get($data, 'run_id', '-');
+@endphp
 
-    @if(!empty($dryRun))
-        <div class="bc-alert">{{ $dryRun['message'] ?? 'Dry run completed.' }}</div>
+<div class="eyebrow">Generated Bills / Billing Record</div>
+<h1 class="page-title">Generated Bills / Billing Record</h1>
 
-        <div class="bc-grid">
-            @include('billing_control.components.status-card', ['title' => 'Dry Run Status', 'value' => $dryRun['status'] ?? '-', 'note' => 'no DB write'])
-            @include('billing_control.components.status-card', ['title' => 'Month Cycle', 'value' => $dryRun['month_cycle'] ?? '-', 'note' => ($dryRun['cycle_start_date'] ?? '-') . ' to ' . ($dryRun['cycle_end_date'] ?? '-')])
-            @include('billing_control.components.status-card', ['title' => 'Employees', 'value' => $dryRun['active_employees'] ?? '-', 'note' => 'active'])
-            @include('billing_control.components.status-card', ['title' => 'Meters', 'value' => $dryRun['active_meters'] ?? '-', 'note' => 'active electric'])
-        </div>
+<section class="panel-center" style="margin-top:24px">
+    <div class="gen-tick">✓</div>
+    <h2 class="headline">{{ data_get($data, 'status', 'Preview completed') }}</h2>
+    <p class="hero-sub" style="margin:8px auto 22px">{{ data_get($data, 'message', 'Preview Bills completed.') }}</p>
+</section>
 
-        <section class="bc-panel">
-            <h3>Dry run safety proof</h3>
-            <div class="bc-table-wrap">
-                <table class="bc-table">
-                    <thead><tr><th>Action</th><th>Status</th></tr></thead>
-                    <tbody>
-                    @foreach(($dryRun['safety'] ?? []) as $action => $status)
-                        <tr><td>{{ $action }}</td><td>{{ $status }}</td></tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="bc-panel">
-            <h3>Dry run counts</h3>
-            <div class="bc-table-wrap">
-                <table class="bc-table">
-                    <tbody>
-                        <tr><td>current_readings</td><td>{{ $dryRun['current_readings'] ?? '-' }}</td></tr>
-                        <tr><td>active_days_rows</td><td>{{ $dryRun['active_days_rows'] ?? '-' }}</td></tr>
-                        <tr><td>electric_rate</td><td>{{ $dryRun['electric_rate'] ?? '-' }}</td></tr>
-                        <tr><td>blocker_count</td><td>{{ $dryRun['blocker_count'] ?? '-' }}</td></tr>
-                        <tr><td>checked_at</td><td>{{ $dryRun['checked_at'] ?? '-' }}</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    @else
-        <p>Phase 1D dry run only. Real bill rows are not generated yet.</p>
-    @endif
+<section class="card" style="margin-top:24px">
+    <div class="eyebrow">Run Summary</div>
+    <div class="run-summary">
+        <div class="run-row"><span class="k">Run</span><span class="v">{{ $runLabel }}</span></div>
+        <div class="run-row"><span class="k">Cycle Start</span><span class="v">{{ data_get($data, 'cycle_start_date', '-') }}</span></div>
+        <div class="run-row"><span class="k">Cycle End</span><span class="v">{{ data_get($data, 'cycle_end_date', '-') }}</span></div>
+        <div class="run-row"><span class="k">Employees</span><span class="v">{{ data_get($data, 'active_employees', '-') }}</span></div>
+        <div class="run-row"><span class="k">Readings</span><span class="v">{{ data_get($data, 'current_readings', '-') }}</span></div>
+        <div class="run-row"><span class="k">Rate</span><span class="v">{{ data_get($data, 'electric_rate', '-') }}</span></div>
+    </div>
 </section>
 @endsection

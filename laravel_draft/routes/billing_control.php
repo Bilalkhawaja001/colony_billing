@@ -11,7 +11,7 @@ use App\Http\Controllers\Billing\ControlRoom\ExportController;
 
 /*
 |--------------------------------------------------------------------------
-| Colony Billing Control Room
+| Colony Billing Center
 |--------------------------------------------------------------------------
 | App is already mounted at /billing by webroot.
 | Do NOT add Route::prefix('billing') here.

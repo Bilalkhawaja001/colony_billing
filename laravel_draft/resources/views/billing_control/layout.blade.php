@@ -2,32 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>{{ $pageTitle ?? 'Colony Billing Control Room' }}</title>
+    <title>{{ $pageTitle ?? 'Colony Billing | Billing Center' }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    @php($billingControlAssetBase = rtrim(config('app.url'), '/'))
-    <link rel="stylesheet" href="{{ $billingControlAssetBase }}/billing-control/control-room.css?v=phase1b">
+    @php($colonyCssPath = public_path('css/colony-billing.css'))
+    @php($bcCssPath = public_path('css/billing-control.css'))
+    @if(is_file($colonyCssPath))
+        <link rel="stylesheet" href="{{ asset('css/colony-billing.css') }}?v={{ filemtime($colonyCssPath) }}">
+    @endif
+    @if(is_file($bcCssPath))
+        <link rel="stylesheet" href="{{ asset('css/billing-control.css') }}?v={{ filemtime($bcCssPath) }}">
+    @endif
 </head>
 <body>
-<div class="bc-shell">
+<div class="app">
     @include('billing_control.components.topbar')
-    @include('billing_control.components.stepper')
 
-    @if(session('status'))
-        <div class="bc-alert">{{ session('status') }}</div>
-    @endif
+    <div class="body-row">
+        @include('billing_control.components.stepper')
 
-    @if(isset($errors) && $errors->any())
-        <div class="bc-alert bc-alert-danger">
-            @foreach($errors->all() as $error)
-                <div>{{ $error }}</div>
-            @endforeach
-        </div>
-    @endif
+        <main class="main">
+            <div class="main-inner">
+                @if(session('status'))
+                    <div class="card" style="margin-bottom:16px">{{ session('status') }}</div>
+                @endif
 
-    <main class="bc-main">
-        @yield('content')
-    </main>
+                @if(isset($errors) && $errors->any())
+                    <div class="card" style="margin-bottom:16px;color:#DC2626">
+                        @foreach($errors->all() as $error)
+                            <div>{{ $error }}</div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @yield('content')
+            </div>
+        </main>
+    </div>
 </div>
-<script src="{{ $billingControlAssetBase }}/billing-control/control-room.js?v=phase1b"></script>
+
+@php($bcJsPath = public_path('billing-control/control-room.js'))
+@if(is_file($bcJsPath))
+    <script>{!! file_get_contents($bcJsPath) !!}</script>
+@endif
 </body>
 </html>

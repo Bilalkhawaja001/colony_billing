@@ -17,7 +17,7 @@ class ReadinessController extends Controller
         }
 
         return view('billing_control.readiness', [
-            'pageTitle' => 'Check Readiness',
+            'pageTitle' => 'Check & Fix Data',
             'readiness' => $data,
         ]);
     }

@@ -15,7 +15,7 @@ class BillRunController extends Controller
         $monthCycle = $request->query('month_cycle');
 
         return view('billing_control.generate', [
-            'pageTitle' => 'Generate Bill',
+            'pageTitle' => 'Preview Bills',
             'readiness' => $readiness->summary($monthCycle),
             'safetyAudit' => $safetyAudit->audit($monthCycle),
         ]);

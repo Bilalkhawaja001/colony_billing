@@ -1,78 +1,42 @@
 @extends('billing_control.layout')
 
 @section('content')
-<section class="bc-panel">
-    <h2>Generate Bill Dry Run</h2>
-    <p class="bc-muted">Phase 1E keeps final generation locked. Dry run and audit write no bill data.</p>
+@php
+    $stats = data_get($readiness, 'stats', []);
+    $month = request('month_cycle', data_get($readiness, 'month', data_get($stats, 'month_cycle', '06-2026')));
+    $isReady = (bool) data_get($readiness, 'isReady', false);
+    $blockers = data_get($readiness, 'blockers', []);
+@endphp
 
-    <div class="bc-grid">
-        @include('billing_control.components.status-card', ['title' => 'Readiness', 'value' => ($readiness['isReady'] ?? false) ? 'Ready' : 'Blocked', 'note' => $readiness['mode'] ?? ''])
-        @include('billing_control.components.status-card', ['title' => 'Month', 'value' => $readiness['stats']['month_cycle'] ?? '-', 'note' => 'selected'])
-        @include('billing_control.components.status-card', ['title' => 'Current Readings', 'value' => $readiness['stats']['current_readings'] ?? '-', 'note' => 'cycle end'])
-        @include('billing_control.components.status-card', ['title' => 'Rate', 'value' => $readiness['stats']['electric_rate'] ?? '-', 'note' => 'electric'])
-    </div>
+<div class="eyebrow">Preview &amp; Generate</div>
+<h1 class="page-title">Preview & Generate · @include('billing_control.components.month-label', ['value' => $month])</h1>
 
-    <form method="post" action="{{ route('billing.control.generate.store') }}" class="bc-form">
-        @csrf
-        <input type="hidden" name="month_cycle" value="{{ request('month_cycle', $readiness['month'] ?? '') }}">
-        <button class="bc-btn" type="submit" @disabled(!($readiness['isReady'] ?? false))>Run Generate Dry Run</button>
-        <span class="bc-muted">DB write: NO | Queue dispatch: NO | Bill insert: NO</span>
-    </form>
+@if(!$isReady)
+    <section class="panel-center is-locked" style="margin-top:24px">
+        <div class="hero-icon" style="margin:0 auto 16px;background:var(--warn-bg);color:var(--warn)">🔒</div>
+        <h2 class="headline">Must Fix items need attention first</h2>
+        <p class="hero-sub" style="margin:8px auto 22px">Fix {{ count($blockers) }} Must Fix item(s) before previewing bills.</p>
+        <a class="btn btn-warn" href="{{ route('billing.control.readiness', ['month_cycle'=>$month]) }}">Go to Check & Fix Data</a>
+    </section>
+@else
+    <section class="panel-center" style="margin-top:24px">
+        <div class="gen-tick">✓</div>
+        <h2 class="headline">Ready for Preview</h2>
+        <p class="hero-sub" style="margin:8px auto 22px">Preview Bills will run checks only. Official final generation remains locked.</p>
 
-    @forelse(($readiness['blockers'] ?? []) as $issue)
-        @include('billing_control.components.issue-card', ['issue' => $issue])
-    @empty
-        <div class="bc-alert">Gate is ready for dry run. Final generation remains locked until explicit next approval.</div>
-    @endforelse
-</section>
+        <form method="post" action="{{ route('billing.control.generate.store') }}">
+            @csrf
+            <input type="hidden" name="month_cycle" value="{{ $month }}">
+            <button class="btn btn-cta" type="submit">⚡ Preview Bills</button>
+        </form>
+        <div class="btn-hint">DB write: NO · Bill insert: NO</div>
+    </section>
+@endif
 
-<section class="bc-panel">
-    <h2>Final Generation Safety Audit</h2>
-    <p class="bc-muted">Confirmation gate only. Final generation is intentionally disabled.</p>
-
-    <div class="bc-grid">
-        @include('billing_control.components.status-card', ['title' => 'Audit Status', 'value' => $safetyAudit['status'] ?? '-', 'note' => 'locked'])
-        @include('billing_control.components.status-card', ['title' => 'Final Generation', 'value' => !empty($safetyAudit['real_generate_enabled']) ? 'Enabled' : 'Locked', 'note' => $safetyAudit['reason'] ?? ''])
-        @include('billing_control.components.status-card', ['title' => 'Ready Blockers', 'value' => $safetyAudit['readiness']['blocker_count'] ?? '-', 'note' => $safetyAudit['readiness']['mode'] ?? '-'])
-        @include('billing_control.components.status-card', ['title' => 'Next Approval', 'value' => 'Phase 1F', 'note' => 'required'])
-    </div>
-
-    <div class="bc-table-wrap">
-        <table class="bc-table">
-            <thead><tr><th>Safety item</th><th>Status</th></tr></thead>
-            <tbody>
-            @foreach(($safetyAudit['phase1e_safety'] ?? []) as $key => $value)
-                <tr><td>{{ $key }}</td><td>{{ $value }}</td></tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="bc-panel">
-    <h3>Current output counts</h3>
-    <div class="bc-table-wrap">
-        <table class="bc-table">
-            <thead><tr><th>Table</th><th>Current rows</th></tr></thead>
-            <tbody>
-            @foreach(($safetyAudit['current_output_counts'] ?? []) as $table => $count)
-                <tr><td>{{ $table }}</td><td>{{ $count }}</td></tr>
-            @endforeach
-            </tbody>
-        </table>
-    </div>
-</section>
-
-<section class="bc-panel">
-    <h3>Confirmation gate</h3>
-    <p class="bc-muted">Required phrase for later final execution approval:</p>
-    <code>{{ $safetyAudit['required_phrase'] ?? 'CONFIRM FINAL GENERATION' }}</code>
-
-    <form class="bc-form">
-        <input type="text" placeholder="Locked until Phase 1F" disabled>
-        <button class="bc-btn" type="button" disabled>Final Generation Locked</button>
-    </form>
-
-    <div class="bc-alert bc-alert-danger">Phase 1E does not queue a job and does not write or delete billing rows.</div>
+<section class="stat-grid" style="margin-top:24px">
+    @include('billing_control.components.status-card', ['value' => data_get($stats, 'active_employees', '-'), 'title' => 'Employees'])
+    @include('billing_control.components.status-card', ['value' => data_get($stats, 'current_readings', '-'), 'title' => 'Readings In'])
+    @include('billing_control.components.status-card', ['value' => data_get($stats, 'electric_rate', '-'), 'title' => 'Rate'])
+    @include('billing_control.components.status-card', ['value' => data_get($safetyAudit ?? [], 'status', 'Locked'), 'title' => 'Safety Audit'])
 </section>
 @endsection

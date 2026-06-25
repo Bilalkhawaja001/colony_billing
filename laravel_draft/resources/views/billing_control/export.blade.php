@@ -1,29 +1,49 @@
 @extends('billing_control.layout')
 
 @section('content')
-<section class="bc-panel">
-    <h2>Download Excel</h2>
-    <p class="bc-muted">6-filter scaffold. Real 17-column export pending Phase 2.</p>
+@php($month = request('month_cycle', request('month', '06-2026')))
 
-    <form method="post" action="{{ route('billing.control.export.download') }}" class="bc-form">
+<div class="eyebrow">Download &amp; Records</div>
+<h1 class="page-title">Download & Records · @include('billing_control.components.month-label', ['value' => $month])</h1>
+
+<section class="form-card" style="margin-top:24px">
+    <form method="post" action="{{ route('billing.control.export.download') }}" class="form-stack">
         @csrf
-        <input name="billing_month" placeholder="Month e.g. 2026-06">
-        <select name="bill_type">
-            <option value="electric_v1">Electric V1</option>
-            <option value="water">Water</option>
-            <option value="school_van">School Van</option>
-            <option value="all">All</option>
-        </select>
-        <select name="scope">
-            <option value="all">All</option>
-            <option value="colony">Colony</option>
-            <option value="unit">Unit</option>
-            <option value="room">Room</option>
-        </select>
-        <input name="colony_type" placeholder="Colony Type">
-        <input name="unit_type" placeholder="Unit Type">
-        <input name="room_type" placeholder="Room Type">
-        <button class="bc-btn" type="submit">Test Export Gate</button>
+
+        <div>
+            <label class="form-label">Billing Month</label>
+            <div data-month-picker-wrap>
+        @include('billing_control.components.month-select', [
+                'value' => $month,
+                'id' => 'export-month-select',
+            ])
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label">Bill Type</label>
+            <select class="form-select" name="bill_type">
+                <option value="electric_v1">Electricity</option>
+            </select>
+        </div>
+
+        <div class="dl-filters">
+            <div>
+                <label class="form-label">Scope</label>
+                <select class="form-select" name="scope"><option value="all">All</option></select>
+            </div>
+            <div>
+                <label class="form-label">Unit Type</label>
+                <select class="form-select" name="unit_type"><option value="">All</option></select>
+            </div>
+            <div>
+                <label class="form-label">Room Type</label>
+                <select class="form-select" name="room_type"><option value="">All</option></select>
+            </div>
+        </div>
+
+        <button class="btn btn-cta" type="submit">Download & Records</button>
+        <div class="col-caption">Filtered download will follow approved billing records and Excel format.</div>
     </form>
 </section>
 @endsection

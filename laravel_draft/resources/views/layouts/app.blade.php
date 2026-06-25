@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@yield('page_title', 'Colony Billing Admin')</title>
+    <title>@yield('page_title', 'Colony Billing')</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -683,10 +683,39 @@
             .people-kpi-grid{grid-template-columns:1fr !important}
         }
 
-    </style>
+    
+/* Phase 1B Billing UI context badge - labels only */
+.phase1b-billing-context{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    margin-left:12px;
+    padding:7px 10px;
+    border:1px solid rgba(15,23,42,.12);
+    border-radius:999px;
+    background:rgba(255,255,255,.78);
+    color:#334155;
+    font-size:12px;
+    font-weight:700;
+    box-shadow:0 6px 18px rgba(15,23,42,.06);
+}
+.phase1b-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:3px 8px;
+    border-radius:999px;
+    background:#eef2ff;
+    color:#3730a3;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.02em;
+}
+
+</style>
     <script defer src="/js/crud-grids.js?v=20260520-1611"></script>
     <link rel="stylesheet" href="{{ asset('css/enterprise-shell.css') }}?v={{ filemtime(public_path('css/enterprise-shell.css')) }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
 </head>
 <body>
 <div class="app">
@@ -697,7 +726,7 @@
             <div class="cb-promo">
                 <b>Colony Billing</b>
                 <span>Enterprise billing, residency and utility operations workspace.</span>
-                <a href="/billing-run-lock">Run Billing →</a>
+                <a href="/control-room">Billing Center →</a>
             </div>
         </div>
         <div class="cb-nav">
@@ -716,19 +745,19 @@
                         <div class="cb-drop-col">
                             <h4>Workspace</h4>
                             <a href="/dashboard">Dashboard</a>
-                            <a href="/month-lifecycle">Month Lifecycle</a>
+                            <a href="/month-lifecycle">Billing Month Control</a>
                             <a href="/imports-validation">Imports & Validation</a>
                         </div>
                         <div class="cb-drop-col">
                             <h4>Billing</h4>
-                            <a href="/billing-run-lock">Billing Run & Lock</a>
+                            <a href="/control-room">Billing Center</a>
                             <a href="/reporting">Reporting Center</a>
                             <a href="/rates">Rates</a>
                         </div>
                         <div class="cb-drop-col">
                             <h4>Controls</h4>
-                            <a href="/active-days-monthly">Active Days Monthly</a>
-                            <a href="/meters-readings">Meters & Readings</a>
+                            <a href="/active-days-monthly">Monthly Attendance</a>
+                            <a href="/meters-readings">Meter Readings</a>
                             <a href="/unit-directory">Unit Directory</a>
                         </div>
                     </div>
@@ -739,25 +768,25 @@
                     <div class="cb-dropdown">
                         <div class="cb-drop-col">
                             <h4>People</h4>
-                            <a href="/people-residency">People & Residency</a>
+                            <a href="/people-residency">People & Housing</a>
                             <a href="/housing-occupancy">Housing & Occupancy</a>
                             <a href="/transport">School Van Kids Management</a>
                         </div>
                         <div class="cb-drop-col">
                             <h4>Utilities</h4>
-                            <a href="/meters-readings">Meters & Readings</a>
+                            <a href="/meters-readings">Meter Readings</a>
                             <a href="/water-tools">Water Tools</a>
-                            <a href="/electric-v1-lab">Electric V1 Lab</a>
+                            {{-- Phase 1C: Electric V1 hidden from staff nav; admin diagnostics kept by route. --}}
                         </div>
                         <div class="cb-drop-col">
                             <h4>Data</h4>
                             <a href="/unit-directory">Unit Directory</a>
-                            <a href="/active-days-monthly">Active Days Monthly</a>
+                            <a href="/active-days-monthly">Monthly Attendance</a>
                             <a href="/imports-validation">Import Validation</a>
                         </div>
                         <div class="cb-drop-col">
                             <h4>Maintenance Operations</h4>
-                            <a href="/facilities-management">Facilities Management</a>
+                            <a href="/facilities-management">Facilities Workspace</a>
                             <a href="/facilities-management/registry">Facility Registry</a>
                         </div>
                     </div>
@@ -779,7 +808,7 @@
                         </div>
                         <div class="cb-drop-col">
                             <h4>Audit</h4>
-                            <a href="/billing-run-lock">Billing Run</a>
+                            <a href="/control-room">Billing Center</a>
                             <a href="/imports-validation">Validation Tokens</a>
                         </div>
                     </div>
@@ -802,27 +831,27 @@
             <div class="nav-section">
                 <div class="nav-head">Core</div>
                 <a class="{{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard"><span class="nav-ico">D</span>Dashboard</a>
-                <a class="{{ request()->is('month-lifecycle') ? 'active' : '' }}" href="/month-lifecycle"><span class="nav-ico">M</span>Month Lifecycle</a>
+                <a class="{{ request()->is('month-lifecycle') ? 'active' : '' }}" href="/month-lifecycle"><span class="nav-ico">M</span>Billing Month Control</a>
                 <a class="{{ request()->is('imports-validation') ? 'active' : '' }}" href="/imports-validation"><span class="nav-ico">I</span>Imports & Validation</a>
-                <a class="{{ request()->is('billing-run-lock') ? 'active' : '' }}" href="/billing-run-lock"><span class="nav-ico">B</span>Billing Run & Lock</a>
+                <a class="{{ request()->is('control-room') || request()->is('control-room/*') ? 'active' : '' }}" href="/control-room"><span class="nav-ico">B</span>Billing Center</a>
                 <a class="{{ request()->is('reporting') ? 'active' : '' }}" href="/reporting"><span class="nav-ico">R</span>Reporting Center</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Operations</div>
-                <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency"><span class="nav-ico">P</span>People & Residency</a>
-                <a class="{{ request()->is('active-days-monthly') || request()->is('ui/monthly-active-days') ? 'active' : '' }}" href="/active-days-monthly"><span class="nav-ico">AD</span>Active Days Monthly</a>
+                <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency"><span class="nav-ico">P</span>People & Housing</a>
+                <a class="{{ request()->is('active-days-monthly') || request()->is('ui/monthly-active-days') ? 'active' : '' }}" href="/active-days-monthly"><span class="nav-ico">AD</span>Monthly Attendance</a>
                 <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">S</span>School Van Kids Management</a>
-                <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meters & Readings</a>
+                <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meter Readings</a>
                 <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory"><span class="nav-ico">U</span>Unit Directory</a>
                 <a class="{{ request()->is('ui/residency-master') ? 'active' : '' }}" href="/ui/residency-master"><span class="nav-ico">RM</span>Residency Master</a>
                 <a class="{{ request()->is('ui/department-master') ? 'active' : '' }}" href="/ui/department-master"><span class="nav-ico">DM</span>Department Master</a>
                 <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy"><span class="nav-ico">H</span>Housing & Occupancy</a>
-                <a class="{{ request()->is('electric-v1-lab') || request()->is('electric-v1-lab/*') ? 'active' : '' }}" href="/electric-v1-lab"><span class="nav-ico">E</span>Electric V1 Lab</a>
+                {{-- Phase 1D: Electric V1 hidden from staff navigation; route kept for admin diagnostics. --}}
                 <a class="{{ request()->is('rates') ? 'active' : '' }}" href="/rates"><span class="nav-ico">$</span>Rates</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Maintenance Operations</div>
-                <a class="{{ request()->is('facilities-management') || request()->is('facilities-management/*') ? 'active' : '' }}" href="/facilities-management"><span class="nav-ico">FM</span>Facilities Management</a>
+                <a class="{{ request()->is('facilities-management') || request()->is('facilities-management/*') ? 'active' : '' }}" href="/facilities-management"><span class="nav-ico">FM</span>Facilities Workspace</a>
             </div>
             <div class="nav-section">
                 <div class="nav-head">Profile</div>
@@ -839,12 +868,20 @@
     <main class="main">
         <header class="top">
             <div class="top-title">@yield('page_title', 'Colony Billing')</div>
+@php
+    $phase1Month = request('month_cycle', request('month', session('billing_month', 'Select Month')));
+@endphp
+<div class="phase1b-billing-context" title="Phase 1 UI label only">
+    <span>Billing Month: {{ $phase1Month }}</span>
+    <span class="phase1b-badge">Draft View</span>
+</div>
+
             <div class="user">User #{{ session('user_id', 'N/A') }} · Role: {{ session('role', 'N/A') }}</div>
         </header>
         <section class="container">
             <div class="page-head">
                 <div>
-                    <div class="crumb">Admin / Workspace</div>
+                    <div class="crumb">Billing / Workspace</div>
                     <h1 class="page-title">@yield('page_title', 'Colony Billing')</h1>
                     @hasSection('page_subtitle')<p class="page-sub">@yield('page_subtitle')</p>@endif
                 </div>

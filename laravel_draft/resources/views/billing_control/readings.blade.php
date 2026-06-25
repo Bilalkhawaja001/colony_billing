@@ -1,17 +1,18 @@
 @extends('billing_control.layout')
 
 @section('content')
-<section class="bc-panel">
-    <h2>Fix Meter Readings</h2>
-    <p class="bc-muted">Phase 1A scaffold only. No real data and no DB write.</p>
+<div class="eyebrow">Fix Data</div>
+<h1 class="page-title">Meter Readings</h1>
 
-    <form method="post" action="{{ route('billing.control.readings.save') }}" class="bc-form">
+<section class="card" style="margin-top:22px">
+    <div class="pin-card">
+        <div class="pin-key">Purpose</div><div class="pin-val">Review or fix missing meter readings before bill preview.</div>
+        <div class="pin-key">Status</div><div class="pin-val">Safe gate only. No real billing rows are generated from this page.</div>
+    </div>
+
+    <form method="post" action="{{ route('billing.control.readings.save') }}" class="form-stack">
         @csrf
-        <input name="meter_id" placeholder="Meter ID">
-        <input name="unit_id" placeholder="Unit ID">
-        <input name="reading_date" type="date">
-        <input name="reading_value" type="number" step="0.001" placeholder="Reading">
-        <button class="bc-btn" type="submit">Test Save Gate</button>
+        <button class="btn btn-outline" type="submit">Test Save Gate</button>
     </form>
 </section>
 @endsection

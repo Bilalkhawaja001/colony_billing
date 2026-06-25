@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 class ReadinessService
 {
+    private array $tableExistsMemo = [];
     public function summary(?string $requestedMonthCycle = null): array
     {
         $blockers = [];
@@ -126,7 +127,7 @@ class ReadinessService
     private function tableStatus(string $table): array
     {
         try {
-            $exists = Schema::hasTable($table);
+            $exists = $this->tableExists($table);
 
             return [
                 'exists' => $exists,
@@ -146,7 +147,7 @@ class ReadinessService
         $row = null;
 
         try {
-            if (Schema::hasTable('util_month_cycle')) {
+            if ($this->tableExists('util_month_cycle')) {
                 $q = DB::table('util_month_cycle');
 
                 if ($requestedMonthCycle) {
@@ -224,7 +225,7 @@ class ReadinessService
     private function countRows(string $table): int
     {
         try {
-            return Schema::hasTable($table) ? DB::table($table)->count() : 0;
+            return $this->tableExists($table) ? DB::table($table)->count() : 0;
         } catch (\Throwable $e) {
             return 0;
         }
@@ -233,7 +234,7 @@ class ReadinessService
     private function countActiveEmployees(): int
     {
         try {
-            if (!Schema::hasTable('employees_master')) {
+            if (!$this->tableExists('employees_master')) {
                 return 0;
             }
 
@@ -253,7 +254,7 @@ class ReadinessService
     private function countActiveResidences(?string $start, ?string $end): int
     {
         try {
-            if (!Schema::hasTable('employee_residence_assignments')) {
+            if (!$this->tableExists('employee_residence_assignments')) {
                 return 0;
             }
 
@@ -275,7 +276,7 @@ class ReadinessService
     private function countActiveMeters(): int
     {
         try {
-            if (!Schema::hasTable('util_meter_unit')) {
+            if (!$this->tableExists('util_meter_unit')) {
                 return 0;
             }
 
@@ -294,7 +295,7 @@ class ReadinessService
     private function countMeterReadingsOnDate(string $date): int
     {
         try {
-            return Schema::hasTable('util_meter_readings')
+            return $this->tableExists('util_meter_readings')
                 ? DB::table('util_meter_readings')->whereDate('reading_date', $date)->count()
                 : 0;
         } catch (\Throwable $e) {
@@ -305,7 +306,7 @@ class ReadinessService
     private function countMeterReadingsOnOrBefore(string $date): int
     {
         try {
-            return Schema::hasTable('util_meter_readings')
+            return $this->tableExists('util_meter_readings')
                 ? DB::table('util_meter_readings')->whereDate('reading_date', '<=', $date)->count()
                 : 0;
         } catch (\Throwable $e) {
@@ -316,7 +317,7 @@ class ReadinessService
     private function countActiveDaysRows(?string $billingMonthDate): int
     {
         try {
-            return $billingMonthDate && Schema::hasTable('electric_active_days_monthly')
+            return $billingMonthDate && $this->tableExists('electric_active_days_monthly')
                 ? DB::table('electric_active_days_monthly')->whereDate('billing_month_date', $billingMonthDate)->count()
                 : 0;
         } catch (\Throwable $e) {
@@ -327,7 +328,7 @@ class ReadinessService
     private function countRoomAllowanceRows(): int
     {
         try {
-            return Schema::hasTable('electric_v1_room_allowance')
+            return $this->tableExists('electric_v1_room_allowance')
                 ? DB::table('electric_v1_room_allowance')->where('is_active', 1)->count()
                 : 0;
         } catch (\Throwable $e) {
@@ -338,7 +339,7 @@ class ReadinessService
     private function electricRate(?string $monthCycle): ?float
     {
         try {
-            if (!$monthCycle || !Schema::hasTable('util_monthly_rates_config')) {
+            if (!$monthCycle || !$this->tableExists('util_monthly_rates_config')) {
                 return null;
             }
 
@@ -355,7 +356,7 @@ class ReadinessService
     private function latestBillRun(?string $monthCycle): ?object
     {
         try {
-            if (!Schema::hasTable('bill_runs')) {
+            if (!$this->tableExists('bill_runs')) {
                 return null;
             }
 
@@ -374,7 +375,7 @@ class ReadinessService
     private function countBillRuns(?string $monthCycle): int
     {
         try {
-            if (!Schema::hasTable('bill_runs')) {
+            if (!$this->tableExists('bill_runs')) {
                 return 0;
             }
 
@@ -400,4 +401,15 @@ class ReadinessService
             'source_table' => $sourceTable,
         ];
     }
+
+    private function tableExists(string $table): bool
+    {
+        if (!array_key_exists($table, $this->tableExistsMemo)) {
+            $this->tableExistsMemo[$table] = Schema::hasTable($table);
+        }
+
+        return $this->tableExistsMemo[$table];
+    }
+
+
 }

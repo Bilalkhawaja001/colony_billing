@@ -11,7 +11,7 @@ class ControlRoomController extends Controller
     public function index(Request $request, ReadinessService $readiness)
     {
         return view('billing_control.control_room', [
-            'pageTitle' => 'Colony Billing Control Room',
+            'pageTitle' => 'Billing Center',
             'readiness' => $readiness->summary($request->query('month_cycle')),
         ]);
     }
