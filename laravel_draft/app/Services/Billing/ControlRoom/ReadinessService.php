@@ -9,14 +9,16 @@ use Illuminate\Support\Facades\Schema;
 class ReadinessService
 {
     private array $tableExistsMemo = [];
-    public function summary(?string $requestedMonthCycle = null): array
+    public function summary(?string $requestedMonthCycle = null, bool $includeTables = true): array
     {
         $blockers = [];
         $tables = $this->tableMap();
 
         $tableStatus = [];
-        foreach ($tables as $table) {
-            $tableStatus[$table] = $this->tableStatus($table);
+        if ($includeTables) {
+            foreach ($tables as $table) {
+                $tableStatus[$table] = $this->tableStatus($table);
+            }
         }
 
         $cycle = $this->resolveCycle($requestedMonthCycle);
