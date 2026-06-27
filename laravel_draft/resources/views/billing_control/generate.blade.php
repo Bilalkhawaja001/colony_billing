@@ -30,6 +30,19 @@
             <button class="btn btn-cta" type="submit">⚡ Preview Bills</button>
         </form>
         <div class="btn-hint">DB write: NO · Bill insert: NO</div>
+
+        <form method="POST" action="{{ route('billing.control.generate.official', ['month_cycle'=>$month]) }}"
+              onsubmit="return confirm('This will create OFFICIAL bill records. Continue?');"
+              style="margin-top:20px;border-top:1px solid var(--line);padding-top:20px;text-align:left;max-width:520px;margin-left:auto;margin-right:auto">
+            @csrf
+            <input type="hidden" name="month_cycle" value="{{ $month }}">
+            <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">
+                <input type="checkbox" name="confirm_official" value="1" required>
+                <span>I understand this will create official bill records for
+                <strong>@include('billing_control.components.month-label', ['value' => $month])</strong>.</span>
+            </label>
+            <button class="btn btn-danger" type="submit">Generate Official Bills</button>
+        </form>
     </section>
 @endif
 

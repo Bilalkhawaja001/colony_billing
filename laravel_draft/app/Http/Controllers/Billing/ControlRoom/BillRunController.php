@@ -7,6 +7,7 @@ use App\Services\Billing\ControlRoom\GenerateDryRunService;
 use App\Services\Billing\ControlRoom\ReadinessService;
 use App\Services\Billing\ControlRoom\RealGenerateSafetyAuditService;
 use Illuminate\Http\Request;
+use App\Services\Billing\V2\BillRunGenerateService;
 
 class BillRunController extends Controller
 {
@@ -60,5 +61,22 @@ class BillRunController extends Controller
             'row' => $row,
             'status' => 'DRY_RUN_ONLY',
         ]);
+    }
+    public function generate(Request $request, BillRunGenerateService $generator)
+    {
+        if (!$request->boolean('confirm_official')) {
+            return back()->with('error','Please confirm you understand this creates official bill records.');
+        }
+        $monthCycle  = $request->input('month_cycle');
+        $actorUserId = optional($request->user())->id;
+        $role        = optional($request->user())->role ?? null;
+
+        $result = $generator->generate($monthCycle, $actorUserId, $role);
+
+        if (($result['status'] ?? '') !== 'ok') {
+            return back()->with('error', $result['reason'] ?? 'Generation blocked.');
+        }
+        return redirect()->route('billing.control.export', ['month_cycle'=>$monthCycle])
+            ->with('success','Official bills generated. Bill Reference: '.$result['bill_reference']);
     }
 }

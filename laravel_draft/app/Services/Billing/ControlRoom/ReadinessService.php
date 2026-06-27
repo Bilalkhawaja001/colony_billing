@@ -106,6 +106,19 @@ class ReadinessService
         ];
     }
 
+    public function resolveCycleContext(?string $requestedMonthCycle = null): array
+    {
+        $cycle = $this->resolveCycle($requestedMonthCycle);
+        return [
+            'month_cycle'        => $cycle['month_cycle'] ?? null,
+            'billing_month_date' => $cycle['billing_month_date'] ?? null,
+            'cycle_start_date'   => $cycle['cycle_start_date'] ?? null,
+            'cycle_end_date'     => $cycle['cycle_end_date'] ?? null,
+            'cycle_days'         => $cycle['cycle_days'] ?? null,
+            'electric_rate'      => $this->electricRate($cycle['month_cycle'] ?? null),
+        ];
+    }
+
     private function tableMap(): array
     {
         return [
