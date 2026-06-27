@@ -848,6 +848,7 @@
             <div class="user">User #{{ session('user_id', 'N/A') }} · Role: {{ session('role', 'N/A') }}</div>
         </header>
         <section class="container">
+            @unless(trim($__env->yieldContent('hide_page_head')) === '1')
             <div class="page-head">
                 <div>
                     <div class="crumb">Admin / Workspace</div>
@@ -856,6 +857,7 @@
                 </div>
                 @hasSection('page_actions')<div class="toolbar">@yield('page_actions')</div>@endif
             </div>
+            @endunless
             @if(session('status'))<div class="banner">{{ session('status') }}</div>@endif
             @yield('content')
         </section>

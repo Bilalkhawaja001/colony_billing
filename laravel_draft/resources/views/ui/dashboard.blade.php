@@ -1,714 +1,215 @@
 @extends('layouts.app')
-@section('page_title','Billing Command Dashboard')
-@section('page_subtitle','Readiness console for the billing month — what is ready, what is missing, and the next action.')
+@section('page_title','Dashboard')
+@section('page_subtitle','Operations home for this billing month')
+@section('hide_page_head', '1')
+
 @section('content')
 @php
-    // Honest, derived-only signals. No backend readiness feed is wired to this
-    // view yet, so status tiles default to PENDING and no values are fabricated.
-    $hasPeriod = trim((string)($monthCycle ?? '')) !== '';
-    $mc = urlencode((string)($monthCycle ?? ''));
+    $rawMonth = trim((string)($monthCycle ?? ''));
+    $hasPeriod = $rawMonth !== '';
+    $mc = urlencode($rawMonth);
+    $monthLabel = $hasPeriod ? $rawMonth : 'No month selected';
+
+    $kpis = $kpis ?? [];
+    $employeesBilled = (int)($kpis['employees_billed'] ?? 0);
+    $totalBilled = (float)($kpis['total_billed'] ?? 0);
+    $familyCount = (int)($kpis['family_members'] ?? 0);
+    $vanKids = (int)($kpis['van_kids'] ?? 0);
+    $totalUnits = (int)($kpis['total_units'] ?? 0);
+    $houseUnits = (int)($kpis['house_units'] ?? 0);
+    $bachelorUnits = (int)($kpis['bachelor_units'] ?? 0);
+    $hostelUnits = (int)($kpis['hostel_units'] ?? 0);
+    $adminColonies = (int)($kpis['container_units'] ?? 0);
+    $uncategorizedUnits = (int)($kpis['uncategorized_units'] ?? 0);
+
+    $familyRows = $familyRows ?? [];
+    $vanRows = $vanRows ?? [];
+
+    $monthQuery = $hasPeriod ? ('?month_cycle=' . $mc) : '';
+    $routeWithMonth = fn (string $path) => $path . $monthQuery;
 @endphp
-<div class="grid dashboard-command-console">
 
-    <!-- DASHBOARD_COMMAND_PILLS_START -->
-    <div class="col-12 command-row" id="dashboardCommandRow">
-        <div class="command-row-label">Commands</div>
-
-        <a class="command-pill pill-blue" href="/unit-directory">
-            <svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M9 8h2m2 0h2M9 12h2m2 0h2M10 21v-5h4v5"/></svg>
-            <span>Unit Directory</span>
-        </a>
-
-        <a class="command-pill pill-purple" href="/people-residency?mode=manage">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-3.6 3.2-5.3 7-5.3s6 1.7 7 5.3"/></svg>
-            <span>Employee Profile</span>
-        </a>
-
-        <a class="command-pill pill-green primary" href="/people-residency?action=add&mode=quick">
-            <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M3.5 19c.7-3 2.3-4.5 4.5-4.5M18 11v10m-5-5h10"/></svg>
-            <span>Add Employee</span>
-        </a>
-
-        <a class="command-pill pill-orange" href="/reports/employee-statement?month_cycle={{ $mc }}">
-            <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 12h6m-6 4h6"/></svg>
-            <span>Statement</span>
-        </a>
-
-        <a class="command-pill pill-cyan" href="/people-residency?tab=occupancy">
-            <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10.5V20h13v-9.5M10 20v-5h4v5"/></svg>
-            <span>Residence</span>
-        </a>
-
-        <a class="command-pill pill-pink" href="/people-residency?tab=family">
-            <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.2"/><path d="M3.5 20c.7-3.5 2.4-5.2 5.5-5.2s4.8 1.7 5.5 5.2M15 15c2.5.2 4 1.8 4.5 5"/></svg>
-            <span>Family</span>
-        </a>
-
-        <a class="command-pill pill-yellow" href="/transport?month_cycle={{ $mc }}">
-            <svg viewBox="0 0 24 24"><path d="M4 16V8c0-2 1.5-3 3.5-3h7c2.3 0 4.2 2 5.5 5v6M4 13h16"/><circle cx="7" cy="17.5" r="1"/><circle cx="17" cy="17.5" r="1"/></svg>
-            <span>School Van</span>
-        </a>
-    </div>
-    <!-- DASHBOARD_COMMAND_PILLS_END -->
-
-    <!-- 1. CURRENT RUN / CURRENT PERIOD -->
-    <div class="col-12 cb-run-card">
-        <div class="cb-run-top">
+<div class="dash-wrap">
+    <section class="dash-head">
+        <div class="dash-head-left">
+            <div class="dash-head-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20v-6"/></svg>
+            </div>
             <div>
-                <div class="cb-run-eyebrow">Current Billing Period</div>
-                <div class="cb-run-period">{{ $hasPeriod ? $monthCycle : 'No month selected' }}</div>
-                <p class="cb-run-hint">
-                    @if($hasPeriod)
-                        Set the period below, then work through readiness before running billing.
-                    @else
-                        Enter a month cycle (MM-YYYY) to load this period's readiness.
-                    @endif
-                </p>
-            </div>
-            <div class="cb-run-side">
-                @if($hasPeriod)
-                    <span class="cb-status-pill is-pending">Readiness not yet checked</span>
-                @else
-                    <span class="cb-status-pill is-blocked">No active period</span>
-                @endif
-                <div class="cb-run-actions">
-                    <a class="cb-btn-ghost" href="/month-lifecycle?month_cycle={{ $mc }}">Open Month Cycle</a>
-                    <a class="cb-btn-ghost" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing</a>
-                </div>
+                <h1>Dashboard</h1>
+                <p>Operations home for this billing month</p>
             </div>
         </div>
 
-        <form method="get" action="/dashboard" class="cb-run-form">
-            <div class="field">
-                <label class="label">Month Cycle</label>
-                <input name="month_cycle" value="{{ $monthCycle }}" placeholder="MM-YYYY">
-            </div>
-            <button class="btn btn-primary" type="submit">Reload Dashboard</button>
-            <div class="cb-run-quicklinks">
-                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reports</a>
-                <a class="cb-btn-ghost" href="/reporting?month_cycle={{ $mc }}">Reconciliation</a>
-                <a class="cb-btn-ghost" href="/imports-validation?month_cycle={{ $mc }}">Imports</a>
-                <a class="cb-btn-ghost" href="/rates?month_cycle={{ $mc }}">Rates</a>
-            </div>
-        </form>
-    </div>
+        <div class="dash-head-actions">
+            <form method="get" action="/dashboard" class="month-card">
+                <span class="month-icon" aria-hidden="true"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg></span>
+                <label>
+                    <span>Billing Month</span>
+                    <input name="month_cycle" value="{{ $rawMonth }}" placeholder="MM-YYYY" aria-label="Billing month">
+                </label>
+                <button type="submit" title="Reload Dashboard"><svg viewBox="0 0 20 20"><path d="M3 10a7 7 0 0 1 12-5M17 10a7 7 0 0 1-12 5M13 5h3V2M7 15H4v3"/></svg></button>
+            </form>
 
-    <!-- 2. READINESS TILES -->
-    <div class="col-12 card cb-readiness-card">
-        <div class="cb-card-head">
-            <h3 class="section-title">Readiness</h3>
-            <span class="cb-status-pill is-pending">Checks not automated yet</span>
-        </div>
-        <div class="cb-readiness-grid">
-            <div class="cb-tile is-pending">
-                <div class="cb-tile-head">
-                    <span class="cb-tile-name">Readings</span>
-                    <span class="cb-status-pill is-pending">Pending</span>
-                </div>
-                <p class="cb-tile-desc">Meter readings for this period. Open to review and import.</p>
-                <div class="cb-tile-foot">
-                    <a class="cb-tile-link" href="/meters-readings/readings?month_cycle={{ $mc }}">Open readings →</a>
-                </div>
-            </div>
+            <span class="state-pill {{ $hasPeriod ? 'is-open' : 'is-muted' }}">
+                <svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7"/><path d="M6 9l2 2 4-4"/></svg>
+                {{ $hasPeriod ? 'Open' : 'Select Month' }}
+            </span>
 
-            <div class="cb-tile is-pending">
-                <div class="cb-tile-head">
-                    <span class="cb-tile-name">Attendance</span>
-                    <span class="cb-status-pill is-pending">Pending</span>
-                </div>
-                <p class="cb-tile-desc">Active days / attendance import for the month.</p>
-                <div class="cb-tile-foot">
-                    <a class="cb-tile-link" href="/active-days-monthly?month_cycle={{ $mc }}">Open attendance →</a>
-                </div>
-            </div>
-
-            <div class="cb-tile is-pending">
-                <div class="cb-tile-head">
-                    <span class="cb-tile-name">Allowance</span>
-                    <span class="cb-status-pill is-pending">Pending</span>
-                </div>
-                <p class="cb-tile-desc">House allowance inputs &amp; corrections.</p>
-                <div class="cb-tile-foot">
-                    <a class="cb-tile-link" href="/imports-validation?month_cycle={{ $mc }}">Open imports →</a>
-                </div>
-            </div>
-
-            <div class="cb-tile is-pending">
-                <div class="cb-tile-head">
-                    <span class="cb-tile-name">Rates</span>
-                    <span class="cb-status-pill is-pending">Pending</span>
-                </div>
-                <p class="cb-tile-desc">Approved rate set must be in place before the run.</p>
-                <div class="cb-tile-foot">
-                    <a class="cb-tile-link" href="/rates?month_cycle={{ $mc }}">Open rates →</a>
-                </div>
-            </div>
-
-            <div class="cb-tile is-pending">
-                <div class="cb-tile-head">
-                    <span class="cb-tile-name">Integrity</span>
-                    <span class="cb-status-pill is-pending">Pending</span>
-                </div>
-                <p class="cb-tile-desc">Reconciliation &amp; integrity checks before locking.</p>
-                <div class="cb-tile-foot">
-                    <a class="cb-tile-link" href="/reporting?month_cycle={{ $mc }}">Open reconciliation →</a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. MISSING DATA / BLOCKERS -->
-    <div class="col-12 card cb-blockers-card">
-        <div class="cb-card-head">
-            <h3 class="section-title">Missing Data &amp; Blockers</h3>
-        </div>
-        <div class="empty" style="margin-bottom:12px">
-            No automated blocker feed is connected to this view yet — nothing is being flagged automatically.
-            Use the manual pre-run checks below until live checks are wired in.
-        </div>
-        <div class="muted" style="margin-bottom:8px;font-weight:800">Manual pre-run checks</div>
-        <ul class="cb-list">
-            <li class="cb-list-row"><span class="cb-dot"></span>Readings imported and validated for this period.</li>
-            <li class="cb-list-row"><span class="cb-dot"></span>Attendance / active days uploaded and reviewed.</li>
-            <li class="cb-list-row"><span class="cb-dot"></span>House allowance inputs and corrections confirmed.</li>
-            <li class="cb-list-row"><span class="cb-dot"></span>Rates approved before the billing run.</li>
-            <li class="cb-list-row"><span class="cb-dot"></span>Reconciliation reviewed before lock.</li>
-        </ul>
-    </div>
-
-    <!-- 5. SNAPSHOT (real KPI data) -->
-    <div class="col-3 card">
-        <div class="muted">Employees Billed</div>
-        <div class="kpi">{{ $kpis['employees_billed'] ?? 0 }}</div>
-        <span class="badge success">Billing Coverage</span>
-    </div>
-    <div class="col-3 card">
-        <div class="muted">Total Billed</div>
-        <div class="kpi">PKR {{ number_format((float)($kpis['total_billed'] ?? 0), 2) }}</div>
-        <span class="badge">Financial</span>
-    </div>
-    <div class="col-3 card">
-        <div class="muted">Family Members</div>
-        <div class="kpi">{{ $kpis['family_members'] ?? 0 }}</div>
-        <span class="badge">Registry</span>
-    </div>
-    <div class="col-3 card">
-        <div class="muted">Van Kids</div>
-        <div class="kpi">{{ $kpis['van_kids'] ?? 0 }}</div>
-        <span class="badge warn">Transport</span>
-    </div>
-
-    <div class="col-12 card">
-        <h3 class="section-title">Resident Type Overview</h3>
-        <div class="grid" style="gap:10px">
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory">
-                <div class="muted">Total Rooms</div>
-                <div class="kpi">{{ $kpis['total_units'] ?? 0 }}</div>
-                <span class="badge">Master</span>
-            </a>
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=house">
-                <div class="muted">House Units</div>
-                <div class="kpi">{{ $kpis['house_units'] ?? 0 }}</div>
-                <span class="badge success">House</span>
-            </a>
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=bachelor">
-                <div class="muted">Bachelor Units</div>
-                <div class="kpi">{{ $kpis['bachelor_units'] ?? 0 }}</div>
-                <span class="badge">Bachelor</span>
-            </a>
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=hostel">
-                <div class="muted">Hostel</div>
-                <div class="kpi">{{ $kpis['hostel_units'] ?? 0 }}</div>
-                <span class="badge">Hostel</span>
-            </a>
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=containers">
-                <div class="muted">Admin Colonies</div>
-                <div class="kpi">{{ $kpis['container_units'] ?? 0 }}</div>
-                <span class="badge warn">Admin Colonies</span>
-            </a>
-            <a class="col-2 card soft kpi-link-card" href="/unit-directory?res_type=uncategorized">
-                <div class="muted">Uncategorized</div>
-                <div class="kpi">{{ $kpis['uncategorized_units'] ?? 0 }}</div>
-                <span class="badge warn">Review</span>
+            <a class="billing-cta" href="{{ $routeWithMonth('/billing-run-lock') }}">
+                <span><svg viewBox="0 0 20 20"><path d="M11 1 3 11h5l-1 7 9-11h-5z"/></svg></span>
+                <strong>Billing Center</strong>
+                <small>Start your workflow</small>
+                <svg viewBox="0 0 20 20"><path d="M4 10h10M10 6l4 4-4 4"/></svg>
             </a>
         </div>
-    </div>
+    </section>
 
-    <!-- FAMILY & VAN OVERVIEW (real backend data: $familyRows / $vanRows) -->
-    <div class="col-6 card">
-        <div class="cb-card-head">
-            <h3 class="section-title">Family Members</h3>
-            <span class="badge">{{ count($familyRows ?? []) }} rows</span>
-        </div>
-        @if(!empty($familyRows))
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Employee</th><th>Member</th><th>Relation</th><th>Age</th></tr></thead>
-                    <tbody>
-                    @foreach($familyRows as $row)
-                        <tr>
-                            <td>{{ $row->employee_id ?? '' }}</td>
-                            <td>{{ $row->family_member_name ?? '' }}</td>
-                            <td>{{ $row->relation ?? '' }}</td>
-                            <td>{{ $row->age ?? '' }}</td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+    <section class="dash-card workflow-card">
+        <div class="section-row">
+            <div class="section-title"><span class="danger-icon"><svg viewBox="0 0 20 20"><path d="M10 2 19 18H1z"/><path d="M10 7v5M10 15h0"/></svg></span>Workflow Attention</div>
+            <div class="section-actions">
+                <a href="{{ $routeWithMonth('/month-lifecycle') }}"><svg viewBox="0 0 18 18"><rect x="2" y="3" width="14" height="13" rx="2"/><path d="M2 7h14M6 1v3M12 1v3"/></svg>Open Month Cycle</a>
+                <a href="/dashboard{{ $monthQuery }}"><svg viewBox="0 0 18 18"><path d="M2 9a7 7 0 0 1 12-5M16 9a7 7 0 0 1-12 5M12 4h3V1M6 14H3v3"/></svg>Reload Dashboard</a>
             </div>
-        @else
-            <div class="empty">No family member records for this period.</div>
-        @endif
-    </div>
-
-    <div class="col-6 card">
-        <div class="cb-card-head">
-            <h3 class="section-title">School Van Kids</h3>
-            <span class="badge warn">{{ count($vanRows ?? []) }} rows</span>
         </div>
-        @if(!empty($vanRows))
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>Employee</th><th>Child</th><th>School</th><th>Class</th><th>Amount</th></tr></thead>
-                    <tbody>
-                    @foreach($vanRows as $row)
-                        <tr>
-                            <td>{{ $row->employee_id ?? '' }}</td>
-                            <td>{{ $row->child_name ?? '' }}</td>
-                            <td>{{ $row->school_name ?? '' }}</td>
-                            <td>{{ $row->class_level ?? '' }}</td>
-                            <td>PKR {{ number_format((float)($row->amount ?? 0), 2) }}</td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
+
+        <div class="workflow-grid">
+            <a class="wf-tile must" href="{{ $routeWithMonth('/imports-validation') }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h0"/></svg></span>
+                <span><strong>{{ $hasPeriod ? '0' : '1' }}</strong><em>Must Fix</em><small>Check data →</small></span>
+            </a>
+            <a class="wf-tile review" href="{{ $routeWithMonth('/reporting') }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><path d="M1 10s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6z"/><circle cx="10" cy="10" r="2.5"/></svg></span>
+                <span><strong>{{ $hasPeriod ? '0' : '—' }}</strong><em>Please Review</em><small>Open reports →</small></span>
+            </a>
+            <a class="wf-tile ready" href="{{ $routeWithMonth('/billing-run-lock') }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/><path d="M6 10l3 3 5-6"/></svg></span>
+                <span><strong>{{ $hasPeriod ? 'Ready' : 'Wait' }}</strong><em>Billing Center</em><small>Start workflow →</small></span>
+            </a>
+            <a class="wf-tile read" href="{{ $routeWithMonth('/meters-readings/readings') }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><path d="M10 2c3 4 5 6 5 9a5 5 0 0 1-10 0c0-3 2-5 5-9z"/></svg></span>
+                <span><strong>Open</strong><em>Readings</em><small>Meter data →</small></span>
+            </a>
+            <a class="wf-tile rooms" href="/housing-occupancy{{ $monthQuery }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><path d="M3 17V8l7-5 7 5v9M8 17v-5h4v5"/></svg></span>
+                <span><strong>Open</strong><em>Rooms</em><small>Housing data →</small></span>
+            </a>
+            <a class="wf-tile rate" href="{{ $routeWithMonth('/rates') }}">
+                <span class="tile-icon"><svg viewBox="0 0 20 20"><path d="M11 3H6l1 5h4a2 2 0 0 1 0 4H6M6 8h7"/></svg></span>
+                <span><strong>Open</strong><em>Rates</em><small>Review rates →</small></span>
+            </a>
+        </div>
+    </section>
+
+    <section class="kpi-grid">
+        <a class="dash-card kpi-card blue" href="{{ $routeWithMonth('/reporting') }}">
+            <span class="kpi-head"><span>Employees Billed</span><i><svg viewBox="0 0 22 22"><circle cx="11" cy="7" r="3.3"/><path d="M4 19c0-3.6 3-6 7-6s7 2.4 7 6"/></svg></i></span>
+            <strong>{{ number_format($employeesBilled) }}</strong><small>This Month</small>
+            <svg class="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline points="0,28 25,24 50,26 75,18 100,20 125,12 150,15 175,8 200,10"/></svg>
+        </a>
+        <a class="dash-card kpi-card green" href="{{ $routeWithMonth('/reports/monthly-summary') }}">
+            <span class="kpi-head"><span>Total Billed</span><i><svg viewBox="0 0 22 22"><path d="M12 3H7l1 6h4a2.2 2.2 0 0 1 0 4.4H7M7 9h8"/></svg></i></span>
+            <strong class="money">PKR {{ number_format($totalBilled, 2) }}</strong><small>This Month</small>
+            <svg class="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline points="0,30 25,26 50,22 75,24 100,16 125,18 150,10 175,12 200,6"/></svg>
+        </a>
+        <a class="dash-card kpi-card purple" href="{{ $routeWithMonth('/family/details') }}">
+            <span class="kpi-head"><span>Family Members</span><i><svg viewBox="0 0 22 22"><circle cx="7" cy="7" r="2.8"/><circle cx="15" cy="8" r="2.3"/><path d="M2 18c0-3 2.2-5 5-5M11 17c0-2.2 1.8-4 4-4"/></svg></i></span>
+            <strong>{{ number_format($familyCount) }}</strong><small>Total Registered</small>
+            <svg class="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline points="0,24 25,22 50,18 75,20 100,14 125,16 150,12 175,14 200,9"/></svg>
+        </a>
+        <a class="dash-card kpi-card orange" href="{{ $routeWithMonth('/transport') }}">
+            <span class="kpi-head"><span>Van Kids</span><i><svg viewBox="0 0 22 22"><rect x="3" y="6" width="16" height="9" rx="2"/><circle cx="8" cy="17" r="1.6"/><circle cx="14" cy="17" r="1.6"/></svg></i></span>
+            <strong>{{ number_format($vanKids) }}</strong><small>School Van</small>
+            <svg class="spark" viewBox="0 0 200 34" preserveAspectRatio="none"><polyline points="0,20 25,24 50,18 75,22 100,16 125,20 150,14 175,18 200,12"/></svg>
+        </a>
+    </section>
+
+    <section class="kpi-grid units-row">
+        <a class="dash-card kpi-card teal" href="/unit-directory"><span class="kpi-head"><span>Total Rooms</span><i><svg viewBox="0 0 22 22"><path d="M3 17V8l8-5 8 5v9M8 17v-5h6v5"/></svg></i></span><strong>{{ number_format($totalUnits) }}</strong><small>All Rooms</small></a>
+        <a class="dash-card kpi-card blue" href="/unit-directory?res_type=house"><span class="kpi-head"><span>House Units</span><i><svg viewBox="0 0 22 22"><path d="M3 17V8l8-5 8 5v9M8 17v-5h6v5"/></svg></i></span><strong>{{ number_format($houseUnits) }}</strong><small>Residential</small></a>
+        <a class="dash-card kpi-card amber" href="/unit-directory?res_type=bachelor"><span class="kpi-head"><span>Bachelor Units</span><i><svg viewBox="0 0 22 22"><circle cx="11" cy="7" r="3.3"/><path d="M4 19c0-3.6 3-6 7-6s7 2.4 7 6"/></svg></i></span><strong>{{ number_format($bachelorUnits) }}</strong><small>Units</small></a>
+        <a class="dash-card kpi-card pink" href="/unit-directory?res_type=hostel"><span class="kpi-head"><span>Hostel Units</span><i><svg viewBox="0 0 22 22"><rect x="4" y="3" width="12" height="14" rx="1.5"/><path d="M8 3v14M12 3v14M4 8h12"/></svg></i></span><strong>{{ number_format($hostelUnits) }}</strong><small>Hostel</small></a>
+    </section>
+
+    <section class="lower-grid">
+        <div class="dash-card panel-card">
+            <div class="panel-title"><svg viewBox="0 0 18 18"><path d="M10 1 3 10h5l-1 7 8-10h-5z"/></svg>Quick Actions</div>
+            <div class="quick-grid">
+                <a href="/unit-directory"><i class="blue"><svg viewBox="0 0 20 20"><rect x="4" y="3" width="12" height="14" rx="1.5"/><path d="M8 3v14M12 3v14M4 8h12"/></svg></i><span>Unit Directory</span></a>
+                <a href="/people-residency"><i class="green"><svg viewBox="0 0 20 20"><circle cx="10" cy="7" r="3"/><path d="M4 17c0-3 2.7-5 6-5s6 2 6 5"/></svg></i><span>Employee Profile</span></a>
+                <a href="/people-residency"><i class="purple"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/><path d="M10 6v8M6 10h8"/></svg></i><span>Add Employee</span></a>
+                <a href="{{ $routeWithMonth('/reports/employee-statement') }}"><i class="orange"><svg viewBox="0 0 20 20"><path d="M5 2h7l3 3v13H5z"/><path d="M8 8h4M8 11h4M8 14h3"/></svg></i><span>Statement</span></a>
+                <a href="/housing-occupancy{{ $monthQuery }}"><i class="teal"><svg viewBox="0 0 20 20"><path d="M3 17V8l7-5 7 5v9M8 17v-5h4v5"/></svg></i><span>Residence</span></a>
+                <a href="{{ $routeWithMonth('/family/details') }}"><i class="pink"><svg viewBox="0 0 20 20"><circle cx="7" cy="7" r="2.5"/><circle cx="14" cy="8" r="2"/><path d="M2 17c0-2.6 2-4.5 5-4.5M11 16c0-2 1.6-3.5 3.5-3.5"/></svg></i><span>Family</span></a>
+                <a href="{{ $routeWithMonth('/transport') }}"><i class="blue"><svg viewBox="0 0 20 20"><rect x="3" y="6" width="14" height="8" rx="2"/><circle cx="7" cy="16" r="1.5"/><circle cx="13" cy="16" r="1.5"/></svg></i><span>School Van</span></a>
+                <a href="{{ $routeWithMonth('/meters-readings/readings') }}"><i class="green"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8"/><path d="M10 5v5l3 2"/></svg></i><span>Meter Readings</span></a>
+                <a href="{{ $routeWithMonth('/active-days-monthly') }}"><i class="amber"><svg viewBox="0 0 20 20"><rect x="2" y="4" width="16" height="13" rx="2"/><path d="M2 8h16M6 2v3M14 2v3"/></svg></i><span>Active Days</span></a>
+                <a href="{{ $routeWithMonth('/rates') }}"><i class="purple"><svg viewBox="0 0 20 20"><circle cx="6" cy="6" r="2.5"/><circle cx="14" cy="14" r="2.5"/><path d="M5 15 15 5"/></svg></i><span>Monthly Rates</span></a>
             </div>
-        @else
-            <div class="empty">No school van records for this period.</div>
-        @endif
-    </div>
+        </div>
 
-    <!-- 6. LAST RUN / RECENT RUNS -->
-    <div class="col-12 card">
-        <div class="cb-card-head">
-            <h3 class="section-title">Last Run &amp; Recent Runs</h3>
-            <a class="cb-tile-link" href="/billing-run-lock?month_cycle={{ $mc }}">Open Billing Run &amp; Lock →</a>
+        <div class="dash-card panel-card">
+            <div class="panel-title"><svg viewBox="0 0 18 18"><circle cx="9" cy="9" r="7"/><path d="M9 2v7l5 3"/></svg>Resident Type Overview</div>
+            <a class="donut-link" href="/unit-directory">
+                <div class="donut">
+                    <svg viewBox="0 0 42 42" width="140" height="140">
+                        <circle cx="21" cy="21" r="15.9" fill="none" stroke="#EEF2F8" stroke-width="6"/>
+                        <circle cx="21" cy="21" r="15.9" fill="none" stroke="#2563EB" stroke-width="6" stroke-dasharray="43 57" stroke-dashoffset="0" transform="rotate(-90 21 21)"/>
+                        <circle cx="21" cy="21" r="15.9" fill="none" stroke="#F59E0B" stroke-width="6" stroke-dasharray="29 71" stroke-dashoffset="-43" transform="rotate(-90 21 21)"/>
+                        <circle cx="21" cy="21" r="15.9" fill="none" stroke="#DB2777" stroke-width="6" stroke-dasharray="21 79" stroke-dashoffset="-72" transform="rotate(-90 21 21)"/>
+                        <circle cx="21" cy="21" r="15.9" fill="none" stroke="#7C3AED" stroke-width="6" stroke-dasharray="5 95" stroke-dashoffset="-93" transform="rotate(-90 21 21)"/>
+                    </svg>
+                    <span><strong>{{ number_format($totalUnits) }}</strong><em>Total Units</em></span>
+                </div>
+                <div class="legend-list">
+                    <span><i style="background:#2563EB"></i>House Units <b>{{ number_format($houseUnits) }}</b></span>
+                    <span><i style="background:#F59E0B"></i>Bachelor Units <b>{{ number_format($bachelorUnits) }}</b></span>
+                    <span><i style="background:#DB2777"></i>Hostel Units <b>{{ number_format($hostelUnits) }}</b></span>
+                    <span><i style="background:#7C3AED"></i>Admin Colonies <b>{{ number_format($adminColonies) }}</b></span>
+                    <span><i style="background:#94A3B8"></i>Uncategorized <b>{{ number_format($uncategorizedUnits) }}</b></span>
+                </div>
+            </a>
         </div>
-        <div class="empty">
-            No run history is connected to this view yet. Previous runs and reprint actions appear here once a run feed is wired in.
+
+        <div class="dash-card panel-card">
+            <div class="panel-title"><svg viewBox="0 0 18 18"><rect x="2" y="3" width="14" height="13" rx="2"/><path d="M2 7h14M6 1v3M12 1v3"/></svg>Recent Activity</div>
+            <div class="activity-empty">
+                <strong>No recent activity connected yet.</strong>
+                <span>Last bill, upload, reading update and export records will appear here when the activity feed is available.</span>
+                <a href="{{ $routeWithMonth('/billing-run-lock') }}">Open Billing Center →</a>
+            </div>
         </div>
-    </div>
+    </section>
+
+    <section class="dash-card reports-card">
+        <div class="panel-title"><svg viewBox="0 0 18 18"><path d="M4 16V8M9 16V4M14 16v-6"/></svg>Reports Shortcuts</div>
+        <div class="reports-grid">
+            <a href="{{ $routeWithMonth('/reports/monthly-summary') }}">Monthly Summary</a>
+            <a href="{{ $routeWithMonth('/reports/employee-bill-summary') }}">Employee Bill Summary</a>
+            <a href="{{ $routeWithMonth('/reports/reconciliation') }}">Reconciliation Report</a>
+            <a href="{{ $routeWithMonth('/reports/recovery') }}">Recovery Report</a>
+            <a href="{{ $routeWithMonth('/reports/van') }}">Van Report</a>
+            <a href="{{ $routeWithMonth('/reporting') }}">More Reports ···</a>
+        </div>
+    </section>
+
+    <footer class="dash-foot">Colony Billing · Enterprise Platform · nodesky.pk/billing</footer>
 </div>
+
 <style>
-
-/* Dashboard-only header replacement: hide default page-head and use fixed commands as the first rail. */
-.main .container > .page-head{
-    display:none;
-}
-.dashboard-command-console{
-    margin-top:0;
-    padding-top:48px;
-}
-
-.kpi-link-card{
-    display:block;
-    text-decoration:none;
-    color:inherit;
-    cursor:pointer;
-    transition:transform .15s ease, box-shadow .15s ease;
-}
-.kpi-link-card:hover{
-    transform:translateY(-2px);
-    box-shadow:0 18px 36px rgba(15,23,42,.12);
-}
-
-/* DASHBOARD_COMPACT_CURRENT_PERIOD_START */
-.cb-run-card{
-    padding:12px 14px !important;
-    border-radius:16px !important;
-}
-.cb-run-top{
-    display:grid !important;
-    grid-template-columns:minmax(0,1fr) auto;
-    align-items:center !important;
-    gap:12px !important;
-    margin-bottom:8px !important;
-}
-.cb-run-eyebrow{
-    font-size:10px !important;
-    line-height:1 !important;
-    letter-spacing:.14em !important;
-    margin-bottom:4px !important;
-}
-.cb-run-period{
-    font-size:24px !important;
-    line-height:1.05 !important;
-    margin:0 !important;
-}
-.cb-run-hint{
-    margin:3px 0 0 !important;
-    font-size:12px !important;
-    line-height:1.35 !important;
-    max-width:720px;
-}
-.cb-run-side{
-    display:flex !important;
-    flex-direction:column !important;
-    align-items:flex-end !important;
-    gap:8px !important;
-}
-.cb-run-actions,
-.cb-run-quicklinks{
-    display:flex !important;
-    align-items:center !important;
-    justify-content:flex-end !important;
-    gap:7px !important;
-    flex-wrap:wrap !important;
-}
-.cb-run-form{
-    display:flex !important;
-    align-items:flex-end !important;
-    gap:9px !important;
-    flex-wrap:wrap !important;
-    margin-top:8px !important;
-    padding-top:8px !important;
-    border-top:1px solid rgba(148,163,184,.18) !important;
-}
-.cb-run-form .field{
-    min-width:158px !important;
-    max-width:190px !important;
-}
-.cb-run-form .label{
-    font-size:10px !important;
-    line-height:1 !important;
-    margin-bottom:4px !important;
-}
-.cb-run-form input[name="month_cycle"]{
-    min-height:34px !important;
-    padding:6px 10px !important;
-    font-weight:800 !important;
-}
-.cb-run-form .btn,
-.cb-btn-ghost{
-    min-height:34px !important;
-    padding:7px 11px !important;
-    font-size:12px !important;
-    line-height:1 !important;
-}
-.cb-run-quicklinks{
-    margin-left:auto !important;
-}
-@media(max-width:900px){
-    .cb-run-top{
-        grid-template-columns:1fr;
-    }
-    .cb-run-side,
-    .cb-run-actions,
-    .cb-run-quicklinks{
-        align-items:flex-start !important;
-        justify-content:flex-start !important;
-        margin-left:0 !important;
-    }
-    .cb-run-form .field{
-        max-width:none !important;
-        width:100% !important;
-    }
-}
-/* DASHBOARD_COMPACT_CURRENT_PERIOD_END */
-
-/* DASHBOARD_PREMIUM_READINESS_START */
-.cb-readiness-card{
-    position:relative;
-    overflow:hidden;
-    padding:16px !important;
-    border-radius:18px !important;
-    border:1px solid rgba(148,163,184,.24) !important;
-    background:
-        radial-gradient(circle at top left, rgba(59,130,246,.10), transparent 34%),
-        linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,251,255,.90)) !important;
-    box-shadow:0 14px 34px rgba(15,23,42,.08) !important;
-}
-.cb-readiness-card::before{
-    content:"";
-    position:absolute;
-    inset:0 0 auto;
-    height:3px;
-    background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981,#f59e0b);
-    opacity:.82;
-}
-.cb-readiness-card .cb-card-head{
-    align-items:center;
-    margin-bottom:12px !important;
-    padding-bottom:10px;
-    border-bottom:1px solid rgba(148,163,184,.18);
-}
-.cb-readiness-card .section-title{
-    margin:0 !important;
-    font-size:16px !important;
-    letter-spacing:-.01em;
-}
-.cb-readiness-card .cb-card-head .cb-status-pill{
-    font-size:11px !important;
-    padding:6px 10px !important;
-    border-radius:999px !important;
-}
-.cb-readiness-grid{
-    counter-reset:readiness-step;
-    display:grid !important;
-    grid-template-columns:repeat(5,minmax(0,1fr));
-    gap:10px !important;
-}
-.cb-readiness-grid .cb-tile{
-    counter-increment:readiness-step;
-    position:relative;
-    min-height:132px;
-    padding:14px 13px 12px !important;
-    border-radius:16px !important;
-    border:1px solid rgba(148,163,184,.22) !important;
-    background:rgba(255,255,255,.84) !important;
-    box-shadow:0 8px 18px rgba(15,23,42,.05) !important;
-    transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease;
-}
-.cb-readiness-grid .cb-tile::before{
-    content:"0" counter(readiness-step);
-    position:absolute;
-    top:12px;
-    right:12px;
-    min-width:26px;
-    height:22px;
-    display:grid;
-    place-items:center;
-    border-radius:999px;
-    background:rgba(15,23,42,.055);
-    color:#64748b;
-    font-size:10px;
-    font-weight:900;
-    letter-spacing:.04em;
-}
-.cb-readiness-grid .cb-tile:hover{
-    transform:translateY(-2px);
-    border-color:rgba(37,99,235,.24) !important;
-    box-shadow:0 12px 26px rgba(15,23,42,.09) !important;
-}
-.cb-readiness-grid .cb-tile-head{
-    display:flex !important;
-    flex-direction:column;
-    align-items:flex-start !important;
-    gap:7px !important;
-    padding-right:34px;
-    margin-bottom:8px !important;
-}
-.cb-readiness-grid .cb-tile-name{
-    font-size:14px !important;
-    font-weight:900 !important;
-    color:#0f172a !important;
-    letter-spacing:-.01em;
-}
-.cb-readiness-grid .cb-tile .cb-status-pill{
-    font-size:10px !important;
-    padding:5px 8px !important;
-    border-radius:999px !important;
-}
-.cb-readiness-grid .cb-tile-desc{
-    margin:0 0 12px !important;
-    min-height:34px;
-    color:#64748b !important;
-    font-size:12px !important;
-    line-height:1.42 !important;
-}
-.cb-readiness-grid .cb-tile-foot{
-    margin-top:auto !important;
-}
-.cb-readiness-grid .cb-tile-link{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    min-height:30px;
-    padding:7px 10px;
-    border-radius:999px;
-    background:rgba(37,99,235,.08);
-    color:#1d4ed8 !important;
-    font-size:12px;
-    font-weight:850;
-    text-decoration:none;
-}
-.cb-readiness-grid .cb-tile-link:hover{
-    background:rgba(37,99,235,.13);
-    text-decoration:none;
-}
-@media(max-width:1250px){
-    .cb-readiness-grid{
-        grid-template-columns:repeat(3,minmax(0,1fr));
-    }
-}
-@media(max-width:760px){
-    .cb-readiness-grid{
-        grid-template-columns:1fr;
-    }
-    .cb-readiness-grid .cb-tile{
-        min-height:auto;
-    }
-}
-/* DASHBOARD_PREMIUM_READINESS_END */
-
-/* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_START */
-.command-row{
-    grid-column:span 12;
-    position:fixed;
-    top:128px;
-    left:50%;
-    width:min(calc(100vw - 56px), 1424px);
-    z-index:99;
-    display:grid;
-    grid-template-columns:84px repeat(7,minmax(0,1fr));
-    align-items:center;
-    gap:9px;
-    min-height:64px;
-    margin:0;
-    padding:9px 11px;
-    border:1px solid rgba(148,163,184,.28);
-    border-radius:16px;
-    background:rgba(248,250,252,.96);
-    box-shadow:0 16px 38px rgba(15,23,42,.12);
-    backdrop-filter:blur(14px);
-    transform:translateX(-50%);
-}
-.command-row-label{
-    height:46px;
-    display:flex;
-    align-items:center;
-    padding:0 2px;
-    color:#64748b;
-    font-size:10px;
-    font-weight:800;
-    letter-spacing:.10em;
-    text-transform:uppercase;
-}
-.command-pill{
-    --surface:#edf4ff;
-    --border:#bfd6fb;
-    --depth:#a8c5ee;
-    --ink:#1d4ed8;
-    position:relative;
-    width:100%;
-    height:47px;
-    padding:0 11px;
-    display:flex;
-    align-items:center;
-    justify-content:flex-start;
-    gap:8px;
-    border:1px solid var(--border);
-    border-radius:9px;
-    background:var(--surface);
-    color:var(--ink);
-    font:inherit;
-    font-size:13px;
-    line-height:1;
-    font-weight:750;
-    white-space:nowrap;
-    text-align:left;
-    cursor:pointer;
-    text-decoration:none;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.75),
-        0 2px 0 var(--depth),
-        0 5px 9px rgba(15,23,42,.06);
-    transition:box-shadow .14s ease;
-}
-.command-pill::before,
-.command-pill::after{
-    display:none;
-}
-.command-pill:hover{
-    text-decoration:none;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.82),
-        0 3px 0 var(--depth),
-        0 7px 13px rgba(15,23,42,.09);
-}
-.command-pill:focus-visible{
-    outline:3px solid rgba(59,130,246,.22);
-    outline-offset:2px;
-}
-.command-pill:active{
-    box-shadow:
-        inset 0 1px 3px rgba(15,23,42,.10),
-        0 1px 0 var(--depth);
-}
-.command-pill svg{
-    width:22px;
-    height:22px;
-    flex:0 0 22px;
-    padding:0;
-    border-radius:0;
-    background:none;
-    box-shadow:none;
-    fill:none;
-    stroke:currentColor;
-    stroke-width:2;
-    stroke-linecap:round;
-    stroke-linejoin:round;
-}
-.command-pill > span:last-child{
-    min-width:0;
-    display:block;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-    font-size:13px;
-    line-height:1;
-    font-weight:750;
-    letter-spacing:0;
-}
-.pill-blue{--surface:#e9f2ff;--border:#bad2fb;--depth:#9dbbea;--ink:#1d4ed8;}
-.pill-purple{--surface:#f2ecff;--border:#d4c4fa;--depth:#b7a1e0;--ink:#6d28d9;}
-.pill-green{--surface:#e3f6eb;--border:#a8dcc0;--depth:#83bf9d;--ink:#047857;}
-.pill-orange{--surface:#fff0e3;--border:#facaa6;--depth:#dfaa7d;--ink:#c2410c;}
-.pill-cyan{--surface:#e4f5fb;--border:#acddec;--depth:#83bfd6;--ink:#0369a1;}
-.pill-pink{--surface:#fbe8f2;--border:#eeb8d2;--depth:#d99ab9;--ink:#be185d;}
-.pill-yellow{--surface:#fff5d4;--border:#ecd47a;--depth:#cfb550;--ink:#a16207;}
-.command-pill.primary{
-    height:47px;
-    background:#07966c;
-    border-color:#067b59;
-    color:#fff;
-    text-shadow:none;
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.18),
-        0 2px 0 #056448,
-        0 6px 11px rgba(5,150,105,.14);
-}
-.command-pill.primary svg{
-    stroke:#fff;
-}
-@media(max-width:1250px){
-    .dashboard-command-console{
-        padding-top:150px;
-    }
-    .command-row{
-        grid-template-columns:repeat(4,minmax(0,1fr));
-        top:116px;
-    }
-    .command-row-label{
-        grid-column:1 / -1;
-        height:22px;
-    }
-}
-@media(max-width:720px){
-    .dashboard-command-console{
-        padding-top:0;
-    }
-    .command-row{
-        position:static;
-        width:auto;
-        transform:none;
-        grid-template-columns:1fr;
-        max-height:none;
-        overflow:visible;
-        margin:0 0 14px;
-    }
-}
-/* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_END */
-
+:root{--db-bg:#eef2f8;--db-surface:#fff;--db-ink:#0f172a;--db-muted:#64748b;--db-faint:#94a3b8;--db-line:#e8ecf3;--db-blue:#2563eb;--db-navy:#0b1c3a;--db-shadow:0 1px 3px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.06)}
+.dash-wrap{max-width:1320px;margin:0 auto 28px;padding:0 0 4px;color:var(--db-ink)}
+.dash-wrap svg{stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.dash-head{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:4px 0 22px}
+.dash-head-left{display:flex;align-items:center;gap:14px}.dash-head-icon{width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#1e3a8a);display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(37,99,235,.3)}.dash-head-icon svg{width:27px;height:27px}.dash-head h1{margin:0;font-size:25px;font-weight:900;letter-spacing:-.03em}.dash-head p{margin:2px 0 0;color:var(--db-muted);font-size:13.5px}
+.dash-head-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.month-card{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--db-line);border-radius:13px;padding:8px 10px 8px 14px;box-shadow:var(--db-shadow)}.month-icon{width:34px;height:34px;border-radius:9px;background:#eff4ff;color:#2563eb;display:grid;place-items:center}.month-icon svg{width:18px;height:18px}.month-card label{display:flex;flex-direction:column;gap:1px}.month-card label span{font-size:10.5px;color:var(--db-muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}.month-card input{width:112px;min-height:auto;border:0;background:transparent;box-shadow:none;padding:0;color:var(--db-ink);font-size:15px;font-weight:900;letter-spacing:-.01em}.month-card button{width:32px;height:32px;border:0;border-radius:9px;background:#eff4ff;color:#2563eb;display:grid;place-items:center;cursor:pointer}.month-card button svg{width:17px;height:17px}.state-pill{display:inline-flex;align-items:center;gap:7px;border-radius:11px;padding:11px 16px;font-weight:800;font-size:14px}.state-pill svg{width:16px;height:16px}.state-pill.is-open{background:#ecfdf3;color:#16a34a;border:1px solid #bbf7d0}.state-pill.is-muted{background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1}.billing-cta{display:grid;grid-template-columns:34px auto 18px;align-items:center;column-gap:12px;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:#fff;border-radius:13px;padding:10px 18px;box-shadow:0 8px 20px rgba(37,99,235,.35);text-decoration:none}.billing-cta:hover{transform:translateY(-1px);box-shadow:0 10px 26px rgba(37,99,235,.45)}.billing-cta span{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.18);display:grid;place-items:center}.billing-cta strong{display:block;font-size:14.5px;line-height:1.1}.billing-cta small{grid-column:2;font-size:11.5px;opacity:.86}
+.dash-card{background:#fff;border:1px solid var(--db-line);border-radius:16px;box-shadow:var(--db-shadow)}.workflow-card{padding:20px}.section-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}.section-title{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900}.danger-icon{width:34px;height:34px;border-radius:9px;background:#fee2e2;color:#dc2626;display:grid;place-items:center}.danger-icon svg{width:18px;height:18px}.section-actions{display:flex;gap:10px;flex-wrap:wrap}.section-actions a{display:flex;align-items:center;gap:8px;border:1px solid var(--db-line);background:#fff;border-radius:11px;padding:9px 15px;font-size:13.5px;font-weight:800;color:var(--db-ink);text-decoration:none}.section-actions a:hover{border-color:#2563eb;color:#2563eb}.section-actions svg{width:17px;height:17px;color:#2563eb}
+.workflow-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:13px}.wf-tile{display:flex;align-items:center;gap:11px;border:1px solid var(--db-line);border-radius:13px;padding:15px;text-decoration:none;transition:.15s;min-width:0}.wf-tile:hover{transform:translateY(-2px);box-shadow:var(--db-shadow)}.wf-tile .tile-icon{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;flex:0 0 42px}.wf-tile svg{width:20px;height:20px}.wf-tile strong{display:block;font-size:21px;font-weight:900;line-height:1;letter-spacing:-.03em}.wf-tile em{display:block;font-style:normal;font-size:12.5px;color:#64748b;font-weight:800;margin-top:3px}.wf-tile small{display:block;font-size:12px;font-weight:850;margin-top:7px}.wf-tile.must{background:#fff4ed}.wf-tile.must .tile-icon{background:#fecaca;color:#dc2626}.wf-tile.must small{color:#dc2626}.wf-tile.review,.wf-tile.rate{background:#fffbeb}.wf-tile.review .tile-icon{background:#fed7aa;color:#ea580c}.wf-tile.review small{color:#ea580c}.wf-tile.ready{background:#ecfdf3}.wf-tile.ready .tile-icon{background:#bbf7d0;color:#16a34a}.wf-tile.ready small{color:#16a34a}.wf-tile.read{background:#eff4ff}.wf-tile.read .tile-icon{background:#dbeafe;color:#2563eb}.wf-tile.read small{color:#2563eb}.wf-tile.rooms{background:#f5f0ff}.wf-tile.rooms .tile-icon{background:#e9d5ff;color:#7c3aed}.wf-tile.rooms small{color:#7c3aed}.wf-tile.rate .tile-icon{background:#fde68a;color:#d97706}.wf-tile.rate small{color:#d97706}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}.kpi-card{display:block;padding:20px;position:relative;overflow:hidden;text-decoration:none;color:var(--db-ink);transition:.16s}.kpi-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(15,23,42,.1)}.kpi-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:7px;color:#64748b;font-weight:800}.kpi-head i{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;color:#fff;box-shadow:0 6px 14px rgba(0,0,0,.12)}.kpi-head svg{width:22px;height:22px}.kpi-card strong{display:block;font-size:28px;font-weight:900;letter-spacing:-.03em}.kpi-card strong.money{font-size:23px}.kpi-card small{display:block;font-size:12.5px;color:#94a3b8;margin-top:2px}.kpi-card .spark{width:100%;height:34px;margin-top:12px;display:block}.kpi-card .spark polyline{stroke:currentColor;stroke-width:2.2;fill:none}.kpi-card.blue{color:#2563eb}.kpi-card.green{color:#16a34a}.kpi-card.purple{color:#7c3aed}.kpi-card.orange{color:#ea580c}.kpi-card.teal{color:#0d9488}.kpi-card.amber{color:#d97706}.kpi-card.pink{color:#db2777}.kpi-card.blue .kpi-head i{background:linear-gradient(135deg,#3b82f6,#2563eb)}.kpi-card.green .kpi-head i{background:linear-gradient(135deg,#22c55e,#16a34a)}.kpi-card.purple .kpi-head i{background:linear-gradient(135deg,#a855f7,#7c3aed)}.kpi-card.orange .kpi-head i{background:linear-gradient(135deg,#fb923c,#ea580c)}.kpi-card.teal .kpi-head i{background:linear-gradient(135deg,#2dd4bf,#0d9488)}.kpi-card.amber .kpi-head i{background:linear-gradient(135deg,#fbbf24,#d97706)}.kpi-card.pink .kpi-head i{background:linear-gradient(135deg,#f472b6,#db2777)}.units-row .kpi-card .spark{display:none}
+.lower-grid{display:grid;grid-template-columns:1.15fr 1fr 1.15fr;gap:16px;margin-top:18px}.panel-card{padding:20px}.panel-title{display:flex;align-items:center;gap:9px;font-size:15.5px;font-weight:900;margin-bottom:16px}.panel-title svg{width:18px;height:18px;color:#2563eb}.quick-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}.quick-grid a{text-align:center;padding:13px 6px;border-radius:12px;text-decoration:none;color:#0f172a}.quick-grid a:hover{background:#eef2f8}.quick-grid i{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;color:#fff;margin:0 auto 8px;box-shadow:0 4px 10px rgba(0,0,0,.1)}.quick-grid i svg{width:20px;height:20px}.quick-grid span{display:block;font-size:11.5px;font-weight:850}.quick-grid .blue{background:linear-gradient(135deg,#3b82f6,#1e3a8a)}.quick-grid .green{background:linear-gradient(135deg,#22c55e,#16a34a)}.quick-grid .purple{background:linear-gradient(135deg,#a855f7,#7c3aed)}.quick-grid .orange{background:linear-gradient(135deg,#fb923c,#ea580c)}.quick-grid .teal{background:linear-gradient(135deg,#2dd4bf,#0d9488)}.quick-grid .pink{background:linear-gradient(135deg,#f472b6,#db2777)}.quick-grid .amber{background:linear-gradient(135deg,#fbbf24,#d97706)}
+.donut-link{display:flex;align-items:center;gap:18px;text-decoration:none;color:#0f172a}.donut{position:relative;width:140px;height:140px;flex:0 0 140px}.donut > span{position:absolute;inset:0;display:grid;place-items:center;text-align:center}.donut strong{font-size:24px;font-weight:900;line-height:1}.donut em{display:block;font-style:normal;font-size:11px;color:#64748b}.legend-list{flex:1;display:flex;flex-direction:column;gap:9px}.legend-list span{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:750}.legend-list i{width:11px;height:11px;border-radius:3px;flex:0 0 11px}.legend-list b{margin-left:auto;color:#64748b;font-size:12.5px}.activity-empty{min-height:230px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;color:#64748b}.activity-empty strong{font-size:15px;color:#0f172a}.activity-empty a{font-weight:900;color:#2563eb;text-decoration:none}.reports-card{padding:18px 20px;margin-top:16px}.reports-grid{display:flex;gap:12px;flex-wrap:wrap}.reports-grid a{flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;border:1px solid var(--db-line);border-radius:12px;padding:13px 15px;font-size:13.5px;font-weight:850;color:#2563eb;text-decoration:none}.reports-grid a:hover{border-color:#2563eb;background:#eff4ff}.dash-foot{margin:30px 0 10px;text-align:center;font-size:12px;color:#94a3b8}
+@media(max-width:1100px){.workflow-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.lower-grid{grid-template-columns:1fr}.quick-grid{grid-template-columns:repeat(5,1fr)}}
+@media(max-width:720px){.dash-wrap{padding:0}.dash-head-actions{width:100%}.month-card,.billing-cta{width:100%}.workflow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi-grid{grid-template-columns:1fr}.quick-grid{grid-template-columns:repeat(3,1fr)}.donut-link{flex-direction:column;align-items:flex-start}.state-pill{width:100%;justify-content:center}.dash-head-left{align-items:flex-start}}
 </style>
 @endsection
