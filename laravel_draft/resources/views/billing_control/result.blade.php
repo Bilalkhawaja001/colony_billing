@@ -18,7 +18,7 @@
 <section class="card" style="margin-top:24px">
     <div class="eyebrow">Run Summary</div>
     <div class="run-summary">
-        <div class="run-row"><span class="k">Run</span><span class="v">{{ $runLabel }}</span></div>
+        <div class="run-row"><span class="k">Bill Reference</span><span class="v">{{ $runLabel }}</span></div>
         <div class="run-row"><span class="k">Cycle Start</span><span class="v">{{ data_get($data, 'cycle_start_date', '-') }}</span></div>
         <div class="run-row"><span class="k">Cycle End</span><span class="v">{{ data_get($data, 'cycle_end_date', '-') }}</span></div>
         <div class="run-row"><span class="k">Employees</span><span class="v">{{ data_get($data, 'active_employees', '-') }}</span></div>
