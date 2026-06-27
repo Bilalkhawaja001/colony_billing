@@ -1,5 +1,5 @@
 @php
-    $monthLabel = request('month_cycle', request('month', data_get($readiness ?? [], 'stats.month_cycle', '06-2026')));
+    $monthLabel = request('month_cycle', request('month', data_get($readiness ?? [], 'stats.month_cycle', now()->format('m-Y'))));
     $monthPretty = $monthLabel;
 
     if (preg_match('/^(\d{2})-(\d{4})$/', (string) $monthLabel, $m)) {

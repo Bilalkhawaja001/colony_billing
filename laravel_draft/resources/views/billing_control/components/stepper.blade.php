@@ -1,6 +1,6 @@
 @php
     $q = request()->query();
-    $monthLabel = request('month_cycle', request('month', data_get($readiness ?? [], 'stats.month_cycle', '06-2026')));
+    $monthLabel = request('month_cycle', request('month', data_get($readiness ?? [], 'stats.month_cycle', now()->format('m-Y'))));
     $isReady = (bool) data_get($readiness ?? [], 'isReady', false);
     $blockerCount = count(data_get($readiness ?? [], 'blockers', []));
 @endphp

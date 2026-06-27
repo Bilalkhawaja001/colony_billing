@@ -3,7 +3,7 @@
 @section('content')
 @php
     $stats = data_get($readiness, 'stats', []);
-    $month = request('month_cycle', data_get($readiness, 'month', data_get($stats, 'month_cycle', '06-2026')));
+    $month = request('month_cycle', data_get($readiness, 'month', data_get($stats, 'month_cycle', now()->format('m-Y'))));
     $isReady = (bool) data_get($readiness, 'isReady', false);
     $blockers = data_get($readiness, 'blockers', []);
     $meterCount = (int) data_get($stats, 'active_meters', 0);

@@ -2,10 +2,10 @@
     $fieldName = $name ?? 'month_cycle';
     $fieldId = $id ?? 'billing-month-picker';
     $fieldClass = $class ?? 'form-select';
-    $raw = trim((string) ($value ?? request('month_cycle', request('month', '06-2026'))));
+    $raw = trim((string) ($value ?? request('month_cycle', request('month', now()->format('m-Y')))));
 
     $monthPickerValue = date('Y-m');
-    $billingMonthValue = '06-2026';
+    $billingMonthValue = now()->format('m-Y');
 
     if (preg_match('/^(\d{2})-(\d{4})$/', $raw, $m)) {
         $billingMonthValue = sprintf('%02d-%04d', (int) $m[1], (int) $m[2]);

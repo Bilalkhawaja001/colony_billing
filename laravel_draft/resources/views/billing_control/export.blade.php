@@ -1,7 +1,7 @@
 @extends('billing_control.layout')
 
 @section('content')
-@php($month = request('month_cycle', request('month', '06-2026')))
+@php($month = request('month_cycle', request('month', now()->format('m-Y'))))
 
 <div class="eyebrow">Download &amp; Records</div>
 <h1 class="page-title">Download & Records · @include('billing_control.components.month-label', ['value' => $month])</h1>
