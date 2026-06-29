@@ -265,6 +265,10 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/reports/recovery', [BillingDraftController::class, 'recoveryReport']);
     Route::get('/reports/employee-bill-summary', [BillingDraftController::class, 'employeeBillSummary']);
     Route::get('/reports/van', [BillingDraftController::class, 'vanReport']);
+    Route::get('/reports/employee-statement', [\App\Http\Controllers\Billing\DataGridController::class, 'employeeStatement']);
+    Route::get('/reports/employee-statement/print', [\App\Http\Controllers\Billing\DataGridController::class, 'employeeStatementPrint']);
+    Route::get('/reports/employee-statement/export', [\App\Http\Controllers\Billing\DataGridController::class, 'employeeStatementExport']);
+    Route::get('/reports/employee-statements/export-all', [\App\Http\Controllers\Billing\DataGridController::class, 'employeeStatementsExportAll']);
     Route::get('/reports/elec-summary', [BillingDraftController::class, 'elecSummary']);
     Route::get('/export/excel/reconciliation', [BillingDraftController::class, 'exportExcelReconciliation']);
     Route::get('/export/excel/monthly-summary', [BillingDraftController::class, 'exportExcelMonthlySummary']);

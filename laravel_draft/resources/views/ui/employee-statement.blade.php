@@ -57,7 +57,7 @@
 
 <div class="statement-page">
     <div class="statement-toolbar card no-print">
-        <form method="get" action="/reports/employee-statement" class="statement-filter-grid">
+        <form method="get" action="{{ url('/reports/employee-statement') }}" class="statement-filter-grid">
             <div class="field">
                 <label class="label">From Month</label>
                 <input type="month" name="from_month" value="{{ $monthInput($fromMonth) }}">
@@ -98,9 +98,9 @@
 
         <div class="statement-toolbar-actions">
             <button class="btn" type="button" onclick="window.print()">Print</button>
-            <a class="btn" target="_blank" href="/reports/employee-statement/print?{{ http_build_query(request()->query()) }}">Printable Page</a>
-            <a class="btn" href="/reports/employee-statement/export?{{ http_build_query(request()->query()) }}">Download CSV</a>
-            <a class="btn" href="/reports/employee-statement/export?{{ http_build_query(array_merge(request()->query(), ['format'=>'pdf'])) }}">Download PDF</a>
+            <a class="btn" target="_blank" href="{{ url('/reports/employee-statement/print') }}?{{ http_build_query(request()->query()) }}">Printable Page</a>
+            <a class="btn" href="{{ url('/reports/employee-statement/export') }}?{{ http_build_query(request()->query()) }}">Download CSV</a>
+            <a class="btn" href="{{ url('/reports/employee-statement/export') }}?{{ http_build_query(array_merge(request()->query(), ['format'=>'pdf'])) }}">Download PDF</a>
         </div>
     </div>
 
