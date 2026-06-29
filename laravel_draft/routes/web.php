@@ -37,6 +37,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::post('/api/profile/change-password', [AuthDraftController::class, 'changePassword']);
 
     Route::get('/dashboard', [ParityUiController::class, 'dashboard']);
+    Route::get('/dashboard-v2', [ParityUiController::class, 'dashboardV2']);
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);

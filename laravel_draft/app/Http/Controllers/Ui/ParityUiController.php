@@ -39,6 +39,17 @@ class ParityUiController extends Controller
         ]);
     }
 
+    public function dashboardV2(Request $request)
+    {
+        $month = $this->dashboard->resolveMonthCycle($request->query('month_cycle'));
+        return view('ui.dashboard-v2', [
+            'monthCycle' => $month,
+            'kpis' => $this->dashboard->colonyKpis($month)['kpis'] ?? [],
+            'familyRows' => $this->dashboard->familyMembers($month)['rows'] ?? [],
+            'vanRows' => $this->dashboard->vanKids($month)['rows'] ?? [],
+        ]);
+    }
+
     public function reports(Request $request)
     {
         $data = $this->dashboard->reportsSummary($request->query('month_cycle'));
