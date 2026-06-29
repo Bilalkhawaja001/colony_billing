@@ -471,3 +471,10 @@ body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;ba
 .dv2-kc .ki svg[viewBox="0 0 24 24"],
 .dv2-qt .qi svg[viewBox="0 0 24 24"]{width:30px;height:30px}
 .dv2-rep .rpi svg[viewBox="0 0 24 24"]{width:20px;height:20px}
+
+/* ============ MISSING-BILL NOTE (in header) ============ */
+.dv2-bannote{display:inline-flex;align-items:center;gap:7px;margin-top:6px;padding:5px 11px;background:#FFF8EC;border:1px solid #FDE68A;border-radius:9px;font-size:11.5px;font-weight:600;color:#B45309;line-height:1.2}
+.dv2-bannote svg{flex-shrink:0;color:#D97706}
+@media (max-height:800px){
+  .dv2-bannote{margin-top:4px;padding:4px 9px;font-size:11px}
+}
