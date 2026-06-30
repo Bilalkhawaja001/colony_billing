@@ -59,12 +59,12 @@ class EmployeeProfileController extends Controller
     {
         if (($result['status'] ?? 'error') !== 'ok') {
             return redirect()
-                ->to('/employee-profile/' . rawurlencode($companyId))
+                ->to(url('/employee-profile/' . rawurlencode($companyId)))
                 ->withErrors(['family_member' => $result['error'] ?? 'Family member could not be saved.']);
         }
 
         return redirect()
-            ->to('/employee-profile/' . rawurlencode($companyId))
+            ->to(url('/employee-profile/' . rawurlencode($companyId)))
             ->with('status', $result['message']);
     }
 
@@ -103,12 +103,12 @@ class EmployeeProfileController extends Controller
     {
         if (($result['status'] ?? 'error') !== 'ok') {
             return redirect()
-                ->to('/employee-profile/' . rawurlencode($companyId))
+                ->to(url('/employee-profile/' . rawurlencode($companyId)))
                 ->withErrors(['residence_action' => $result['error'] ?? 'Residence action could not be completed.']);
         }
 
         return redirect()
-            ->to('/employee-profile/' . rawurlencode($companyId))
+            ->to(url('/employee-profile/' . rawurlencode($companyId)))
             ->with('status', $result['message']);
     }
 
@@ -123,12 +123,12 @@ class EmployeeProfileController extends Controller
 
         if (($result['status'] ?? 'error') !== 'ok') {
             return redirect()
-                ->to('/employee-profile/' . rawurlencode($companyId))
+                ->to(url('/employee-profile/' . rawurlencode($companyId)))
                 ->withErrors(['family_movement' => $result['error'] ?? 'Family movement could not be recorded.']);
         }
 
         return redirect()
-            ->to('/employee-profile/' . rawurlencode($companyId))
+            ->to(url('/employee-profile/' . rawurlencode($companyId)))
             ->with('status', $result['message']);
     }
 }

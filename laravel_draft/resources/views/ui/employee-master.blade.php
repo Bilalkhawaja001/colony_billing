@@ -911,7 +911,7 @@ function openEmployeeProfile(){
     return;
   }
 
-  window.location.href = '/employee-profile/' + encodeURIComponent(companyId);
+  window.location.href = '{{ url('/employee-profile') }}/' + encodeURIComponent(companyId);
 }
 
 async function fetchById(){

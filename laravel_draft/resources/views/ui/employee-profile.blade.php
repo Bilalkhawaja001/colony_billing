@@ -138,7 +138,7 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
   @endif
 
   <div class="ep-actions">
-    <a class="ep-back" href="/people-residency">← Back to People & Residency</a>
+    <a class="ep-back" href="{{ url('/people-residency') }}">← Back to People & Residency</a>
   </div>
 
   <section class="ep-hero">
@@ -324,7 +324,7 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
                     data-school-name="{{ e($member['school_name'] ?? '') }}"
                     data-class-name="{{ e($member['class_name'] ?? '') }}"
                     data-remarks="{{ e($member['remarks'] ?? '') }}"
-                    data-edit-action="/employee-profile/{{ rawurlencode($employee['company_id']) }}/family-members/{{ $member['member_id'] }}"
+                    data-edit-action="{{ url('/employee-profile/'.rawurlencode($employee['company_id']).'/family-members/'.$member['member_id']) }}"
                   >Edit</button>
 
                   @if($member['next_movement_type'])
@@ -335,7 +335,7 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
                       data-member-name="{{ e($member['member_name']) }}"
                       data-action-label="{{ e($member['next_action_label']) }}"
                       data-movement-type="{{ $member['next_movement_type'] }}"
-                      data-form-action="/employee-profile/{{ rawurlencode($employee['company_id']) }}/family-members/{{ $member['member_id'] }}/movement"
+                      data-form-action="{{ url('/employee-profile/'.rawurlencode($employee['company_id']).'/family-members/'.$member['member_id'].'/movement') }}"
                     >
                       {{ $member['next_action_label'] }}
                     </button>
@@ -559,7 +559,7 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
         <button class="ep-modal-close" type="button" data-member-close>×</button>
       </div>
 
-      <form class="ep-modal-form" id="familyMemberForm" method="POST" action="/employee-profile/{{ rawurlencode($employee['company_id']) }}/family-members">
+      <form class="ep-modal-form" id="familyMemberForm" method="POST" action="{{ url('/employee-profile/'.rawurlencode($employee['company_id']).'/family-members') }}">
         @csrf
         <input type="hidden" name="_method" id="familyMemberMethod" value="POST" disabled>
 
@@ -670,7 +670,7 @@ const residenceBlockHidden = document.getElementById('residenceBlockHidden');
 const residenceOccupancyHidden = document.getElementById('residenceOccupancyHidden');
 const residenceCascadeHint = document.getElementById('residenceCascadeHint');
 
-const residenceBasePath = '/employee-profile/{{ rawurlencode($employee['company_id']) }}/residence/';
+const residenceBasePath = '{{ url('/employee-profile/'.rawurlencode($employee['company_id']).'/residence') }}/';
 
 function resetSelectForProfileResidence(el, label){
   if(!el) return;
@@ -790,7 +790,7 @@ const familyMemberSchoolName = document.getElementById('familyMemberSchoolName')
 const familyMemberClassName = document.getElementById('familyMemberClassName');
 const familyMemberRemarks = document.getElementById('familyMemberRemarks');
 const familyMemberSubmit = document.getElementById('familyMemberSubmit');
-const familyMemberStoreAction = '/employee-profile/{{ rawurlencode($employee['company_id']) }}/family-members';
+const familyMemberStoreAction = '{{ url('/employee-profile/'.rawurlencode($employee['company_id']).'/family-members') }}';
 
 function setSchoolFieldsEnabled(){
   const enabled = familyMemberSchoolGoing.checked;
