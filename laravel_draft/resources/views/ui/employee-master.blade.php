@@ -3,6 +3,42 @@
 @section('page_subtitle','Employee master, room assignment, family details and CSV validation in one controlled workspace.')
 @section('content')
 <style>
+/* ---- Premium redesign styles ---- */
+.pr-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.pr-header-left{display:flex;align-items:center;gap:12px}
+.pr-header-ico{width:44px;height:44px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pr-header-ico svg{width:22px;height:22px}
+.pr-header h2{margin:0;font-size:19px;font-weight:800;color:#0f172a}
+.pr-header p{margin:2px 0 0;font-size:13px;color:#64748b;font-weight:500}
+.pr-add-btn{height:42px;padding:0 20px;border-radius:10px;border:none;background:linear-gradient(180deg,#3b82f6,#2563eb);color:#fff;font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 4px 12px rgba(37,99,235,.25)}
+.pr-add-btn:hover{background:linear-gradient(180deg,#2563eb,#1d4ed8)}
+.pr-tabs{display:flex;gap:2px;border-bottom:1px solid #e2e8f0;margin-bottom:16px}
+.pr-tab{padding:11px 18px;font-size:14px;font-weight:600;color:#64748b;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:color .12s}
+.pr-tab:hover{color:#334155}
+.pr-tab.active{color:#2563eb;border-bottom-color:#2563eb}
+.pr-tab svg{width:16px;height:16px}
+.pr-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+.pr-kpi{position:relative;border:1px solid #e2e8f0;border-radius:12px;padding:16px;background:#fff;text-align:left;cursor:pointer;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,.04);transition:transform .12s,box-shadow .12s}
+.pr-kpi:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,23,42,.1)}
+.pr-kpi:before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+.pr-kpi .lbl{font-size:12px;font-weight:600;color:#64748b}
+.pr-kpi .val{font-size:28px;font-weight:800;line-height:1;margin:8px 0 4px;color:#0f172a}
+.pr-kpi .hlp{font-size:11px;color:#94a3b8}
+.pr-kpi.k-total:before{background:#2563eb} .pr-kpi.k-total .val{color:#2563eb}
+.pr-kpi.k-active:before{background:#16a34a} .pr-kpi.k-active .val{color:#16a34a}
+.pr-kpi.k-deactive:before{background:#ea580c} .pr-kpi.k-deactive .val{color:#ea580c}
+.pr-kpi.k-missing:before{background:#dc2626} .pr-kpi.k-missing .val{color:#dc2626}
+.pr-search-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,23,42,.04)}
+.pr-search-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pr-search-box{flex:1;min-width:220px;display:flex;align-items:center;gap:8px;border:1px solid #cbd5e1;border-radius:9px;padding:0 12px;height:42px;background:#f8fafc}
+.pr-search-box input{flex:1;border:none;background:transparent;font-size:13px;height:40px;outline:none;max-width:none}
+.pr-search-box svg{width:17px;height:17px;color:#94a3b8;flex-shrink:0}
+.pr-sbtn{height:42px;padding:0 16px;border-radius:9px;border:1px solid #cbd5e1;background:#fff;font-size:13px;font-weight:700;cursor:pointer;color:#334155;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.pr-sbtn:hover{background:#f8fafc;border-color:#94a3b8}
+.pr-sbtn.primary{background:linear-gradient(180deg,#3b82f6,#2563eb);border-color:#2563eb;color:#fff}
+.pr-sbtn.primary:hover{background:linear-gradient(180deg,#2563eb,#1d4ed8)}
+.pr-search-hint{font-size:12px;color:#94a3b8;margin-top:10px}
+
 .page-head{display:none!important}
 .container{padding-top:18px!important}
 
@@ -21,42 +57,45 @@
 .people-kpi-card .kpi{margin:4px 0;font-size:26px}
 </style>
 <div class="card people-shell">
-  <div class="module-intro">
-    <div>
-      <h3>Employee Master Control</h3>
-      <p>Manage employee status, residency assignment, CSV validation and family links from one controlled workspace.</p>
+  <div class="pr-header">
+    <div class="pr-header-left">
+      <div class="pr-header-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div>
+        <h2>People and Residency</h2>
+        <p>Manage employees, families, and room assignments</p>
+      </div>
     </div>
-    <span class="badge">Employee Operations</span>
+    <button class="pr-add-btn" type="button" onclick="addEmployee()"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Add employee</button>
   </div>
 
-  <div class="grid people-kpi-grid" style="margin-bottom:14px">
-    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('all')">
-      <div class="muted">Total Employees</div>
-      <div class="kpi" id="kpi_total_employees">Loading...</div>
-      <div class="people-help">Click to view complete employee list</div>
+  <div class="pr-kpi-grid">
+    <button type="button" class="pr-kpi k-total" onclick="openEmployeeMetric('all')">
+      <div class="lbl">Total Employees</div>
+      <div class="val" id="kpi_total_employees">…</div>
+      <div class="hlp">View complete list</div>
     </button>
-    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('active')">
-      <div class="muted">Active Employees</div>
-      <div class="kpi" id="kpi_active_employees">Loading...</div>
-      <div class="people-help">Active = Yes</div>
+    <button type="button" class="pr-kpi k-active" onclick="openEmployeeMetric('active')">
+      <div class="lbl">Active Employees</div>
+      <div class="val" id="kpi_active_employees">…</div>
+      <div class="hlp">Active = Yes</div>
     </button>
-    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('deactive')">
-      <div class="muted">Deactive Employees</div>
-      <div class="kpi" id="kpi_deactive_employees">Loading...</div>
-      <div class="people-help">Active = No</div>
+    <button type="button" class="pr-kpi k-deactive" onclick="openEmployeeMetric('deactive')">
+      <div class="lbl">Deactive Employees</div>
+      <div class="val" id="kpi_deactive_employees">…</div>
+      <div class="hlp">Active = No</div>
     </button>
-    <button type="button" class="card people-kpi-card" onclick="openEmployeeMetric('missing')">
-      <div class="muted">Missing Status</div>
-      <div class="kpi" id="kpi_missing_status">Loading...</div>
-      <div class="people-help">Blank active status</div>
+    <button type="button" class="pr-kpi k-missing" onclick="openEmployeeMetric('missing')">
+      <div class="lbl">Missing Status</div>
+      <div class="val" id="kpi_missing_status">…</div>
+      <div class="hlp">Blank status</div>
     </button>
   </div>
 
   <div class="toolbar sticky-actions" style="margin-bottom:12px">
-    <div class="segmented" role="group" aria-label="People Residency tabs">
-      <button id="tab_btn_employee" class="btn btn-primary" type="button" onclick="setPeopleTab('employee')">Employee Master</button>
-      <button id="tab_btn_family" class="btn" type="button" onclick="setPeopleTab('family')">Family Details</button>
-      <button id="tab_btn_occupancy" class="btn" type="button" onclick="setPeopleTab('occupancy')">Occupancy Status</button>
+    <div class="pr-tabs" role="group" aria-label="People Residency tabs">
+      <button id="tab_btn_employee" class="pr-tab active" type="button" onclick="setPeopleTab('employee')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Employees</button>
+      <button id="tab_btn_family" class="pr-tab" type="button" onclick="setPeopleTab('family')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Family</button>
+      <button id="tab_btn_occupancy" class="pr-tab" type="button" onclick="setPeopleTab('occupancy')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Occupancy</button>
     </div>
   </div>
 
@@ -84,15 +123,17 @@
       </div>
       <!-- HR_ACTIVE_WORKBOOK_UI_END -->
 
-<div id="quick_panel" class="banner" style="margin-bottom:10px">
-      <div class="toolbar">
-        <span class="badge">Quick Mode</span>
-        <input id="lookup_id" placeholder="CompanyID" style="max-width:220px">
-        <button class="btn" type="button" onclick="fetchById()">Fetch by ID</button>
-        <button class="btn btn-primary" type="button" onclick="openEmployeeProfile()">Open Employee Profile</button>
-        <button class="btn" type="button" onclick="saveToRegistry()">Save to Registry</button>
-        <span class="muted">Search by CompanyID, review details, then save changes only when needed.</span>
+<div id="quick_panel" class="pr-search-card" style="margin-bottom:14px">
+      <div class="pr-search-row">
+        <div class="pr-search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="lookup_id" placeholder="Search by Company ID">
+        </div>
+        <button class="pr-sbtn" type="button" onclick="fetchById()">Fetch</button>
+        <button class="pr-sbtn primary" type="button" onclick="openEmployeeProfile()">Open Profile</button>
+        <button class="pr-sbtn" type="button" onclick="saveToRegistry()">Save to Registry</button>
       </div>
+      <div class="pr-search-hint">Search by Company ID, review details, then save changes only when needed.</div>
     </div>
 
     <div id="bulk_panel" class="card soft" style="display:none;margin-bottom:10px">
@@ -444,7 +485,7 @@ function setPeopleTab(tab){
     const pane=document.getElementById('people_tab_'+t);
     const btn=document.getElementById('tab_btn_'+t);
     if(pane){ pane.style.display=(t===tab?'':'none'); }
-    if(btn){ btn.className = 'btn' + (t===tab ? ' btn-primary' : ''); }
+    if(btn){ btn.className = 'pr-tab' + (t===tab ? ' active' : ''); }
   });
   if(tab==='family'){
     setEmployeeContextFromForm();
@@ -805,6 +846,7 @@ function show(o){
   el.textContent=ok?'Action completed successfully.':'Action failed. Check technical response.';
 }
 async function req(url, method='GET', payload=null){
+  if(url.charAt(0)==='/'){ url='{{ url('/') }}'+url; }
   const opts={method,headers:{'X-CSRF-TOKEN':csrf}};
   if(payload!==null){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(payload);}
   const r=await fetch(url,opts); const j=await r.json().catch(()=>({raw:'non-json'}));
