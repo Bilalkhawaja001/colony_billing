@@ -982,6 +982,41 @@ function clearBanner() {
     transportBannerHost.innerHTML = '';
 }
 
+const KNOWN_BILLING_BASE = '/billing';
+const API_PATH_SEGMENT = 'api';
+const APP_BASE_PATH = (
+    window.location.pathname === KNOWN_BILLING_BASE ||
+    window.location.pathname.startsWith(`${KNOWN_BILLING_BASE}/`)
+) ? KNOWN_BILLING_BASE : '';
+const TRANSPORT_API_BASE = `${APP_BASE_PATH}/${API_PATH_SEGMENT}/transport`;
+const DASHBOARD_API_BASE = `${APP_BASE_PATH}/${API_PATH_SEGMENT}/dashboard`;
+const DEFAULT_MONTH_CYCLE = @json(($monthCycle ?? '') !== '' ? $monthCycle : now()->format('m-Y'));
+
+function scopedApi(base, path = '') {
+    const cleaned = String(path || '').replace(/^\/+/, '');
+    return cleaned ? `${base}/${cleaned}` : base;
+}
+
+function transportApi(path = '') {
+    return scopedApi(TRANSPORT_API_BASE, path);
+}
+
+function dashboardApi(path = '') {
+    return scopedApi(DASHBOARD_API_BASE, path);
+}
+
+function isValidMonthCycle(value) {
+    return /^\d{2}-\d{4}$/.test(String(value || '').trim());
+}
+
+function syncDefaultMonthCycleInputs() {
+    document.querySelectorAll('input[name="month_cycle"]').forEach((input) => {
+        if (!isValidMonthCycle(input.value)) {
+            input.value = DEFAULT_MONTH_CYCLE;
+        }
+    });
+}
+
 async function getJson(url) {
     const r = await fetch(url);
     const j = await r.json().catch(() => ({}));
@@ -1298,7 +1333,7 @@ function renderSchoolVanRows(rows = null) {
 }
 
 async function loadSchoolVan() {
-    const result = await getJson('/api/transport/school-van/enrolments');
+    const result = await getJson(transportApi('school-van/enrolments'));
     const body = result.body || {};
 
     if (result.status >= 400 || body.status === 'error') {
@@ -1420,7 +1455,7 @@ async function loadSvExpenseAndCost() {
         return;
     }
 
-    const result = await getJson(`/api/transport/summary?month_cycle=${encodeURIComponent(month)}`);
+    const result = await getJson(transportApi(`summary?month_cycle=${encodeURIComponent(month)}`));
     const body = result.body || {};
 
     if (result.status >= 400 || body.status === 'error') {
@@ -1583,7 +1618,7 @@ async function handleSchoolVanManageConfirm() {
             showBanner('error', 'Other reason ke liye remarks required hain.');
             return;
         }
-        url = `/api/transport/school-van/enrolments/${row.id}/left`;
+        url = transportApi(`school-van/enrolments/${row.id}/left`);
         payload = {
             left_on: schoolVanManageLeftDate.value,
             left_reason: schoolVanManageLeftReason.value,
@@ -1600,7 +1635,7 @@ async function handleSchoolVanManageConfirm() {
             showBanner('error', 'Other Administrative Correction ke liye remarks required hain.');
             return;
         }
-        url = `/api/transport/school-van/enrolments/${row.id}/cancel`;
+        url = transportApi(`school-van/enrolments/${row.id}/cancel`);
         payload = {
             cancel_reason: schoolVanManageCancelReason.value,
             remarks: schoolVanManageCancelRemarks.value || ''
@@ -1612,7 +1647,7 @@ async function handleSchoolVanManageConfirm() {
             showBanner('error', 'Restore reason select karein.');
             return;
         }
-        url = `/api/transport/school-van/enrolments/${row.id}/reactivate`;
+        url = transportApi(`school-van/enrolments/${row.id}/reactivate`);
         payload = {
             reactivation_reason: schoolVanManageReactivateReason.value,
             remarks: schoolVanManageReactivateRemarks.value || ''
@@ -1624,7 +1659,7 @@ async function handleSchoolVanManageConfirm() {
             showBanner('error', 'Restore cancelled entry reason select karein.');
             return;
         }
-        url = `/api/transport/school-van/enrolments/${row.id}/restore-cancellation`;
+        url = transportApi(`school-van/enrolments/${row.id}/restore-cancellation`);
         payload = {
             cancellation_reversal_reason: schoolVanManageRestoreCancelReason.value,
             remarks: schoolVanManageRestoreCancelRemarks.value || ''
@@ -1686,7 +1721,7 @@ async function handleSchoolVanCancel() {
         return;
     }
 
-    const result = await postJson(`/api/transport/school-van/enrolments/${schoolVanPendingCancelId}/cancel`, {
+    const result = await postJson(transportApi(`school-van/enrolments/${schoolVanPendingCancelId}/cancel`), {
         cancel_reason: reason,
         remarks: remarks
     });
@@ -1712,7 +1747,7 @@ async function handleSchoolVanReactivate() {
         return;
     }
 
-    const result = await postJson(`/api/transport/school-van/enrolments/${schoolVanPendingReactivateId}/reactivate`, {
+    const result = await postJson(transportApi(`school-van/enrolments/${schoolVanPendingReactivateId}/reactivate`), {
         reactivation_reason: reason,
         remarks: schoolVanReactivateRemarks.value || ''
     });
@@ -1734,7 +1769,7 @@ async function handleSchoolVanAdd(event) {
     clearBanner();
 
     const payload = formToObject(schoolVanAddForm);
-    const result = await postJson('/api/transport/school-van/enrolments/add', payload);
+    const result = await postJson(transportApi('school-van/enrolments/add'), payload);
     const body = result.body || {};
 
     if (result.status >= 400 || body.status === 'error') {
@@ -1757,7 +1792,7 @@ async function handleSchoolVanLeft(enrolmentId, leftOn) {
         return;
     }
 
-    const result = await postJson(`/api/transport/school-van/enrolments/${enrolmentId}/left`, {
+    const result = await postJson(transportApi(`school-van/enrolments/${enrolmentId}/left`), {
         left_on: leftOn,
         remarks: schoolVanLeftRemarks.value || '',
     });
@@ -1786,7 +1821,7 @@ async function loadTransport() {
     }
 
     const month = encodeURIComponent(selectedMonth);
-    const result = await getJson(`/api/transport/summary?month_cycle=${month}`);
+    const result = await getJson(transportApi(`summary?month_cycle=${month}`));
     transportResult.textContent = JSON.stringify(result, null, 2);
 
     const body = result.body || {};
@@ -1802,7 +1837,7 @@ async function loadTransport() {
     renderFatherBill(body.father_bill || null);
     renderVehicles(body.vehicles || []);
     renderVehicleOptions(body.vehicles || []);
-    transportCsvExport.href = `/api/transport/export/csv?month_cycle=${encodeURIComponent(body.month_cycle || payload.month_cycle || '')}`;
+    transportCsvExport.href = transportApi(`export/csv?month_cycle=${encodeURIComponent(body.month_cycle || payload.month_cycle || '')}`);
     applyMonthLockUi();
     renderRentEntries(body.rent_entries || []);
     renderFuelEntries(body.fuel_entries || []);
@@ -1826,7 +1861,7 @@ async function handlePost(form, url, resetAfter = true) {
     clearBanner();
     const payload = formToObject(form);
 
-    if (currentMonthLock.is_locked && url !== '/api/transport/vehicles/upsert') {
+    if (currentMonthLock.is_locked && url !== transportApi('vehicles/upsert')) {
         showBanner('error', `Transport month ${payload.month_cycle || transportForm.querySelector('[name="month_cycle"]').value} is locked. Save is blocked for this entry.`);
         return;
     }
@@ -1978,7 +2013,7 @@ schoolVanGenerateBill.addEventListener('click', async () => {
 
     if (!confirmed) return;
 
-    const result = await postJson('/api/transport/school-van/bill/generate', {
+    const result = await postJson(transportApi('school-van/bill/generate'), {
         month_cycle: month
     });
     const body = result.body || {};
@@ -1997,7 +2032,7 @@ svCycleSetupForm.addEventListener('submit', async (e) => {
     clearBanner();
 
     const payload = formToObject(svCycleSetupForm);
-    const result = await postJson('/api/transport/month-cycle/upsert', payload);
+    const result = await postJson(transportApi('month-cycle/upsert'), payload);
     const body = result.body || {};
 
     if (result.status >= 400 || body.status === 'error') {
@@ -2014,22 +2049,22 @@ svCycleSetupForm.addEventListener('submit', async (e) => {
 
 svVehicleSetupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await submitSvExpenseForm(svVehicleSetupForm, '/api/transport/vehicles/upsert');
+    await submitSvExpenseForm(svVehicleSetupForm, transportApi('vehicles/upsert'));
 });
 
 svRentSetupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await submitSvExpenseForm(svRentSetupForm, '/api/transport/rent-entries/upsert');
+    await submitSvExpenseForm(svRentSetupForm, transportApi('rent-entries/upsert'));
 });
 
 svFuelSetupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await submitSvExpenseForm(svFuelSetupForm, '/api/transport/fuel-entries/upsert');
+    await submitSvExpenseForm(svFuelSetupForm, transportApi('fuel-entries/upsert'));
 });
 
 svAdjustmentSetupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await submitSvExpenseForm(svAdjustmentSetupForm, '/api/transport/adjustments/upsert');
+    await submitSvExpenseForm(svAdjustmentSetupForm, transportApi('adjustments/upsert'));
 });
 
 [schoolVanExpenseModal, schoolVanCostModal].forEach((modal) => {
@@ -2087,6 +2122,7 @@ transportForm.querySelector('[name="month_cycle"]').addEventListener('change', (
 });
 fuelForm.querySelector('[name="fuel_liters"]').addEventListener('input', updateFuelCostPreview);
 fuelForm.querySelector('[name="fuel_price"]').addEventListener('input', updateFuelCostPreview);
+syncDefaultMonthCycleInputs();
 schoolVanJoinedOn.value = new Date().toISOString().slice(0, 10);
 loadSchoolVan();
 loadTransport();

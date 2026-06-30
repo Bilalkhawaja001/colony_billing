@@ -1,5 +1,5 @@
 ﻿@extends('layouts.app')
-@section('page_title','Billing Command Dashboard')
+@section('page_title','Billing Command <span class="premium-icon-tile premium-dashboard-icon premium-icon-blue premium-inline-title"><svg viewBox="0 0 24 24"><path d="M4 13h4l2-6 4 12 2-6h4"></path><path d="M4 20h16"></path></svg></span>Dashboard')
 @section('page_subtitle','Enterprise operational control center for month-cycle billing, transport data, reports and reconciliation health.')
 @section('content')
 <div class="grid">
@@ -9,32 +9,32 @@
 
         <button class="command-pill pill-blue" type="button">
             <svg viewBox="0 0 24 24"><path d="M5 21V4h14v17M9 8h2m2 0h2M9 12h2m2 0h2M10 21v-5h4v5"/></svg>
-            <span>Unit Directory</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-blue premium-inline-title"><svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"></rect><path d="M10 7h.01M14 7h.01M10 11h.01M14 11h.01M10 15h.01M14 15h.01"></path></svg></span><span>Unit Directory</span>
         </button>
 
         <button class="command-pill pill-purple" type="button">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-3.6 3.2-5.3 7-5.3s6 1.7 7 5.3"/></svg>
-            <span>Employee Profile</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-green premium-inline-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c0-4 2.8-6.5 7-6.5s7 2.5 7 6.5"></path></svg></span><span>Employee Profile</span>
         </button>
 
         <button class="command-pill pill-green primary" type="button">
             <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><path d="M3.5 19c.7-3 2.3-4.5 4.5-4.5M18 11v10m-5-5h10"/></svg>
-            <span>Add Employee</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-purple premium-inline-title"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"></circle><path d="M3 20c0-4 2.4-6 6-6"></path><path d="M17 10v8M13 14h8"></path></svg></span><span>Add Employee</span>
         </button>
 
         <button class="command-pill pill-orange" type="button">
             <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM14 3v4h4M9 12h6m-6 4h6"/></svg>
-            <span>Statement</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-orange premium-inline-title"><svg viewBox="0 0 24 24"><path d="M7 3h8l4 4v14H7z"></path><path d="M15 3v5h4M10 12h6M10 16h4"></path></svg></span><span>Statement</span>
         </button>
 
         <button class="command-pill pill-cyan" type="button">
             <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5M5.5 10.5V20h13v-9.5M10 20v-5h4v5"/></svg>
-            <span>Residence</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-teal premium-inline-title"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5V21h-6v-6H9v6H3v-9.5Z"></path></svg></span><span>Residence</span>
         </button>
 
         <button class="command-pill pill-pink" type="button">
             <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.2"/><path d="M3.5 20c.7-3.5 2.4-5.2 5.5-5.2s4.8 1.7 5.5 5.2M15 15c2.5.2 4 1.8 4.5 5"/></svg>
-            <span>Family</span>
+            <span class="premium-icon-tile premium-action-icon premium-icon-pink premium-inline-title"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="9" r="2.5"></circle><path d="M3 20c0-3.6 2.2-5.6 5.4-5.6M13 19c0-2.5 1.7-4.1 4.1-4.1"></path></svg></span><span>Family</span>
         </button>
 
         <button class="command-pill pill-yellow" type="button">
@@ -45,22 +45,22 @@
     <!-- DASHBOARD_COMMAND_PILLS_END -->
 
     <div class="col-3 card">
-        <div class="muted">Employees Billed</div>
+        <div class="muted premium-inline-title"><span class="premium-icon-tile premium-kpi-icon premium-icon-blue"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="9" r="2.5"></circle><path d="M3 20c0-3.6 2.2-5.6 5.4-5.6M13 19c0-2.5 1.7-4.1 4.1-4.1"></path></svg></span>Employees Billed</div>
         <div class="kpi">{{ $kpis['employees_billed'] ?? 0 }}</div>
         <span class="badge success">Billing Coverage</span>
     </div>
     <div class="col-3 card">
-        <div class="muted">Total Billed</div>
+        <div class="muted premium-inline-title"><span class="premium-icon-tile premium-kpi-icon premium-icon-green"><svg viewBox="0 0 24 24"><path d="M15 5H8l2 5h5a3 3 0 0 1 0 6H8"></path><path d="M8 10h9"></path></svg></span>Total Billed</div>
         <div class="kpi">PKR {{ number_format((float)($kpis['total_billed'] ?? 0), 2) }}</div>
         <span class="badge">Financial</span>
     </div>
     <div class="col-3 card">
-        <div class="muted">Family Members</div>
+        <div class="muted premium-inline-title"><span class="premium-icon-tile premium-kpi-icon premium-icon-purple"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"></circle><circle cx="16" cy="9" r="2.5"></circle><path d="M3 20c0-3.6 2.2-5.6 5.4-5.6M13 19c0-2.5 1.7-4.1 4.1-4.1"></path></svg></span>Family Members</div>
         <div class="kpi">{{ $kpis['family_members'] ?? 0 }}</div>
         <span class="badge">Registry</span>
     </div>
     <div class="col-3 card">
-        <div class="muted">Van Kids</div>
+        <div class="muted premium-inline-title"><span class="premium-icon-tile premium-kpi-icon premium-icon-orange"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="9" rx="2.5"></rect><path d="M6 7l1-3h10l1 3"></path><circle cx="8" cy="18" r="1.7"></circle><circle cx="16" cy="18" r="1.7"></circle></svg></span>Van Kids</div>
         <div class="kpi">{{ $kpis['van_kids'] ?? 0 }}</div>
         <span class="badge warn">Transport</span>
     </div>
@@ -285,6 +285,83 @@
     }
 }
 /* DASHBOARD_EXECUTIVE_COMMAND_BUTTONS_END */
+
+
+
+.premium-icon-tile{
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+  color:#fff;
+  box-shadow:
+    0 6px 14px rgba(15,27,51,.14),
+    inset 0 1px 0 rgba(255,255,255,.22);
+  position:relative;
+  overflow:hidden;
+}
+.premium-icon-tile::after{
+  content:"";
+  position:absolute;
+  top:-35%;
+  right:-25%;
+  width:70%;
+  height:70%;
+  border-radius:50%;
+  background:rgba(255,255,255,.20);
+}
+.premium-icon-tile svg{
+  position:relative;
+  z-index:2;
+  stroke-width:2.3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  fill:none;
+}
+.premium-icon-blue{background:linear-gradient(135deg,#3B82F6,#1E40AF);}
+.premium-icon-green{background:linear-gradient(135deg,#22C55E,#15803D);}
+.premium-icon-purple{background:linear-gradient(135deg,#A855F7,#7C3AED);}
+.premium-icon-orange{background:linear-gradient(135deg,#FB923C,#EA580C);}
+.premium-icon-teal{background:linear-gradient(135deg,#2DD4BF,#0D9488);}
+.premium-icon-amber{background:linear-gradient(135deg,#FBBF24,#D97706);}
+.premium-icon-pink{background:linear-gradient(135deg,#F472B6,#DB2777);}
+.premium-icon-red{background:linear-gradient(135deg,#FB7185,#DC2626);}
+
+.premium-dashboard-icon{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  margin-right:10px;
+}
+.premium-dashboard-icon svg{
+  width:21px;
+  height:21px;
+}
+.premium-kpi-icon{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  margin-bottom:8px;
+}
+.premium-kpi-icon svg{
+  width:22px;
+  height:22px;
+}
+.premium-action-icon{
+  width:36px;
+  height:36px;
+  border-radius:12px;
+  margin-bottom:7px;
+}
+.premium-action-icon svg{
+  width:18px;
+  height:18px;
+}
+.premium-inline-title{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+
 
 </style>
 @endsection
