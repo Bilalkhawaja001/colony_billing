@@ -42,6 +42,17 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    Route::get('/family-list', [ParityUiController::class, 'familyList']);
+    Route::get('/staff-check', [ParityUiController::class, 'staffCheck']);
+    Route::post('/staff-check/compare', [ParityUiController::class, 'staffCheckCompare']);
+    Route::post('/staff-check/action', [ParityUiController::class, 'staffCheckAction']);
+    Route::get('/employee-profile/{companyId}', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'show']);
+    Route::post('/employee-profile/{companyId}/family-members', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'storeFamilyMember']);
+    Route::post('/employee-profile/{companyId}/family-members/{familyMemberId}', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'updateFamilyMember']);
+    Route::post('/employee-profile/{companyId}/family-members/{familyMemberId}/movement', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'recordFamilyMovement']);
+    Route::post('/employee-profile/{companyId}/residence/assign', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'assignResidence']);
+    Route::post('/employee-profile/{companyId}/residence/shift', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'shiftResidence']);
+    Route::post('/employee-profile/{companyId}/residence/vacate', [\App\Http\Controllers\Billing\EmployeeProfileController::class, 'vacateResidence']);
     Route::get('/transport', function (\Illuminate\Http\Request $request) {
         return view('ui.transport', [
             'monthCycle' => (string) ($request->query('month_cycle') ?? ''),
@@ -108,10 +119,21 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/api/transport/export/csv', [TransportController::class, 'exportCsv']);
     Route::get('/api/transport/child-month-usage', [TransportController::class, 'childMonthUsage']);
     Route::post('/api/transport/child-month-usage/upsert', [TransportController::class, 'childMonthUsageUpsert']);
+    Route::post('/api/transport/month-cycle/upsert', [\App\Http\Controllers\Transport\TransportController::class, 'monthCycleUpsert']);
     Route::post('/api/transport/vehicles/upsert', [TransportController::class, 'vehicleUpsert']);
     Route::post('/api/transport/rent-entries/upsert', [TransportController::class, 'rentEntryUpsert']);
     Route::post('/api/transport/fuel-entries/upsert', [TransportController::class, 'fuelEntryUpsert']);
     Route::post('/api/transport/adjustments/upsert', [TransportController::class, 'adjustmentUpsert']);
+
+    // School Van enrolment routes used by resources/views/ui/transport.blade.php
+    Route::get('/api/transport/school-van/enrolments', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolments']);
+    Route::post('/api/transport/school-van/enrolments/add', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolmentAdd']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/left', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolmentLeave']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/cancel', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolmentCancel']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/reactivate', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolmentReactivate']);
+    Route::post('/api/transport/school-van/enrolments/{enrolmentId}/restore-cancellation', [\App\Http\Controllers\Transport\TransportController::class, 'schoolVanEnrolmentRestoreCancellation']);
+    Route::post('/api/transport/school-van/bill/generate', [\App\Http\Controllers\Transport\TransportController::class, 'generateSchoolVanBill']);
+
 });
 
 Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN'])->group(function () {
