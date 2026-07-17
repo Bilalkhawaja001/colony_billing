@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Services\Billing\EmployeeProfileService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class EmployeeProfileController extends Controller
 {
@@ -12,11 +15,17 @@ class EmployeeProfileController extends Controller
     {
     }
 
-    public function show(string $companyId)
+    public function show(Request $request, string $companyId): View|JsonResponse
     {
         $profile = $this->service->profile($companyId);
+        $httpCode = (int) ($profile['_http'] ?? 200);
+        unset($profile['_http']);
 
-        if (($profile['_http'] ?? null) === 404) {
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json($profile, $httpCode);
+        }
+
+        if ($httpCode === 404) {
             abort(404, 'Employee profile not found.');
         }
 
@@ -25,7 +34,7 @@ class EmployeeProfileController extends Controller
         ]);
     }
 
-    public function storeFamilyMember(Request $request, string $companyId)
+    public function storeFamilyMember(Request $request, string $companyId): JsonResponse|RedirectResponse
     {
         $result = $this->service->createFamilyMember($companyId, [
             'member_name' => $request->input('member_name'),
@@ -37,10 +46,10 @@ class EmployeeProfileController extends Controller
             'remarks' => $request->input('remarks'),
         ]);
 
-        return $this->familyMemberRedirectResponse($companyId, $result);
+        return $this->actionResponse($request, $companyId, $result, 'family_member');
     }
 
-    public function updateFamilyMember(Request $request, string $companyId, int $familyMemberId)
+    public function updateFamilyMember(Request $request, string $companyId, int $familyMemberId): JsonResponse|RedirectResponse
     {
         $result = $this->service->updateFamilyMember($companyId, $familyMemberId, [
             'member_name' => $request->input('member_name'),
@@ -52,67 +61,47 @@ class EmployeeProfileController extends Controller
             'remarks' => $request->input('remarks'),
         ]);
 
-        return $this->familyMemberRedirectResponse($companyId, $result);
+        return $this->actionResponse($request, $companyId, $result, 'family_member');
     }
 
-    private function familyMemberRedirectResponse(string $companyId, array $result)
+    public function assignResidence(Request $request, string $companyId): JsonResponse|RedirectResponse
     {
-        if (($result['status'] ?? 'error') !== 'ok') {
-            return redirect()
-                ->to('/employee-profile/' . rawurlencode($companyId))
-                ->withErrors(['family_member' => $result['error'] ?? 'Family member could not be saved.']);
-        }
-
-        return redirect()
-            ->to('/employee-profile/' . rawurlencode($companyId))
-            ->with('status', $result['message']);
-    }
-
-    public function assignResidence(Request $request, string $companyId)
-    {
-        return $this->residenceRedirectResponse($companyId, $this->service->assignResidence($companyId, [
+        $result = $this->service->assignResidence($companyId, [
             'unit_id' => $request->input('unit_id'),
             'room_no' => $request->input('room_no'),
             'effective_date' => $request->input('effective_date'),
             'remarks' => $request->input('remarks'),
             'created_by' => (string) session('user_id', ''),
-        ]));
+        ]);
+
+        return $this->actionResponse($request, $companyId, $result, 'residence_action');
     }
 
-    public function shiftResidence(Request $request, string $companyId)
+    public function shiftResidence(Request $request, string $companyId): JsonResponse|RedirectResponse
     {
-        return $this->residenceRedirectResponse($companyId, $this->service->shiftResidence($companyId, [
+        $result = $this->service->shiftResidence($companyId, [
             'unit_id' => $request->input('unit_id'),
             'room_no' => $request->input('room_no'),
             'effective_date' => $request->input('effective_date'),
             'remarks' => $request->input('remarks'),
             'created_by' => (string) session('user_id', ''),
-        ]));
+        ]);
+
+        return $this->actionResponse($request, $companyId, $result, 'residence_action');
     }
 
-    public function vacateResidence(Request $request, string $companyId)
+    public function vacateResidence(Request $request, string $companyId): JsonResponse|RedirectResponse
     {
-        return $this->residenceRedirectResponse($companyId, $this->service->vacateResidence($companyId, [
+        $result = $this->service->vacateResidence($companyId, [
             'effective_date' => $request->input('effective_date'),
             'remarks' => $request->input('remarks'),
             'created_by' => (string) session('user_id', ''),
-        ]));
+        ]);
+
+        return $this->actionResponse($request, $companyId, $result, 'residence_action');
     }
 
-    private function residenceRedirectResponse(string $companyId, array $result)
-    {
-        if (($result['status'] ?? 'error') !== 'ok') {
-            return redirect()
-                ->to('/employee-profile/' . rawurlencode($companyId))
-                ->withErrors(['residence_action' => $result['error'] ?? 'Residence action could not be completed.']);
-        }
-
-        return redirect()
-            ->to('/employee-profile/' . rawurlencode($companyId))
-            ->with('status', $result['message']);
-    }
-
-    public function recordFamilyMovement(Request $request, string $companyId, int $familyMemberId)
+    public function recordFamilyMovement(Request $request, string $companyId, int $familyMemberId): JsonResponse|RedirectResponse
     {
         $result = $this->service->recordFamilyMovement($companyId, $familyMemberId, [
             'movement_type' => $request->input('movement_type'),
@@ -121,14 +110,30 @@ class EmployeeProfileController extends Controller
             'created_by' => (string) session('user_id', ''),
         ]);
 
+        return $this->actionResponse($request, $companyId, $result, 'family_movement');
+    }
+
+    private function actionResponse(
+        Request $request,
+        string $companyId,
+        array $result,
+        string $errorBagKey
+    ): JsonResponse|RedirectResponse {
+        $httpCode = (int) ($result['_http'] ?? 200);
+        unset($result['_http']);
+
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json($result, $httpCode);
+        }
+
         if (($result['status'] ?? 'error') !== 'ok') {
             return redirect()
                 ->to('/employee-profile/' . rawurlencode($companyId))
-                ->withErrors(['family_movement' => $result['error'] ?? 'Family movement could not be recorded.']);
+                ->withErrors([$errorBagKey => $result['error'] ?? 'Action could not be completed.']);
         }
 
         return redirect()
             ->to('/employee-profile/' . rawurlencode($companyId))
-            ->with('status', $result['message']);
+            ->with('status', $result['message'] ?? 'Action completed successfully.');
     }
 }
