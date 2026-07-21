@@ -265,118 +265,6 @@
             justify-content:space-between;
             gap:18px;
         }
-        .cb-brand{
-            display:flex;
-            align-items:center;
-            gap:12px;
-            text-decoration:none;
-            color:#0f172a;
-            min-width:230px;
-        }
-        .cb-brand-mark{
-            width:34px;
-            height:34px;
-            border-radius:10px;
-            display:inline-flex;
-            align-items:center;
-            justify-content:center;
-            color:#ffffff;
-            background:linear-gradient(135deg,#fb3b22,#ff7a1a);
-            font-size:15px;
-            font-weight:900;
-            letter-spacing:-.04em;
-        }
-        .cb-brand-text{
-            display:flex;
-            flex-direction:column;
-            line-height:1.05;
-        }
-        .cb-brand-title{
-            font-size:18px;
-            font-weight:900;
-            letter-spacing:-.035em;
-        }
-        .cb-brand-sub{
-            margin-top:3px;
-            color:#64748b;
-            font-size:11px;
-            font-weight:700;
-            letter-spacing:.08em;
-            text-transform:uppercase;
-        }
-        .cb-menu{
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            gap:2px;
-            flex:1;
-        }
-        .cb-menu-item{
-            position:relative;
-        }
-        .cb-menu-btn{
-            min-height:38px;
-            padding:8px 13px;
-            border:0;
-            background:transparent;
-            color:#0f172a;
-            font-size:14px;
-            font-weight:750;
-            cursor:pointer;
-            border-radius:999px;
-            font-family:inherit;
-        }
-        .cb-menu-btn:hover{
-            background:#eef4fb;
-        }
-        .cb-menu-btn:after{
-            content:"";
-            display:inline-block;
-            width:6px;
-            height:6px;
-            margin-left:7px;
-            border-right:1.5px solid currentColor;
-            border-bottom:1.5px solid currentColor;
-            transform:rotate(45deg) translateY(-2px);
-        }
-        .cb-dropdown{
-            position:absolute;
-            top:calc(100% + 10px);
-            left:50%;
-            transform:translateX(-50%);
-            width:720px;
-            display:none;
-            grid-template-columns:repeat(3,minmax(0,1fr));
-            gap:20px;
-            padding:22px;
-            background:rgba(255,255,255,.96);
-            border:1px solid #dce5f2;
-            border-radius:20px;
-            box-shadow:0 24px 60px rgba(15,23,42,.16);
-            backdrop-filter:blur(16px);
-        }
-        .cb-menu-item:hover .cb-dropdown{
-            display:grid;
-        }
-        .cb-drop-col h4{
-            margin:0 0 12px;
-            color:#94a3b8;
-            font-size:11px;
-            font-weight:900;
-            letter-spacing:.13em;
-            text-transform:uppercase;
-        }
-        .cb-drop-col a{
-            display:block;
-            padding:8px 0;
-            color:#334155;
-            text-decoration:none;
-            font-size:14px;
-            font-weight:650;
-        }
-        .cb-drop-col a:hover{
-            color:#0f172a;
-        }
         .cb-actions{
             min-width:280px;
             display:flex;
@@ -430,16 +318,6 @@
                 align-items:flex-start;
                 flex-direction:column;
             }
-            .cb-menu{
-                justify-content:flex-start;
-                flex-wrap:wrap;
-                width:100%;
-            }
-            .cb-dropdown{
-                left:0;
-                transform:none;
-                width:min(92vw,720px);
-            }
             .cb-actions{
                 justify-content:flex-start;
                 min-width:0;
@@ -452,30 +330,6 @@
 
 
         /* Topbar dropdown stability + compact colorful KPI cards */
-        .cb-menu-item{
-            padding:14px 0;
-            margin:-14px 0;
-        }
-
-        .cb-dropdown{
-            top:100% !important;
-            margin-top:0 !important;
-        }
-
-        .cb-menu-item:hover .cb-dropdown,
-        .cb-menu-item:focus-within .cb-dropdown,
-        .cb-menu-item.is-open .cb-dropdown{
-            display:grid !important;
-        }
-
-        .cb-dropdown:before{
-            content:"";
-            position:absolute;
-            left:0;
-            right:0;
-            top:-14px;
-            height:14px;
-        }
 
         /* Compact KPI cards across pages */
         .grid > .col-3.card:has(.kpi),
@@ -718,151 +572,14 @@
 
 </head>
 <body>
+@include('partials.global-navbar')
+
 <div class="app">
 
     @if(session('user_id'))
-    <header class="cb-shell">
-        <div class="cb-topline">
-            <div class="cb-promo">
-                <b>Colony Billing</b>
-                <span>Enterprise billing, residency and utility operations workspace.</span>
-                <a href="/control-room">Billing Center →</a>
-            </div>
-        </div>
-        <div class="cb-nav">
-            <a class="cb-brand" href="/dashboard">
-                <span class="cb-brand-mark">CB</span>
-                <span class="cb-brand-text">
-                    <span class="cb-brand-title">Colony Billing</span>
-                    <span class="cb-brand-sub">Operations Console</span>
-                </span>
-            </a>
-
-            <nav class="cb-menu" aria-label="Main navigation">
-                <div class="cb-menu-item">
-                    <button class="cb-menu-btn" type="button">Core</button>
-                    <div class="cb-dropdown">
-                        <div class="cb-drop-col">
-                            <h4>Workspace</h4>
-                            <a href="/dashboard">Dashboard</a>
-                            <a href="/month-lifecycle">Billing Month Control</a>
-                            <a href="/imports-validation">Imports & Validation</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Billing</h4>
-                            <a href="/control-room">Billing Center</a>
-                            <a href="/reporting">Reporting Center</a>
-                            <a href="/rates">Rates</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Controls</h4>
-                            <a href="/active-days-monthly">Monthly Attendance</a>
-                            <a href="/meters-readings">Meter Readings</a>
-                            <a href="/unit-directory">Unit Directory</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cb-menu-item">
-                    <button class="cb-menu-btn" type="button">Operations</button>
-                    <div class="cb-dropdown">
-                        <div class="cb-drop-col">
-                            <h4>People</h4>
-                            <a href="/people-residency">People & Housing</a>
-                            <a href="/housing-occupancy">Housing & Occupancy</a>
-                            <a href="/transport">School Van Kids Management</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Utilities</h4>
-                            <a href="/meters-readings">Meter Readings</a>
-                            <a href="/water-tools">Water Tools</a>
-                            {{-- Phase 1C: Electric V1 hidden from staff nav; admin diagnostics kept by route. --}}
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Data</h4>
-                            <a href="/unit-directory">Unit Directory</a>
-                            <a href="/active-days-monthly">Monthly Attendance</a>
-                            <a href="/imports-validation">Import Validation</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Maintenance Operations</h4>
-                            <a href="/facilities-management">Facilities Workspace</a>
-                            <a href="/facilities-management/registry">Facility Registry</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="cb-menu-item">
-                    <button class="cb-menu-btn" type="button">Reports</button>
-                    <div class="cb-dropdown">
-                        <div class="cb-drop-col">
-                            <h4>Billing Reports</h4>
-                            <a href="/reporting">Reporting Center</a>
-                            <a href="/reports/employee-statement">Employee Statement</a>
-                            <a href="/finalized-months">Finalized Months</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Utilities</h4>
-                            <a href="/elec-summary">Electric Summary</a>
-                            <a href="/water-tools">Water Tools</a>
-                        </div>
-                        <div class="cb-drop-col">
-                            <h4>Audit</h4>
-                            <a href="/control-room">Billing Center</a>
-                            <a href="/imports-validation">Validation Tokens</a>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <div class="cb-actions">
-                <a class="cb-action-hot" href="/people-residency">People</a>
-                <span class="cb-user-chip">User #{{ session('user_id', 'N/A') }} · {{ session('role', 'N/A') }}</span>
-            </div>
-        </div>
-    </header>
     @endif
 
     @if(session('user_id'))
-    <aside class="sidebar">
-        <div class="brand">Colony Billing</div>
-        <div class="sub">Premium Light Workspace</div>
-        <nav class="nav">
-            <div class="nav-section">
-                <div class="nav-head">Core</div>
-                <a class="{{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard"><span class="nav-ico">D</span>Dashboard</a>
-                <a class="{{ request()->is('month-lifecycle') ? 'active' : '' }}" href="/month-lifecycle"><span class="nav-ico">M</span>Billing Month Control</a>
-                <a class="{{ request()->is('imports-validation') ? 'active' : '' }}" href="/imports-validation"><span class="nav-ico">I</span>Imports & Validation</a>
-                <a class="{{ request()->is('control-room') || request()->is('control-room/*') ? 'active' : '' }}" href="/control-room"><span class="nav-ico">B</span>Billing Center</a>
-                <a class="{{ request()->is('reporting') ? 'active' : '' }}" href="/reporting"><span class="nav-ico">R</span>Reporting Center</a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-head">Operations</div>
-                <a class="{{ request()->is('people-residency') ? 'active' : '' }}" href="/people-residency"><span class="nav-ico">P</span>People & Housing</a>
-                <a class="{{ request()->is('active-days-monthly') || request()->is('ui/monthly-active-days') ? 'active' : '' }}" href="/active-days-monthly"><span class="nav-ico">AD</span>Monthly Attendance</a>
-                <a class="{{ request()->is('transport') ? 'active' : '' }}" href="/transport"><span class="nav-ico">S</span>School Van Kids Management</a>
-                <a class="{{ request()->is('meters-readings') ? 'active' : '' }}" href="/meters-readings"><span class="nav-ico">MR</span>Meter Readings</a>
-                <a class="{{ request()->is('unit-directory') ? 'active' : '' }}" href="/unit-directory"><span class="nav-ico">U</span>Unit Directory</a>
-                <a class="{{ request()->is('ui/residency-master') ? 'active' : '' }}" href="/ui/residency-master"><span class="nav-ico">RM</span>Residency Master</a>
-                <a class="{{ request()->is('ui/department-master') ? 'active' : '' }}" href="/ui/department-master"><span class="nav-ico">DM</span>Department Master</a>
-                <a class="{{ request()->is('housing-rooms') || request()->is('housing-occupancy') ? 'active' : '' }}" href="/housing-occupancy"><span class="nav-ico">H</span>Housing & Occupancy</a>
-                {{-- Phase 1D: Electric V1 hidden from staff navigation; route kept for admin diagnostics. --}}
-                <a class="{{ request()->is('rates') ? 'active' : '' }}" href="/rates"><span class="nav-ico">$</span>Rates</a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-head">Maintenance Operations</div>
-                <a class="{{ request()->is('facilities-management') || request()->is('facilities-management/*') ? 'active' : '' }}" href="/facilities-management"><span class="nav-ico">FM</span>Facilities Workspace</a>
-            </div>
-            <div class="nav-section">
-                <div class="nav-head">Profile</div>
-                <a href="/profile"><span class="nav-ico">MP</span>My Profile</a>
-                @if(in_array(session('role'), ['SUPER_ADMIN']))
-                    <a class="{{ request()->is('ui/admin/users') ? 'active' : '' }}" href="/ui/admin/users"><span class="nav-ico">UM</span>User Management</a>
-                @endif
-                <a href="/logout"><span class="nav-ico">X</span>Logout</a>
-            </div>
-        </nav>
-    </aside>
     @endif
 
     <main class="main">

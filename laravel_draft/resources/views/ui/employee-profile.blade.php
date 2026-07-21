@@ -153,6 +153,35 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
           Company ID: {{ $employee['company_id'] }}<br>
           Residence: {{ $residence['unit_id'] ?: '—' }} &nbsp;|&nbsp; {{ $residence['residence_type'] ?: 'No active residence assigned' }}
         </div>
+        <div style="margin-top:12px;padding:12px 14px;background:#f8f9fb;border:1px solid #e2e8f0;border-radius:10px;font-family:Inter,sans-serif">
+          @if(session('status'))<div style="color:#047857;font-size:13px;font-weight:600;margin-bottom:8px">{{ session('status') }}</div>@endif
+          @if(session('error'))<div style="color:#b91c1c;font-size:13px;font-weight:600;margin-bottom:8px">{{ session('error') }}</div>@endif
+
+          @php($isActive = strtolower((string) ($employee['active'] ?? $employee['active_label'] ?? '')) === 'yes')
+          @if($isActive)
+            <form method="post" action="{{ route('billing.emp.leave', $employee['company_id']) }}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              @csrf
+              <div>
+                <label style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">Leave / Last Working Date</label>
+                <input type="date" name="leave_date" required style="border:1px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:13px">
+              </div>
+              <div>
+                <label style="display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:3px">Remarks</label>
+                <input name="remarks" placeholder="optional" style="border:1px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:13px;width:200px">
+              </div>
+              <button type="submit" onclick="return confirm('Mark this employee as leaving?')" style="padding:7px 16px;background:#ef4444;color:#fff;border:0;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Mark as Left</button>
+            </form>
+            <div style="font-size:11px;color:#64748b;margin-top:6px">Past or today's date deactivates immediately. A future date deactivates automatically on that day.</div>
+          @else
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:13px;color:#b91c1c;font-weight:600">Inactive @if(!empty($employee['leave_date'])) — left on {{ $employee['leave_date'] }}@endif</span>
+              <form method="post" action="{{ route('billing.emp.reactivate', $employee['company_id']) }}">
+                @csrf
+                <button type="submit" style="padding:6px 14px;background:#10b981;color:#fff;border:0;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">Reactivate</button>
+              </form>
+            </div>
+          @endif
+        </div>
       </div>
     </div>
     <div class="ep-hero-info">

@@ -19,11 +19,13 @@
     <div class="eyebrow">Run Summary</div>
     <div class="run-summary">
         <div class="run-row"><span class="k">Bill Reference</span><span class="v">{{ $runLabel }}</span></div>
-        <div class="run-row"><span class="k">Cycle Start</span><span class="v">{{ data_get($data, 'cycle_start_date', '-') }}</span></div>
-        <div class="run-row"><span class="k">Cycle End</span><span class="v">{{ data_get($data, 'cycle_end_date', '-') }}</span></div>
-        <div class="run-row"><span class="k">Employees</span><span class="v">{{ data_get($data, 'active_employees', '-') }}</span></div>
-        <div class="run-row"><span class="k">Readings</span><span class="v">{{ data_get($data, 'current_readings', '-') }}</span></div>
-        <div class="run-row"><span class="k">Rate</span><span class="v">{{ data_get($data, 'electric_rate', '-') }}</span></div>
+        <div class="run-row"><span class="k">Method</span><span class="v">{{ data_get($data, 'method_label', '-') }}</span></div>
+        <div class="run-row"><span class="k">Cycle Start</span><span class="v">{{ data_get($data, 'cycle_start', data_get($data, 'cycle_start_date', '-')) }}</span></div>
+        <div class="run-row"><span class="k">Cycle End</span><span class="v">{{ data_get($data, 'cycle_end', data_get($data, 'cycle_end_date', '-')) }}</span></div>
+        <div class="run-row"><span class="k">Employees</span><span class="v">{{ data_get($data, 'summary.employees', data_get($data, 'active_employees', '-')) }}</span></div>
+        <div class="run-row"><span class="k">Total Amount</span><span class="v">{{ number_format((float) data_get($data, 'summary.total_amount', 0), 2) }}</span></div>
+        <div class="run-row"><span class="k">Rate</span><span class="v">{{ data_get($data, 'rate', data_get($data, 'electric_rate', '-')) }}</span></div>
+        <div class="run-row"><span class="k">Issues</span><span class="v">{{ count(data_get($data, 'issues', [])) }} / snapshot: {{ count(data_get($data, 'snapshot_issues', [])) }}</span></div>
     </div>
 </section>
 @endsection

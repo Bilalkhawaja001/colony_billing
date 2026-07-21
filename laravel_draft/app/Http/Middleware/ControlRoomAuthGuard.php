@@ -45,6 +45,6 @@ class ControlRoomAuthGuard
             ], 401);
         }
 
-        return redirect('/login');
+        return redirect('https://nodesky.pk/login');
     }
 }

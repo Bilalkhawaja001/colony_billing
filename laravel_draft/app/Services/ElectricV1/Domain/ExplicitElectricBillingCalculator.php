@@ -124,7 +124,7 @@ class ExplicitElectricBillingCalculator
 
         $presence = [];
         $allowance = [];
-        $dailyAllowance = $billingMonthDays > 0 ? ($unitFreeElectric / $billingMonthDays) : 0.0;
+        $dailyAllowance = $readingCycleDays > 0 ? ($unitFreeElectric / $readingCycleDays) : 0.0;
 
         foreach ($timeline as $rooms) {
             $roomWeights = [];

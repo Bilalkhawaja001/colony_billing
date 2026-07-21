@@ -12,7 +12,7 @@ class EnsureAuthenticated
         if (!session()->has('user_id')) {
             return ($request->is('api/*') || $request->expectsJson())
                 ? response()->json(['status' => 'error', 'error' => 'authentication required'], 401)
-                : redirect('/login');
+                : redirect('https://nodesky.pk/login');
         }
 
         return $next($request);

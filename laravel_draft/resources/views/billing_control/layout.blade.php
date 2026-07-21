@@ -14,8 +14,9 @@
     @endif
 </head>
 <body>
+@include('partials.global-navbar')
+
 <div class="app">
-    @include('billing_control.components.topbar')
 
     <div class="body-row">
         @include('billing_control.components.stepper')

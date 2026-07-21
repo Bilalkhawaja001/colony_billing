@@ -165,10 +165,138 @@ class ParityUiController extends Controller
             'monthCycle' => (string)($request->query('month_cycle') ?? ''),
         ]);
     }
-    public function employeeMaster() { return view('ui.employee-master'); }
+    public function employeeMaster()
+    {
+        $tree = [];
+        $rows = \Illuminate\Support\Facades\DB::table('util_unit as u')
+            ->join('util_unit_rooms as r', 'r.unit_id', '=', 'u.unit_id')
+            ->where('u.is_active', 1)->where('r.is_active', 1)
+            ->whereNotNull('u.colony_type')
+            ->select('u.colony_type', 'u.block_name', 'u.unit_id', 'r.room_no')
+            ->orderBy('u.colony_type')->orderBy('u.block_name')->orderBy('r.room_no')
+            ->get();
+        $occ = \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
+            ->select('unit_id', 'room_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) c'))
+            ->groupBy('unit_id', 'room_id')->get()
+            ->mapWithKeys(fn($r) => [$r->unit_id.'|'.$r->room_id => $r->c]);
+        foreach ($rows as $r) {
+            $tree[$r->colony_type][$r->block_name ?: '—'][] = [
+                'unit' => $r->unit_id, 'room' => $r->room_no,
+                'n' => (int) ($occ[$r->unit_id.'|'.$r->room_no] ?? 0),
+            ];
+        }
+        $tree['Outside Colony'] = ['—' => [['unit' => 'OUTSIDE', 'room' => 'Outside Colony', 'n' => 0]]];
+
+        $DB = \Illuminate\Support\Facades\DB::class;
+        $noResidence = \Illuminate\Support\Facades\DB::table('employees_master as m')
+            ->leftJoin('electric_v1_occupancy as o', 'o.company_id', '=', 'm.company_id')
+            ->where('m.active', 'Yes')->whereNull('o.company_id')
+            ->select('m.company_id', 'm.name', 'm.department', 'm.designation')
+            ->orderBy('m.company_id')->get();
+
+        $crowded = \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
+            ->select('unit_id', 'room_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) people'))
+            ->groupBy('unit_id', 'room_id')
+            ->havingRaw('COUNT(DISTINCT company_id) > 1')
+            ->orderByDesc('people')->limit(40)->get();
+
+        $empTotal    = \Illuminate\Support\Facades\DB::table('employees_master')->count();
+        $empActive   = \Illuminate\Support\Facades\DB::table('employees_master')->where('active', 'Yes')->count();
+        $empInactive = \Illuminate\Support\Facades\DB::table('employees_master')->where('active', 'No')->count();
+        $empMissing  = \Illuminate\Support\Facades\DB::table('employees_master')
+            ->where(function ($w) { $w->whereNull('active')->orWhereRaw("TRIM(active) = ''"); })->count();
+
+        return view('ui.employee-master', [
+            'empTotal' => $empTotal,
+            'empActive' => $empActive,
+            'empInactive' => $empInactive,
+            'empMissing' => $empMissing,
+            'tree' => $tree,
+            'noResidence' => $noResidence,
+            'crowded' => $crowded,
+        ]);
+    }
     public function employees() { return view('ui.employees'); }
     public function employeeHelper() { return view('ui.employee-helper'); }
-    public function unitMaster() { return view('ui.unit-master'); }
+    public function unitMaster(\Illuminate\Http\Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $colony = trim((string) $request->query('colony', ''));
+
+        $query = \Illuminate\Support\Facades\DB::table('util_unit');
+        if ($q !== '') {
+            $query->where(function ($w) use ($q) {
+                $w->where('unit_id', 'like', '%'.$q.'%')
+                  ->orWhere('room_no', 'like', '%'.$q.'%')
+                  ->orWhere('block_name', 'like', '%'.$q.'%');
+            });
+        }
+        if ($colony !== '') { $query->where('colony_type', $colony); }
+
+        $type = strtoupper(trim((string) $request->query('type', '')));
+        if ($type !== '') {
+            $query->where(function ($w) use ($type) {
+                if ($type === 'BACHELOR')      { $w->where('colony_type', 'like', '%Bachelor%'); }
+                elseif ($type === 'HOSTEL')    { $w->where('colony_type', 'like', '%Hostel%'); }
+                elseif ($type === 'CONTAINER') { $w->where('colony_type', 'like', '%Container%'); }
+                elseif ($type === 'HOUSE') {
+                    $w->where('colony_type', 'like', '%Family%')
+                      ->orWhere('colony_type', 'like', '%A+%')
+                      ->orWhere('colony_type', 'like', '%Palidar%')
+                      ->orWhere('colony_type', 'like', '%Abaseen%');
+                }
+                elseif ($type === 'UNSET') { $w->whereNull('colony_type'); }
+            });
+        }
+
+        $units = $query->orderBy('unit_id')->get();
+
+        $occ = \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
+            ->select('unit_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) as c'))
+            ->groupBy('unit_id')->pluck('c', 'unit_id');
+
+        $colonies = \Illuminate\Support\Facades\DB::table('util_unit')
+            ->whereNotNull('colony_type')->distinct()->orderBy('colony_type')->pluck('colony_type');
+
+        $typeStats = \Illuminate\Support\Facades\DB::select("
+            SELECT
+              CASE
+                WHEN u.colony_type LIKE '%Bachelor%'  THEN 'BACHELOR'
+                WHEN u.colony_type LIKE '%Hostel%'    THEN 'HOSTEL'
+                WHEN u.colony_type LIKE '%Container%' THEN 'CONTAINER'
+                WHEN u.colony_type LIKE '%Family%' OR u.colony_type LIKE '%A+%'
+                  OR u.colony_type LIKE '%Palidar%' OR u.colony_type LIKE '%Abaseen%' THEN 'HOUSE'
+                ELSE 'UNSET'
+              END AS type,
+              COUNT(*) total,
+              SUM(CASE WHEN o.c IS NULL OR o.c=0 THEN 1 ELSE 0 END) vacant,
+              SUM(CASE WHEN o.c>0 THEN 1 ELSE 0 END) occupied
+            FROM util_unit u
+            LEFT JOIN (SELECT unit_id, COUNT(DISTINCT company_id) c FROM electric_v1_occupancy GROUP BY unit_id) o
+              ON o.unit_id=u.unit_id
+            WHERE u.is_active=1
+            GROUP BY type ORDER BY total DESC");
+
+        return view('ui.unit-master', [
+            'roomEmployees' => \Illuminate\Support\Facades\DB::table('electric_v1_occupancy as o')
+                ->leftJoin('employees_master as e', 'e.company_id', '=', 'o.company_id')
+                ->select('o.unit_id', 'o.room_id', 'o.company_id', 'e.name', 'e.department', 'e.designation', 'e.mobile_no', 'e.active')
+                ->get()->groupBy(fn($r) => $r->unit_id.'|'.$r->room_id),
+            'rooms' => \Illuminate\Support\Facades\DB::table('util_unit_rooms')->orderBy('room_no')->get()->groupBy('unit_id'),
+            'roomOcc' => \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
+                ->select('unit_id', 'room_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) as c'))
+                ->groupBy('unit_id', 'room_id')->get()
+                ->mapWithKeys(fn($r) => [$r->unit_id.'|'.$r->room_id => $r->c]),
+            'typeStats' => $typeStats,
+            'type' => $type,
+            'units' => $units,
+            'occ' => $occ,
+            'colonies' => $colonies,
+            'q' => $q,
+            'colony' => $colony,
+            'totalUnits' => $units->count(),
+        ]);
+    }
 
 
     public function familyList()
@@ -497,6 +625,242 @@ class ParityUiController extends Controller
     public function meterReadings()
     {
         return view('ui.meter-readings');
+    }
+
+    // Read-only analysis data for Meter Readings page. No writes, no billing side effects.
+    public function meterReadingsAnalysisData(Request $request)
+    {
+        $schema = app('db')->connection()->getSchemaBuilder();
+        $from = trim((string) $request->query('from', ''));
+        $to = trim((string) $request->query('to', ''));
+        $departmentFilter = strtolower(trim((string) $request->query('department', '')));
+        $buildingFilter = strtolower(trim((string) $request->query('building', '')));
+        $unitFilter = strtolower(trim((string) $request->query('unit_id', '')));
+        $roomFilter = strtolower(trim((string) $request->query('room_no', '')));
+
+        $hasUtilReadings = $schema->hasTable('util_meter_readings');
+        $hasLegacyReadings = $schema->hasTable('readings');
+        $source = $hasUtilReadings ? 'util_meter_readings' : ($hasLegacyReadings ? 'readings' : null);
+
+        $unitMeta = [];
+        if ($schema->hasTable('util_unit')) {
+            foreach (\Illuminate\Support\Facades\DB::table('util_unit')->get() as $u) {
+                $uid = trim((string) $u->unit_id);
+                if ($uid === '') continue;
+                $unitMeta[$uid] = [
+                    'building' => (string) ($u->colony_type ?: $u->block_name ?: ''),
+                    'block' => (string) ($u->block_name ?: ''),
+                    'room' => (string) ($u->room_no ?: ''),
+                ];
+            }
+        }
+
+        $employeeByUnit = [];
+        if ($schema->hasTable('employees_master')) {
+            $employees = \Illuminate\Support\Facades\DB::table('employees_master')
+                ->select('unit_id', 'department', 'colony_type', 'block_floor', 'room_no', 'active')
+                ->whereNotNull('unit_id')
+                ->orderByRaw("CASE WHEN active='Yes' THEN 0 ELSE 1 END")
+                ->limit(50000)
+                ->get();
+            foreach ($employees as $e) {
+                $uid = trim((string) $e->unit_id);
+                if ($uid === '') continue;
+                $current = $employeeByUnit[$uid] ?? null;
+                $candidate = [
+                    'department' => (string) ($e->department ?: ''),
+                    'building' => (string) ($e->colony_type ?: $e->block_floor ?: ''),
+                    'room' => (string) ($e->room_no ?: ''),
+                    'active' => (string) ($e->active ?: ''),
+                ];
+                if (!$current || strtolower($candidate['active']) === 'yes') $employeeByUnit[$uid] = $candidate;
+            }
+        }
+
+        $meterByUnit = [];
+        $allUnits = [];
+        if ($schema->hasTable('util_meter_unit')) {
+            foreach (\Illuminate\Support\Facades\DB::table('util_meter_unit')->select('meter_id', 'unit_id', 'meter_type', 'is_active')->limit(50000)->get() as $m) {
+                $uid = trim((string) $m->unit_id);
+                if ($uid === '') continue;
+                $allUnits[$uid] = true;
+                $meterByUnit[$uid][] = [
+                    'meter_id' => (string) ($m->meter_id ?: ''),
+                    'meter_type' => (string) ($m->meter_type ?: ''),
+                    'is_active' => (string) ($m->is_active ?? ''),
+                ];
+            }
+        }
+        foreach (array_keys($unitMeta) as $uid) $allUnits[$uid] = true;
+        foreach (array_keys($employeeByUnit) as $uid) $allUnits[$uid] = true;
+
+        $optionRows = [];
+        foreach (array_keys($allUnits) as $uid) {
+            $meta = $this->meterAnalysisMeta($uid, $unitMeta, $employeeByUnit);
+            $optionRows[] = $this->meterAnalysisRow($meta, [
+                'meter_id' => $meterByUnit[$uid][0]['meter_id'] ?? '',
+                'unit_id' => $uid,
+                'source' => 'master_mapping',
+                'opening_date' => null,
+                'closing_date' => null,
+                'opening_reading' => null,
+                'closing_reading' => null,
+                'consumption' => 0,
+                'reading_status' => 'Mapping only',
+            ]);
+        }
+
+        $rows = [];
+        if ($hasUtilReadings) {
+            $q = \Illuminate\Support\Facades\DB::table('util_meter_readings')
+                ->select('meter_id', 'unit_id', 'reading_date', 'reading_value')
+                ->orderBy('meter_id')
+                ->orderBy('reading_date');
+            if ($to !== '') $q->whereDate('reading_date', '<=', $to);
+            $raw = $q->limit(50000)->get();
+            $grouped = [];
+            foreach ($raw as $r) {
+                $key = (string) ($r->meter_id ?: $r->unit_id);
+                if ($key === '') continue;
+                $grouped[$key][] = $r;
+            }
+            foreach ($grouped as $meterKey => $items) {
+                $opening = null; $closing = null; $firstInRange = null; $lastInRange = null;
+                foreach ($items as $r) {
+                    $d = (string) $r->reading_date;
+                    if ($from === '' || $d >= $from) {
+                        $firstInRange ??= $r;
+                        $lastInRange = $r;
+                    }
+                    if ($from !== '' && $d <= $from) $opening = $r;
+                    if ($to === '' || $d <= $to) $closing = $r;
+                }
+                $opening = $opening ?: $firstInRange;
+                $closing = $closing ?: $lastInRange;
+                if (!$opening || !$closing) continue;
+                $unitId = trim((string) ($closing->unit_id ?: $opening->unit_id ?: ''));
+                if ($unitId !== '') $allUnits[$unitId] = true;
+                $meta = $this->meterAnalysisMeta($unitId, $unitMeta, $employeeByUnit);
+                $consumption = round((float) $closing->reading_value - (float) $opening->reading_value, 3);
+                $rows[] = $this->meterAnalysisRow($meta, [
+                    'meter_id' => (string) ($closing->meter_id ?: $opening->meter_id),
+                    'unit_id' => $unitId,
+                    'source' => 'util_meter_readings',
+                    'opening_date' => (string) $opening->reading_date,
+                    'closing_date' => (string) $closing->reading_date,
+                    'opening_reading' => (float) $opening->reading_value,
+                    'closing_reading' => (float) $closing->reading_value,
+                    'consumption' => max(0, $consumption),
+                    'reading_status' => 'OK',
+                ]);
+            }
+        } elseif ($hasLegacyReadings) {
+            $q = \Illuminate\Support\Facades\DB::table('readings')
+                ->select('meter_id', 'unit_id', 'meter_type', 'month_cycle', 'usage', 'amount')
+                ->orderBy('month_cycle');
+            if ($from !== '') $q->where('month_cycle', '>=', substr($from, 0, 7));
+            if ($to !== '') $q->where('month_cycle', '<=', substr($to, 0, 7));
+            $raw = $q->limit(50000)->get();
+            foreach ($raw as $r) {
+                $unitId = trim((string) ($r->unit_id ?: ''));
+                if ($unitId !== '') $allUnits[$unitId] = true;
+                $meta = $this->meterAnalysisMeta($unitId, $unitMeta, $employeeByUnit);
+                $rows[] = $this->meterAnalysisRow($meta, [
+                    'meter_id' => (string) ($r->meter_id ?: ''),
+                    'unit_id' => $unitId,
+                    'source' => 'readings',
+                    'opening_date' => (string) $r->month_cycle,
+                    'closing_date' => (string) $r->month_cycle,
+                    'opening_reading' => null,
+                    'closing_reading' => null,
+                    'consumption' => round((float) $r->usage, 3),
+                    'reading_status' => 'OK',
+                ]);
+            }
+        }
+
+        $seenUnits = [];
+        foreach ($rows as $r) if (($r['unit_id'] ?? '') !== '') $seenUnits[$r['unit_id']] = true;
+        foreach (array_keys($allUnits) as $uid) {
+            if (isset($seenUnits[$uid])) continue;
+            $meta = $this->meterAnalysisMeta($uid, $unitMeta, $employeeByUnit);
+            $rows[] = $this->meterAnalysisRow($meta, [
+                'meter_id' => $meterByUnit[$uid][0]['meter_id'] ?? '',
+                'unit_id' => $uid,
+                'source' => 'master_mapping',
+                'opening_date' => null,
+                'closing_date' => null,
+                'opening_reading' => null,
+                'closing_reading' => null,
+                'consumption' => 0,
+                'reading_status' => 'Missing reading',
+            ]);
+        }
+
+        $filterFn = function ($r) use ($departmentFilter, $buildingFilter, $unitFilter, $roomFilter) {
+            if ($departmentFilter !== '' && strtolower($r['department']) !== $departmentFilter) return false;
+            if ($buildingFilter !== '' && strtolower($r['building']) !== $buildingFilter) return false;
+            if ($unitFilter !== '' && strtolower($r['unit_id']) !== $unitFilter) return false;
+            if ($roomFilter !== '' && strtolower($r['room_no']) !== $roomFilter) return false;
+            return true;
+        };
+        $rows = array_values(array_filter($rows, $filterFn));
+        usort($rows, fn($a, $b) => [$a['department'], $a['building'], $a['unit_id'], $a['room_no']] <=> [$b['department'], $b['building'], $b['unit_id'], $b['room_no']]);
+        usort($optionRows, fn($a, $b) => [$a['department'], $a['building'], $a['unit_id'], $a['room_no']] <=> [$b['department'], $b['building'], $b['unit_id'], $b['room_no']]);
+
+        $total = array_sum(array_column($rows, 'consumption'));
+        $departments = array_values(array_unique(array_filter(array_map(fn($r) => $r['department'], array_merge($rows, $optionRows)))));
+        $buildings = array_values(array_unique(array_filter(array_map(fn($r) => $r['building'], $optionRows))));
+
+        return response()->json([
+            'status' => 'ok',
+            'source' => $source,
+            'summary' => [
+                'meters' => count($rows),
+                'total_consumption' => round($total, 3),
+                'unmapped' => count(array_filter($rows, fn($r) => $r['department'] === 'Unmapped' || $r['building'] === 'Unmapped')),
+                'missing_readings' => count(array_filter($rows, fn($r) => ($r['reading_status'] ?? '') === 'Missing reading')),
+            ],
+            'departments' => array_values(array_unique(array_merge(['Weaving', 'Spinning', 'Centralized'], $departments))),
+            'buildings' => $buildings,
+            'options' => ['rows' => array_slice($optionRows, 0, 5000)],
+            'rows' => array_slice($rows, 0, 2000),
+        ]);
+    }
+
+    private function meterAnalysisMeta(string $unitId, array $unitMeta, array $employeeByUnit): array
+    {
+        $u = $unitMeta[$unitId] ?? [];
+        $e = $employeeByUnit[$unitId] ?? [];
+        $building = trim((string) (($e['building'] ?? '') ?: ($u['building'] ?? '') ?: ($u['block'] ?? '')));
+        $room = trim((string) (($e['room'] ?? '') ?: ($u['room'] ?? '')));
+        $department = trim((string) ($e['department'] ?? ''));
+        $haystack = strtolower($department.' '.$building.' '.$unitId.' '.$room);
+        if ($department === '') {
+            if (str_contains($haystack, 'weav')) $department = 'Weaving';
+            elseif (str_contains($haystack, 'spin')) $department = 'Spinning';
+            elseif (str_contains($haystack, 'central')) $department = 'Centralized';
+            else $department = 'Unmapped';
+        } else {
+            $low = strtolower($department);
+            if (str_contains($low, 'weav')) $department = 'Weaving';
+            elseif (str_contains($low, 'spin')) $department = 'Spinning';
+            elseif (str_contains($low, 'central')) $department = 'Centralized';
+        }
+        return [
+            'department' => $department,
+            'building' => $building !== '' ? $building : 'Unmapped',
+            'room_no' => $room !== '' ? $room : 'Unmapped',
+        ];
+    }
+
+    private function meterAnalysisRow(array $meta, array $row): array
+    {
+        return array_merge([
+            'department' => $meta['department'],
+            'building' => $meta['building'],
+            'room_no' => $meta['room_no'],
+        ], $row);
     }
 
     // Workspace: Water Tools (pre-billing water controls/allocation tools)

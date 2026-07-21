@@ -26,13 +26,22 @@ class BillRunController extends Controller
 
     public function store(Request $request, GenerateDryRunService $dryRunService)
     {
-        $dryRun = $dryRunService->run($request->input('month_cycle'));
+        $month = $request->input('month_cycle');
+        $methodCode = $request->input('method_code', 'ATTENDANCE_PRORATED');
+
+        $ctx = app(\App\Services\Billing\ControlRoom\ReadinessService::class)->resolveCycleContext($month);
+        $preview = (new \App\Services\BillingEngine\Engine())->preview(
+            $methodCode,
+            $ctx['cycle_start_date'],
+            $ctx['cycle_end_date'],
+            (float) ($ctx['electric_rate'] ?? 0)
+        );
 
         return view('billing_control.result', [
-            'pageTitle' => 'Generate Dry Run Result',
-            'run' => $dryRun['dry_run_id'],
-            'dryRun' => $dryRun,
-            'rows' => [],
+            'pageTitle' => 'Preview Result — '.($preview['method_label'] ?? $methodCode),
+            'run' => 'PREVIEW',
+            'dryRun' => $preview,
+            'rows' => $preview['rows'] ?? [],
         ]);
     }
 
@@ -71,7 +80,18 @@ class BillRunController extends Controller
         $actorUserId = optional($request->user())->id;
         $role        = optional($request->user())->role ?? null;
 
-        $result = $generator->generate($monthCycle, $actorUserId, $role);
+        $methodCode  = $request->input('method_code', 'ATTENDANCE_PRORATED');
+        // Phase 3 gate: har data issue ka decision zaroori
+        $readiness = app(\App\Services\Billing\ControlRoom\ReadinessService::class)->summary($monthCycle);
+        $pending = (int) ($readiness['pendingDecisions'] ?? 0);
+        $issueCount = (int) ($readiness['dataIssueCount'] ?? 0);
+
+        if ($pending > 0 && !$request->boolean('continue_anyway')) {
+            return back()->with('error', $pending.' data issue(s) still need a decision. Review them on the Readiness page, or tick "Continue Anyway".');
+        }
+
+
+        $result = $generator->generate($monthCycle, $actorUserId, $role, $methodCode);
 
         if (($result['status'] ?? '') !== 'ok') {
             return back()->with('error', $result['reason'] ?? 'Generation blocked.');

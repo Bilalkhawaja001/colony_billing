@@ -10,34 +10,11 @@
 <link rel="stylesheet" href="{{ asset('css/dashboard-v2.css') }}?v={{ filemtime(public_path('css/dashboard-v2.css')) }}">
 </head>
 <body class="dv2">
+@include('partials.global-navbar')
+
 <div class="dv2-app">
 
   {{-- TOP NAVBAR --}}
-  <header class="dv2-topbar">
-    <div class="dv2-brand">
-      <div class="dv2-logo"><svg viewBox="0 0 24 24"><path d="M3 11L12 3l9 8v9a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M12 7l-2.5 5h3L10 17"/></svg></div>
-      <div><div class="nm">Colony Billing</div><div class="sb">Enterprise Platform</div></div>
-    </div>
-    <nav class="dv2-nav">
-      <a class="active" href="{{ url('/dashboard-v2') }}"><svg viewBox="0 0 20 20"><path d="M3 9l7-6 7 6v8H3z"/><path d="M8 17v-5h4v5"/></svg>Dashboard</a>
-      <a href="{{ url('/control-room') }}"><svg viewBox="0 0 20 20"><rect x="4" y="2" width="12" height="16" rx="2"/><path d="M7 6h6M7 10h6M7 14h4"/></svg>Billing</a>
-      <a href="{{ url('/people-residency') }}"><svg viewBox="0 0 20 20"><circle cx="7" cy="6" r="2.5"/><circle cx="14" cy="7" r="2"/><path d="M2 16c0-2.5 2-4 5-4s5 1.5 5 4M12 15c0-1.8 1.5-3 3.5-3"/></svg>People &amp; Housing</a>
-      <a href="{{ url('/control-room/readings') }}"><svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="13" rx="2"/><path d="M3 8h14M7 2v3M13 2v3"/></svg>Monthly Data</a>
-      <a href="{{ url('/reporting') }}"><svg viewBox="0 0 20 20"><path d="M4 16V8M9 16V4M14 16v-6"/></svg>Reports</a>
-      <a href="{{ url('/rates') }}"><svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="3"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.5 3.5l2 2M14.5 14.5l2 2M16.5 3.5l-2 2M5.5 14.5l-2 2"/></svg>Setup</a>
-    </nav>
-    <div class="dv2-right">
-      <div class="dv2-ic"><svg width="20" height="20"><circle cx="9" cy="9" r="6.5"/><path d="M19 19l-5-5"/></svg></div>
-      <div class="dv2-ic"><svg width="20" height="20"><path d="M10 3a4.5 4.5 0 014.5 4.5v3.5l1.5 2H4l1.5-2V7.5A4.5 4.5 0 0110 3zM8 17a2 2 0 004 0"/></svg><span class="bdg">5</span></div>
-      <div class="dv2-ic"><svg width="20" height="20"><circle cx="10" cy="10" r="3.8"/><path d="M10 1v2.5M10 16.5V19M1 10h2.5M16.5 10H19M3.6 3.6l1.8 1.8M14.6 14.6l1.8 1.8M16.4 3.6l-1.8 1.8M5.4 14.6l-1.8 1.8"/></svg></div>
-      <div class="dv2-user">
-        <div class="av">AD</div>
-        <div><div class="un">Admin</div><div class="ur">Super Admin</div></div>
-        <span class="c" style="color:var(--faint)"><svg width="16" height="16"><path d="M4 6l4 4 4-4"/></svg></span>
-      </div>
-    </div>
-  </header>
-
   {{-- DASHBOARD --}}
   <main class="dv2-dash">
 
@@ -123,7 +100,7 @@
           <a class="dv2-qt" href="{{ url('/people-residency') }}"><div class="qi" style="background:linear-gradient(135deg,#22C55E,#16A34A)"><svg viewBox="0 0 16 16"><path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/></svg></div><div class="qn">Employee Profile</div></a>
           <a class="dv2-qt" href="{{ url('/people-residency') }}"><div class="qi" style="background:linear-gradient(135deg,#A855F7,#7C3AED)"><svg viewBox="0 0 16 16"><path d="M1 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/><path fill-rule="evenodd" d="M13.5 5a.5.5 0 0 1 .5.5V7h1.5a.5.5 0 0 1 0 1H14v1.5a.5.5 0 0 1-1 0V8h-1.5a.5.5 0 0 1 0-1H13V5.5a.5.5 0 0 1 .5-.5"/></svg></div><div class="qn">Add Employee</div></a>
           <a class="dv2-qt" href="{{ url('/reports/employee-statement') }}"><div class="qi" style="background:linear-gradient(135deg,#FB923C,#EA580C)"><svg viewBox="0 0 16 16"><path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M4.5 9a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM4 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 1 0-1h4a.5.5 0 0 1 0 1z"/></svg></div><div class="qn">Statement</div></a>
-          <a class="dv2-qt" href="{{ url('/housing-occupancy') }}"><div class="qi" style="background:linear-gradient(135deg,#2DD4BF,#0D9488)"><svg viewBox="0 0 16 16"><path d="M8.707 1.5a1 1 0 0 0-1.414 0L.646 8.146a.5.5 0 0 0 .708.708L2 8.207V13.5A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5V8.207l.646.647a.5.5 0 0 0 .708-.708L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293z"/></svg></div><div class="qn">Residence</div></a>
+          
           <a class="dv2-qt" href="{{ url('/reporting') }}"><div class="qi" style="background:linear-gradient(135deg,#F472B6,#DB2777)"><svg viewBox="0 0 16 16"><path d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"/></svg></div><div class="qn">Family</div></a>
           <a class="dv2-qt" href="{{ url('/transport') }}"><div class="qi" style="background:linear-gradient(135deg,#60A5FA,#2563EB)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.2" y="9" width="1.8" height="3" rx=".6" fill="#1F2937"/><rect x="20" y="9" width="1.8" height="3" rx=".6" fill="#1F2937"/><rect x="4" y="3.5" width="16" height="15.5" rx="3" fill="#FACC15"/><rect x="4" y="3.5" width="16" height="3.4" rx="3" fill="#FDE047"/><rect x="6" y="7" width="12" height="4.3" rx="1.4" fill="#3B82F6"/><rect x="6" y="7" width="12" height="2" rx="1.2" fill="#60A5FA"/><rect x="7.5" y="13" width="9" height="2.4" rx="1" fill="#111827"/><line x1="9.2" y1="13" x2="9.2" y2="15.4" stroke="#374151" stroke-width=".6"/><line x1="12" y1="13" x2="12" y2="15.4" stroke="#374151" stroke-width=".6"/><line x1="14.8" y1="13" x2="14.8" y2="15.4" stroke="#374151" stroke-width=".6"/><circle cx="6.6" cy="17" r="1.15" fill="#FFFFFF"/><circle cx="17.4" cy="17" r="1.15" fill="#FFFFFF"/><circle cx="7.5" cy="19.3" r="1.7" fill="#1F2937"/><circle cx="16.5" cy="19.3" r="1.7" fill="#1F2937"/><circle cx="7.5" cy="19.3" r=".7" fill="#9CA3AF"/><circle cx="16.5" cy="19.3" r=".7" fill="#9CA3AF"/></svg></div><div class="qn">School Van</div></a>
           <a class="dv2-qt" href="{{ url('/meters-readings/readings') }}"><div class="qi" style="background:linear-gradient(135deg,#34D399,#059669)"><svg viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/><path fill-rule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.298-1.785 1.886-3.119 1.886H3.572c-1.334 0-2.677-.588-3.119-1.886A8 8 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.59.62.871 1.18.871h10.846c.56 0 .977-.282 1.18-.872A7 7 0 0 0 8 3"/></svg></div><div class="qn">Meter Readings</div></a>

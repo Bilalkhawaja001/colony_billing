@@ -93,7 +93,49 @@ class ReadinessService
             $blockers[] = $this->issue('NO_ELECTRIC_RATE', 'Electric rate missing', "util_monthly_rates_config me {$monthCycle} ka electric rate missing/zero hai.", 'critical', 'util_monthly_rates_config');
         }
 
+        // row-level data issues (naye engine ke snapshot se — exact affected records)
+        $dataIssues = [];
+        try {
+            if (!empty($cycleStart) && !empty($cycleEnd)) {
+                $snap = (new \App\Services\BillingEngine\Support\SnapshotBuilder())
+                    ->build($cycleStart, $cycleEnd, (float) ($stats['electric_rate'] ?? 0));
+                $dataIssues = $snap['issues'] ?? [];
+            }
+        } catch (\Throwable $e) {
+            $dataIssues = [['code'=>'SNAPSHOT_FAILED','error'=>$e->getMessage()]];
+        }
+
+        $issueSummary = [];
+        foreach ($dataIssues as $di) {
+            $code = $di['code'] ?? 'UNKNOWN';
+            $issueSummary[$code] = ($issueSummary[$code] ?? 0) + 1;
+        }
+
+        // saved decisions (Phase 2)
+        $decisions = [];
+        try {
+            if (!empty($cycleStart) && !empty($cycleEnd)) {
+                foreach (DB::table('bill_run_issue_decisions')
+                    ->where('cycle_start_date', $cycleStart)
+                    ->where('cycle_end_date', $cycleEnd)->get() as $d) {
+                    $key = $d->issue_code.'|'.($d->unit_id ?? '').'|'.($d->room_no ?? '');
+                    $decisions[$key] = ['decision'=>$d->decision,'reason'=>$d->reason,'by'=>$d->decided_by_name];
+                }
+            }
+        } catch (\Throwable $e) { $decisions = []; }
+
+        $pendingCount = 0;
+        foreach ($dataIssues as $di) {
+            $k = ($di['code'] ?? '').'|'.($di['unit'] ?? '').'|'.($di['room'] ?? '');
+            if (!isset($decisions[$k])) { $pendingCount++; }
+        }
+
         return [
+            'decisions' => $decisions,
+            'pendingDecisions' => $pendingCount,
+            'dataIssues' => $dataIssues,
+            'dataIssueSummary' => $issueSummary,
+            'dataIssueCount' => count($dataIssues),
             'isReady' => count($blockers) === 0,
             'mode' => count($blockers) === 0 ? 'READY_FOR_GENERATE_WIRING' : 'BLOCKED_BY_REAL_DATA',
             'month' => $monthCycle,
@@ -343,8 +385,8 @@ class ReadinessService
     private function countRoomAllowanceRows(): int
     {
         try {
-            return $this->tableExists('electric_v1_room_allowance')
-                ? DB::table('electric_v1_room_allowance')->where('is_active', 1)->count()
+            return $this->tableExists('electric_v1_allowance')
+                ? DB::table('electric_v1_allowance')->where('is_active', 1)->count()
                 : 0;
         } catch (\Throwable $e) {
             return 0;

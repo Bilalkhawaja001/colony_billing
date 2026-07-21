@@ -27,6 +27,14 @@
         <form method="post" action="{{ route('billing.control.generate.store') }}">
             @csrf
             <input type="hidden" name="month_cycle" value="{{ $month }}">
+            <div style="margin-bottom:14px;text-align:left;max-width:340px;margin-left:auto;margin-right:auto">
+                <label style="display:block;font-weight:600;margin-bottom:6px">Billing Method</label>
+                <select class="form-select" name="method_code" required>
+                    @foreach(\App\Services\BillingEngine\MethodRegistry::options() as $mc => $ml)
+                        <option value="{{ $mc }}">{{ $ml }}</option>
+                    @endforeach
+                </select>
+            </div>
             <button class="btn btn-cta" type="submit">⚡ Preview Bills</button>
         </form>
         <div class="btn-hint">DB write: NO · Bill insert: NO</div>
@@ -36,10 +44,22 @@
               style="margin-top:20px;border-top:1px solid var(--line);padding-top:20px;text-align:left;max-width:520px;margin-left:auto;margin-right:auto">
             @csrf
             <input type="hidden" name="month_cycle" value="{{ $month }}">
+            <div style="margin-bottom:14px;text-align:left;max-width:340px;margin-left:auto;margin-right:auto">
+                <label style="display:block;font-weight:600;margin-bottom:6px">Billing Method</label>
+                <select class="form-select" name="method_code" required>
+                    @foreach(\App\Services\BillingEngine\MethodRegistry::options() as $mc => $ml)
+                        <option value="{{ $mc }}">{{ $ml }}</option>
+                    @endforeach
+                </select>
+            </div>
             <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">
                 <input type="checkbox" name="confirm_official" value="1" required>
                 <span>I understand this will create official bill records for
                 <strong>@include('billing_control.components.month-label', ['value' => $month])</strong>.</span>
+            </label>
+            <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;padding:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px">
+                <input type="checkbox" name="continue_anyway" value="1">
+                <span style="font-size:13px">Continue Anyway — generate even if some data issues have no decision yet. This run will be marked <strong>Generated with Exceptions</strong>.</span>
             </label>
             <button class="btn btn-danger" type="submit">Generate Official Bills</button>
         </form>

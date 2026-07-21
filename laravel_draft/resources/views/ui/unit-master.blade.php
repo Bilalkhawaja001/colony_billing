@@ -1,406 +1,396 @@
-@extends('layouts.app')
-@section('page_title','Unit Directory')
-@section('page_subtitle','Unit master, residence categories, colony drilldowns and resident details.')
-@section('content')
+<!DOCTYPE html>
 
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NodeSky Billing - Housing Unit Directory</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
-.local-sticky{position:sticky;top:0;z-index:4;background:#fff;padding:10px;border:1px solid #e2e8f0;border-radius:10px}
-.unit-main-card-grid,.unit-sub-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
-.unit-main-card,.unit-sub-card{border:1px solid var(--border,#dbeafe);border-radius:15px;background:linear-gradient(135deg,var(--bg1,#fff),var(--bg2,#f8fbff));padding:13px 14px;text-align:left;cursor:pointer;box-shadow:0 8px 18px rgba(15,23,42,.055);transition:transform .15s ease,box-shadow .15s ease;position:relative;overflow:hidden}
-.unit-main-card:hover,.unit-sub-card:hover{transform:translateY(-2px);box-shadow:0 14px 26px rgba(15,23,42,.12)}
-.unit-main-card::before,.unit-sub-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--accent,#2563eb)}
-.um-title,.us-title{font-size:13px;line-height:1.25;font-weight:900;color:#0f172a;margin-bottom:8px}
-.um-value{font-size:30px;line-height:1;font-weight:950;color:var(--accent,#2563eb)}
-.um-meta,.us-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.um-meta span,.us-meta span{border-radius:999px;background:rgba(255,255,255,.76);border:1px solid rgba(255,255,255,.86);padding:5px 8px;font-size:11px;font-weight:800;color:#475569}
-.um-meta b,.us-meta b{color:#0f172a}
-.us-row{display:flex;align-items:baseline;gap:7px;margin-top:4px}
-.us-row strong{font-size:26px;line-height:1;color:var(--accent,#2563eb);font-weight:950}
-.us-row span{font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:.06em}
-.tone-house{--accent:#16a34a;--border:#bbf7d0;--bg1:#f0fdf4;--bg2:#fff}
-.tone-bachelor{--accent:#7c3aed;--border:#ddd6fe;--bg1:#f5f3ff;--bg2:#fff}
-.tone-hostel{--accent:#ea580c;--border:#fed7aa;--bg1:#fff7ed;--bg2:#fff}
-.tone-container{--accent:#0f766e;--border:#99f6e4;--bg1:#f0fdfa;--bg2:#fff}
-.tone-uncategorized{--accent:#6b7280;--border:#e5e7eb;--bg1:#f9fafb;--bg2:#fff}
-.tone-default{--accent:#334155;--border:#cbd5e1;--bg1:#f8fafc;--bg2:#fff}
-.unit-list-details summary::-webkit-details-marker{display:none}
-.unit-list-details summary:after{content:' ▼';font-size:12px;color:#64748b}
-.unit-list-details[open] summary:after{content:' ▲'}
-.room-link-btn{
-    min-width:110px!important;
-    height:34px!important;
-    padding:0 12px!important;
-    border-radius:10px!important;
-    border:1px solid #60a5fa!important;
-    background:linear-gradient(180deg,#dbeafe,#bfdbfe)!important;
-    color:#1d4ed8!important;
-    font-weight:900!important;
-    font-size:12px!important;
-    letter-spacing:.01em!important;
-    box-shadow:0 5px 12px rgba(37,99,235,.16)!important;
-}
-.room-link-btn:hover{
-    background:linear-gradient(180deg,#bfdbfe,#93c5fd)!important;
-    border-color:#2563eb!important;
-    transform:translateY(-1px);
-}
-
-</style>
-
-<div class="grid">
-    <div class="col-12 card soft">
-        <div class="toolbar local-sticky">
-            <span class="badge">Directory Control</span>
-            <button class="btn" type="button" id="loadUnitsBtn">Reload Units</button>
-        </div>
-    </div>
-
-    <div class="col-12 card" id="residentGroupCard">
-        <h3 class="section-title">Unit Category Overview</h3>
-        <div id="residentGroupCards"></div>
-    </div>
-
-    <div class="col-12 card" id="residentSubGroupCard" style="display:none">
-        <h3 class="section-title" id="residentSubGroupTitle">Sub Categories</h3>
-        <div id="residentSubGroupCards"></div>
-    </div>
-
-    <div class="col-12 card" id="residentRoomCard" style="display:none">
-        <h3 class="section-title" id="residentRoomTitle">Rooms</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Room No</th>
-                        <th>Unit ID</th>
-                        <th>Floor</th>
-                        <th>Employees</th>
-                    </tr>
-                </thead>
-                <tbody id="residentRoomRows">
-                    <tr><td colspan="4"><div class="empty">Select a bachelor / hostel colony.</div></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="col-12 card" id="residentDetailsCard" style="display:none">
-        <h3 class="section-title" id="residentDetailsTitle">Residents</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Company ID</th>
-                        <th>Name</th>
-                        <th>Department</th>
-                        <th>Designation</th>
-                        <th>Family Members</th>
-                        <th>Colony</th>
-                        <th>Unit</th>
-                        <th>Floor</th>
-                        <th>Room</th>
-                        <th>Active Days</th>
-                    </tr>
-                </thead>
-                <tbody id="residentRows">
-                    <tr><td colspan="10"><div class="empty">Select a category.</div></td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="col-7 card">
-        <h3 class="section-title">Single Upsert</h3>
-        <form id="unitUpsertForm" class="form-grid">
-            <div class="field col-6"><label class="label">Unit ID</label><input name="unit_id" placeholder="U-001"></div>
-            <div class="field col-6"><label class="label">Unit Name</label><input name="unit_name" placeholder="Unit Name"></div>
-            <div class="col-12"><button class="btn btn-primary" type="submit">Save Unit</button></div>
-        </form>
-    </div>
-
-    <div class="col-5 card">
-        <h3 class="section-title">CSV Bulk Upload</h3>
-        <div class="muted" style="margin-bottom:8px">Header: <code>unit_id,unit_name</code></div>
-        <div class="toolbar">
-            <button class="btn" type="button" id="downloadUnitTemplate">Download Template</button>
-            <input type="file" id="unitCsvFile" accept=".csv,text/csv">
-            <button class="btn btn-primary" type="button" id="importUnitCsv">Import CSV</button>
-        </div>
-    </div>
-
-    <div class="col-12 card">
-        <details class="unit-list-details">
-            <summary class="section-title" style="cursor:pointer;margin:0">Unit Listing</summary>
-            <div class="table-wrap" style="margin-top:12px">
-                <table>
-                    <thead><tr><th>Unit ID</th><th>Colony Type</th><th>Block/Floor</th><th>Room No</th><th>Active</th></tr></thead>
-                    <tbody id="unitRows"><tr><td colspan="5"><div class="empty">No rows loaded.</div></td></tr></tbody>
-                </table>
-            </div>
-        </details>
-    </div>
-
-    <div class="col-12 card">
-        <h3 class="section-title">Operation Status</h3>
-        <div id="unitStatus" class="banner">Ready.</div>
-        <details style="margin-top:8px">
-            <summary class="muted">Technical response</summary>
-            <pre id="unitResult" style="margin-top:8px">{}</pre>
-        </details>
-    </div>
-</div>
-
-<script>
-const csrf=@json(csrf_token());
-const out=document.getElementById('unitResult');
-const rowsEl=document.getElementById('unitRows');
-
-function setStatus(ok,text){const el=document.getElementById('unitStatus'); el.className=ok?'banner':'alert'; el.textContent=text;}
-function show(v){out.textContent=JSON.stringify(v,null,2); const ok=(v?.status>=200&&v?.status<300)||v?.status==='done'; setStatus(ok, ok?'Completed successfully.':'Action failed.');}
-function parseCsv(t){const lines=t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); if(lines.length<2)return []; const h=lines[0].split(',').map(s=>s.trim()); return lines.slice(1).map(l=>{const c=l.split(',').map(s=>s.trim()); return Object.fromEntries(h.map((k,i)=>[k,c[i]??'']));});}
-function download(name,c){const b=new Blob([c],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();URL.revokeObjectURL(a.href);}
-async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf}};if(payload){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload);} const r=await fetch(url,o);const j=await r.json().catch(()=>({raw:'non-json'}));const v={status:r.status,body:j};show(v);return v;}
-
-function render(rows){
-    if(!Array.isArray(rows)||rows.length===0){
-        rowsEl.innerHTML='<tr><td colspan="5"><div class="empty">No rows found.</div></td></tr>';
-        return;
-    }
-
-    rowsEl.innerHTML=rows.map(r=>{
-        const room = r.room_no || '';
-        const roomCell = room
-            ? `<button type="button" class="btn room-link-btn"
-                    data-list-colony="${String(r.colony_type || '').replaceAll('"','&quot;')}"
-                    data-list-room="${String(room).replaceAll('"','&quot;')}">
-                    ${room}
-               </button>`
-            : '';
-
-        return `<tr>
-            <td>${r.unit_id??''}</td>
-            <td>${r.colony_type??''}</td>
-            <td>${r.block_name??''}</td>
-            <td>${roomCell}</td>
-            <td>${r.is_active??''}</td>
-        </tr>`;
-    }).join('');
-
-    rowsEl.querySelectorAll('[data-list-room]').forEach(btn=>{
-        btn.onclick=()=>loadResidents(btn.dataset.listColony || '', 'Room ' + btn.dataset.listRoom, btn.dataset.listRoom);
-    });
-}
-
-document.getElementById('unitUpsertForm').addEventListener('submit',e=>{e.preventDefault();req('/units/upsert','POST',Object.fromEntries(new FormData(e.target)));});
-document.getElementById('downloadUnitTemplate').onclick=()=>download('unit_master_template.csv','unit_id,unit_name\nU-001,Unit 1\n');
-document.getElementById('importUnitCsv').onclick=async()=>{const f=document.getElementById('unitCsvFile').files[0]; if(!f)return show({status:400,error:'Select CSV file'}); const rows=parseCsv(await f.text()); if(rows.length===0)return show({status:400,error:'No data rows'}); let ok=0,fail=0,errors=[]; for(let i=0;i<rows.length;i++){const r=await req('/units/upsert','POST',{unit_id:rows[i].unit_id,unit_name:rows[i].unit_name}); if(r.status>=200&&r.status<300)ok++; else {fail++;errors.push({line:i+2,row:rows[i],response:r});}} show({status:'done',processed:rows.length,ok,fail,errors});};
-
-async function loadFilteredUnits(){
-    const params = new URLSearchParams(window.location.search || '');
-    params.set('page', '1');
-    params.set('per_page', '5');
-    const r = await req('/api/grids/units?' + params.toString());
-    render(r.body?.rows || []);
-    const label = params.get('res_type') || params.get('colony_type') || 'all';
-    setStatus(true, 'Loaded units filter: ' + label);
-}
-document.getElementById('loadUnitsBtn').onclick=loadFilteredUnits;
-
-function detectGroup(label){
-    const v = String(label || '').toLowerCase();
-    if(v === 'house' || v.includes('house')) return 'house';
-    if(v === 'bachelor' || v === 'room') return 'bachelor';
-    if(v === 'hostel' || v.includes('hostel')) return 'hostel';
-    if(v === 'containers' || v.includes('container')) return 'containers';
-    if(v === 'uncategorized') return 'uncategorized';
-    return 'uncategorized';
-}
-
-
-function groupTone(key){
-    return {house:'house',bachelor:'bachelor',hostel:'hostel',containers:'container',uncategorized:'uncategorized',other:'default'}[key] || 'default';
-}
-
-function groupLabel(key){
-    return {house:'House Units',bachelor:'Bachelor Units',hostel:'Hostel Units',containers:'Containers',uncategorized:'Uncategorized',other:'Other'}[key] || key;
-}
-
-function sumRows(list, key){return list.reduce((a,x)=>a+Number(x[key]||0),0);}
-
-async function loadResidentGroups(){
-    const params = new URLSearchParams(window.location.search || '');
-    const forcedType = params.get('res_type') || '';
-
-    const r = await req('/api/units/resident-groups?' + params.toString());
-    const rows = r.body?.rows || [];
-    const host = document.getElementById('residentGroupCards');
-
-    if(!rows.length){
-        host.innerHTML='<div class="empty">No category data found.</div>';
-        return;
-    }
-
-    const grouped = {};
-    rows.forEach(row => {
-        const key = row.group_key || detectGroup(row.residence_type || row.colony_type || '');
-        if(!grouped[key]) grouped[key]=[];
-        grouped[key].push(row);
-    });
-
-    if(forcedType && grouped[forcedType]){
-        renderMainCards({[forcedType]: grouped[forcedType]}, host);
-        renderSubCards(groupLabel(forcedType), grouped[forcedType]);
-        return;
-    }
-
-    renderMainCards(grouped, host);
-}
-
-function renderMainCards(grouped, host){
-    const order=['house','bachelor','hostel','containers','uncategorized','other'];
-    host.innerHTML=`<div class="unit-main-card-grid">${
-        order.filter(k=>grouped[k]?.length).map(k=>{
-            const list=grouped[k];
-            const tone=groupTone(k);
-            return `<button type="button" class="unit-main-card tone-${tone}" data-main="${k}">
-                <div class="um-title">${groupLabel(k)}</div>
-                <div class="um-value">${sumRows(list,'resident_count')}</div>
-                <div class="um-meta">
-                    <span>Categories <b>${list.length}</b></span>
-                    <span>Units <b>${sumRows(list,'unit_count')}</b></span>
-                    <span>Rooms <b>${sumRows(list,'room_count')}</b></span>
-                </div>
-            </button>`;
-        }).join('')
-    }</div>`;
-
-    host.querySelectorAll('[data-main]').forEach(btn=>{
-        const key=btn.dataset.main;
-        btn.onclick=()=>renderSubCards(groupLabel(key), grouped[key] || []);
-    });
-}
-
-function renderSubCards(title, rows){
-    const card=document.getElementById('residentSubGroupCard');
-    const host=document.getElementById('residentSubGroupCards');
-    const heading=document.getElementById('residentSubGroupTitle');
-
-    card.style.display='block';
-    heading.textContent=title+' - Categories';
-
-    host.innerHTML=`<div class="unit-sub-card-grid">${
-        rows.map(row=>{
-            const colony=row.colony_type || '__uncategorized';
-            const label=row.colony_type || 'Uncategorized';
-            const tone=groupTone(row.group_key || detectGroup(row.residence_type || label));
-            return `<button type="button" class="unit-sub-card tone-${tone}" data-colony="${String(colony).replaceAll('"','&quot;')}" data-residence-type="${String(row.residence_type || '').replaceAll('"','&quot;')}">
-                <div class="us-title">${label}</div>
-                <div class="us-row"><strong>${row.resident_count ?? 0}</strong><span>Residents</span></div>
-                <div class="us-meta"><span>Units <b>${row.unit_count ?? 0}</b></span><span>Rooms <b>${row.room_count ?? 0}</b></span></div>
-            </button>`;
-        }).join('')
-    }</div>`;
-
-    host.querySelectorAll('[data-colony]').forEach(btn=>{
-        btn.onclick=()=>{
-            const label = btn.querySelector('.us-title')?.textContent || '';
-            const group = detectGroup(label);
-            if(group === 'bachelor' || group === 'hostel'){
-                loadRooms(btn.dataset.colony, label, btn.dataset.residenceType || '');
-            } else {
-                loadResidents(btn.dataset.colony, label);
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fb",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-dim": "#d8dadc",
+                        "on-error-container": "#93000a",
+                        "on-surface-variant": "#434655",
+                        "tertiary": "#4d556b",
+                        "outline": "#737686",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#131b2e",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#3f465c",
+                        "secondary-fixed-dim": "#b9c7df",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#3a485b",
+                        "secondary-container": "#d5e3fc",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#57657a",
+                        "on-primary-fixed": "#00174b",
+                        "primary-fixed": "#dbe1ff",
+                        "surface-container": "#eceef0",
+                        "surface-container-highest": "#e0e3e5",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-background": "#191c1e",
+                        "tertiary-container": "#656d84",
+                        "primary-container": "#2563eb",
+                        "tertiary-fixed": "#dae2fd",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary-container": "#eeefff",
+                        "surface-tint": "#0053db",
+                        "surface-bright": "#f7f9fb",
+                        "secondary": "#515f74",
+                        "inverse-primary": "#b4c5ff",
+                        "tertiary-fixed-dim": "#bec6e0",
+                        "on-tertiary-container": "#eef0ff",
+                        "inverse-surface": "#2d3133",
+                        "on-secondary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-secondary-fixed": "#0d1c2e",
+                        "primary": "#004ac6",
+                        "background": "#f7f9fb",
+                        "secondary-fixed": "#d5e3fc",
+                        "surface-container-high": "#e6e8ea"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "lg": "24px",
+                        "base": "4px",
+                        "xl": "32px",
+                        "gutter": "20px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "mono-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "headline-sm": ["18px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "mono-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "headline-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
             }
-        };
-    });
-}
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col">
+@include('partials.global-navbar')
 
+<!-- TopNavBar Component -->
+<!-- Main Content -->
+<main class="flex-grow w-full max-w-container-max mx-auto px-md md:px-lg py-lg space-y-xl">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-outline-variant pb-sm">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Unit Directory</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage housing categories, sub-categories, rooms, and resident allocations.</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md px-3 py-1.5 rounded flex items-center gap-1 hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined" style="font-size: 16px;">download</span> Export
+                </button>
+</div>
+</div>
+<!-- 1. Unit Category Overview -->
+<section class="space-y-4">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Category Overview</h2>
+@php
+  $tsTotal = collect($typeStats)->sum('total');
+  $tsVacant = collect($typeStats)->sum('vacant');
+  $icons = ['HOUSE'=>'home','HOSTEL'=>'apartment','BACHELOR'=>'single_bed','CONTAINER'=>'inventory_2','UNSET'=>'help'];
+@endphp
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+  <a href="{{ url('unit-directory') }}" class="block bg-surface-container-lowest border rounded p-3 hover:shadow-md transition {{ $type === '' ? 'border-primary ring-2 ring-primary/30' : 'border-outline-variant' }}">
+    <div class="flex justify-between items-center mb-1">
+      <span class="font-label-md text-label-md text-on-surface-variant text-xs">All Units</span>
+      <span class="material-symbols-outlined text-primary" style="font-size:18px">domain</span>
+    </div>
+    <div class="text-2xl font-bold text-on-surface leading-tight">{{ $tsTotal }}</div>
+    <div class="text-sm font-bold text-green-700 mt-1">{{ $tsVacant }} vacant</div>
+  </a>
 
-async function loadRooms(colony, label, residenceType=''){
-    const params = new URLSearchParams(window.location.search || '');
-    params.set('colony_type', colony);
-    if(residenceType) params.set('residence_type', residenceType);
-
-    const card = document.getElementById('residentRoomCard');
-    const title = document.getElementById('residentRoomTitle');
-    const body = document.getElementById('residentRoomRows');
-
-    card.style.display = 'block';
-    title.textContent = 'Rooms - ' + label;
-
-    const r = await req('/api/units/resident-rooms?' + params.toString());
-    const rows = r.body?.rows || [];
-
-    if(!rows.length){
-        body.innerHTML = '<tr><td colspan="4"><div class="empty">No rooms found.</div></td></tr>';
-        return;
-    }
-
-    body.innerHTML = rows.map(row => `<tr>
-        <td>
-            <button type="button" class="btn room-link-btn" data-colony="${String(colony).replaceAll('"','&quot;')}" data-room="${String(row.room_no || '').replaceAll('"','&quot;')}">
-                ${row.room_no ?? ''}
-            </button>
-        </td>
-        <td>${row.unit_id ?? ''}</td>
-        <td>${row.block_floor ?? ''}</td>
-        <td><strong>${row.employee_count ?? 0}</strong></td>
-    </tr>`).join('');
-
-    body.querySelectorAll('[data-room]').forEach(btn=>{
-        btn.onclick=()=>loadResidents(btn.dataset.colony, 'Room ' + btn.dataset.room, btn.dataset.room, residenceType);
-    });
-}
-
-
-async function loadResidents(colony, label, roomNo="", residenceType=""){
-    const params=new URLSearchParams(window.location.search || '');
-    params.set('colony_type', colony);
-    if(roomNo) params.set('room_no', roomNo);
-    if(residenceType) params.set('residence_type', residenceType);
-
-    const card=document.getElementById('residentDetailsCard');
-    const title=document.getElementById('residentDetailsTitle');
-    const body=document.getElementById('residentRows');
-
-    card.style.display='block';
-    title.textContent='Residents - '+label;
-    setStatus(true, 'Loading residents for ' + label + '...');
-
-    const r=await req('/api/units/residents?'+params.toString());
-    const rows=r.body?.rows || [];
-
-    if(!rows.length){
-        body.innerHTML='<tr><td colspan="10"><div class="empty">No residents found.</div></td></tr>';
-        card.scrollIntoView({behavior:'smooth', block:'start'});
-        setStatus(false, 'No residents found for ' + label);
-        return;
-    }
-
-    setStatus(true, 'Loaded ' + rows.length + ' resident(s) for ' + label);
-    card.scrollIntoView({behavior:'smooth', block:'start'});
-
-    body.innerHTML=rows.map(x=>`<tr>
-        <td>${x.company_id ?? ''}</td>
-        <td>${x.name ?? ''}</td>
-        <td>${x.department ?? ''}</td>
-        <td>${x.designation ?? ''}</td>
-        <td>${x.family_members ?? 0}</td>
-        <td>${x.colony_type ?? ''}</td>
-        <td>${x.unit_id ?? ''}</td>
-        <td>${x.block_floor ?? ''}</td>
-        <td>${x.room_no ?? ''}</td>
-        <td>${x.active_days ?? ''}</td>
-    </tr>`).join('');
-}
-
-window.loadResidents = loadResidents;
-
-document.addEventListener('DOMContentLoaded', () => {
-    loadFilteredUnits();
-    loadResidentGroups();
-});
-</script>
-
-<div class="grid" style="margin-top:14px"><div class="col-12" data-grid="units"></div></div>
-<script src="/js/crud-grids.js"></script>
-@endsection
+  @foreach($typeStats as $t)
+  <a href="{{ url('unit-directory') }}?type={{ $t->type }}" class="block rounded p-3 border hover:shadow-md transition {{ $type === $t->type ? 'border-primary ring-2 ring-primary/30 bg-primary/5' : ($t->vacant > 0 ? 'border-green-300 bg-green-50/40' : 'border-outline-variant bg-surface-container-lowest') }}">
+    <div class="flex justify-between items-center mb-1">
+      <span class="font-label-md text-label-md text-on-surface-variant text-xs">{{ ucfirst(strtolower($t->type)) }}</span>
+      <span class="material-symbols-outlined text-primary" style="font-size:18px">{{ $icons[$t->type] ?? 'home' }}</span>
+    </div>
+    <div class="text-2xl font-bold text-on-surface leading-tight">{{ $t->total }}</div>
+    <div class="text-sm font-bold mt-1 {{ $t->vacant > 0 ? 'text-green-700' : 'text-on-surface-variant' }}">{{ $t->vacant }} vacant</div>
+  </a>
+  @endforeach
+</div>
+</section>
+<!-- 2. Sub Categories & Rooms -->
+<section class="space-y-4">
+<div class="flex justify-between items-center">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Sub Categories &amp; Rooms</h2>
+<div class="flex gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2 top-1.5 text-outline" style="font-size: 16px;">search</span>
+<input class="pl-8 pr-3 py-1 border border-outline-variant rounded bg-surface-container-lowest text-body-sm focus:border-primary focus:ring-1 focus:ring-primary w-48" placeholder="Filter rooms..." type="text"/>
+</div>
+<button class="bg-surface-container-lowest border border-outline-variant p-1 rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-size: 20px;">filter_list</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded shadow-[0_2px_4px_rgba(0,0,0,0.02)] overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[800px]">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Unit ID</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Room No</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Location</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Block / Floor</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Occupants</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Status</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm divide-y divide-outline-variant">
+@forelse($units as $u)
+@php($n = (int) ($occ[$u->unit_id] ?? 0))
+<tr class="hover:bg-surface-container-low transition-colors {{ $u->is_active ? '' : 'opacity-50' }}">
+<form method="post" action="{{ route('billing.units.update', $u->unit_id) }}" id="uf-{{ $loop->index }}">@csrf @method('PUT')</form>
+<td class="px-4 py-2 font-mono font-semibold text-on-surface">{{ $u->unit_id }}</td>
+<td class="px-4 py-2"><input form="uf-{{ $loop->index }}" name="room_no" value="{{ $u->room_no }}" class="w-24 border border-outline-variant rounded px-2 py-1 text-sm" placeholder="—"></td>
+<td class="px-4 py-2"><input form="uf-{{ $loop->index }}" name="colony_type" value="{{ $u->colony_type }}" class="w-52 border border-outline-variant rounded px-2 py-1 text-sm" placeholder="e.g. Weaving Bachelor Colony"></td>
+<td class="px-4 py-2"><input form="uf-{{ $loop->index }}" name="block_name" value="{{ $u->block_name }}" class="w-36 border border-outline-variant rounded px-2 py-1 text-sm" placeholder="—"></td>
+<td class="px-4 py-2 font-mono text-center">{{ $n }}</td>
+<td class="px-4 py-2">
+  <span class="px-2 py-0.5 rounded text-xs font-semibold {{ $u->is_active ? ($n > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600') : 'bg-red-100 text-red-700' }}">
+    {{ !$u->is_active ? 'Inactive' : ($n > 0 ? 'Occupied' : 'Vacant') }}
+  </span>
+</td>
+<td class="px-4 py-2 text-right whitespace-nowrap">
+  <button form="uf-{{ $loop->index }}" type="submit" class="text-primary text-xs font-semibold hover:underline mr-3">Save</button>
+  <form method="post" action="{{ route('billing.units.toggle', $u->unit_id) }}" class="inline">@csrf @method('PATCH')
+    <button type="submit" class="text-xs font-semibold hover:underline {{ $u->is_active ? 'text-red-600' : 'text-green-700' }}">{{ $u->is_active ? 'Deactivate' : 'Activate' }}</button>
+  </form>
+</td>
+</tr>
+<tr class="bg-surface-container-low/40">
+<td colspan="7" class="px-4 pb-3 pt-0">
+  <details>
+    <summary class="cursor-pointer text-xs font-semibold text-primary select-none">Rooms ({{ count($rooms[$u->unit_id] ?? []) }})</summary>
+    <div class="mt-2 flex flex-wrap gap-2 items-center">
+      @foreach($rooms[$u->unit_id] ?? [] as $rm)
+        @php($rc = (int) ($roomOcc[$u->unit_id.'|'.$rm->room_no] ?? 0))
+        @php($emps = $roomEmployees[$u->unit_id.'|'.$rm->room_no] ?? collect())
+        <details class="inline-block align-top">
+          <summary class="inline-flex items-center gap-2 border rounded px-2 py-1 text-xs cursor-pointer select-none {{ !$rm->is_active ? 'opacity-50 border-outline-variant' : ($rc > 0 ? 'border-outline-variant bg-surface hover:border-primary' : 'border-green-300 bg-green-50') }}">
+            <span class="font-mono font-semibold">{{ $rm->room_no }}</span>
+            <span class="text-on-surface-variant">{{ $rc > 0 ? $rc.' person' : 'vacant' }}</span>
+          </summary>
+          <div class="mt-1 border border-outline-variant rounded bg-surface p-2 min-w-[420px]">
+            @if(count($emps))
+              <table class="w-full text-xs">
+                <thead><tr class="text-on-surface-variant">
+                  <th class="text-left py-1 pr-3">Company ID</th>
+                  <th class="text-left py-1 pr-3">Name</th>
+                  <th class="text-left py-1 pr-3">Department</th>
+                  <th class="text-left py-1 pr-3">Designation</th>
+                  <th class="text-left py-1">Mobile</th>
+                </tr></thead>
+                <tbody>
+                @foreach($emps as $e)
+                  <tr class="border-t border-outline-variant">
+                    <td class="py-1 pr-3 font-mono"><a href="{{ url('employee-profile') }}/{{ $e->company_id }}" class="text-primary hover:underline">{{ $e->company_id }}</a></td>
+                    <td class="py-1 pr-3 font-semibold">{{ $e->name ?: '—' }}</td>
+                    <td class="py-1 pr-3">{{ $e->department ?: '—' }}</td>
+                    <td class="py-1 pr-3">{{ $e->designation ?: '—' }}</td>
+                    <td class="py-1">{{ $e->mobile_no ?: '—' }}</td>
+                  </tr>
+                @endforeach
+                </tbody>
+              </table>
+            @else
+              <div class="text-xs text-on-surface-variant">No residents in this room.</div>
+            @endif
+            <form method="post" action="{{ route('billing.units.room.toggle', $rm->id) }}" class="mt-2">@csrf @method('PATCH')
+              <button type="submit" class="text-xs font-semibold {{ $rm->is_active ? 'text-red-600' : 'text-green-700' }} hover:underline">{{ $rm->is_active ? 'Deactivate room' : 'Activate room' }}</button>
+            </form>
+          </div>
+        </details>
+      @endforeach
+      <form method="post" action="{{ route('billing.units.room.store') }}" class="inline-flex gap-1 items-center">
+        @csrf
+        <input type="hidden" name="unit_id" value="{{ $u->unit_id }}">
+        <input name="room_no" required placeholder="{{ $u->unit_id }}-1" class="border border-outline-variant rounded px-2 py-1 text-xs w-32">
+        <button type="submit" class="bg-primary text-white rounded px-2 py-1 text-xs font-semibold">+ Room</button>
+      </form>
+    </div>
+  </details>
+</td>
+</tr>
+@empty
+<tr><td colspan="7" class="px-4 py-8 text-center text-on-surface-variant">No units found.</td></tr>
+@endforelse
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+<!-- 3. Residents List View -->
+<section class="lg:col-span-2 space-y-4">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Recent Residents</h2>
+<div class="bg-surface-container-lowest border border-outline-variant rounded shadow-[0_2px_4px_rgba(0,0,0,0.02)] overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse min-w-[500px]">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Name</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Room</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Move-in Date</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase text-right">Billing</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-4 font-medium text-on-surface">Sarah Jenkins</td>
+<td class="py-2 px-4 font-mono-sm text-mono-sm text-on-surface-variant">RM-101A</td>
+<td class="py-2 px-4 text-on-surface-variant">Oct 12, 2023</td>
+<td class="py-2 px-4 text-right text-primary font-medium">Active</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-4 font-medium text-on-surface">Michael Chang</td>
+<td class="py-2 px-4 font-mono-sm text-mono-sm text-on-surface-variant">RM-101A</td>
+<td class="py-2 px-4 text-on-surface-variant">Oct 15, 2023</td>
+<td class="py-2 px-4 text-right text-primary font-medium">Active</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-4 font-medium text-on-surface">Elena Rodriguez</td>
+<td class="py-2 px-4 font-mono-sm text-mono-sm text-on-surface-variant">RM-103A</td>
+<td class="py-2 px-4 text-on-surface-variant">Nov 01, 2023</td>
+<td class="py-2 px-4 text-right text-primary font-medium">Active</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-2 px-4 font-medium text-on-surface">David Smith</td>
+<td class="py-2 px-4 font-mono-sm text-mono-sm text-on-surface-variant">EX-201</td>
+<td class="py-2 px-4 text-on-surface-variant">Dec 05, 2023</td>
+<td class="py-2 px-4 text-right text-on-surface-variant">Pending</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="px-4 py-2 border-t border-outline-variant bg-surface-bright text-center">
+<a class="font-label-md text-label-md text-primary hover:underline" href="#">View All Residents</a>
+</div>
+</div>
+</section>
+<!-- 4. Data Management -->
+<section class="space-y-4">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Data Management</h2>
+<!-- Upsert Form -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-3 uppercase">Quick Add Room</h3>
+<form action="{{ url('unit-directory') }}" class="space-y-3" method="POST">
+<!-- CSRF Token Placeholder for Laravel -->
+<input name="_token" type="hidden" value="csrf_placeholder"/>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Room ID</label>
+<input class="w-full border border-outline-variant rounded px-3 py-1.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" name="room_id" placeholder="e.g. RM-104C" type="text"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Category</label>
+<select class="w-full border border-outline-variant rounded px-3 py-1.5 text-body-sm bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" name="category_id">
+<option value="">Select Category</option>
+<option value="1">Standard Housing</option>
+<option value="2">Executive Suites</option>
+<option value="3">Temporary Lodging</option>
+</select>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Capacity</label>
+<input class="w-full border border-outline-variant rounded px-3 py-1.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" name="capacity" placeholder="Max residents" type="number"/>
+</div>
+<button class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md py-1.5 rounded hover:bg-surface-container-low transition-colors mt-2" type="submit">Add Room</button>
+</form>
+</div>
+<!-- CSV Upload -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded p-4 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">
+<h3 class="font-label-md text-label-md text-on-surface-variant mb-3 uppercase">Bulk Upload</h3>
+<div class="border-2 border-dashed border-outline-variant rounded-lg p-6 text-center hover:border-primary hover:bg-primary-fixed/10 transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-outline group-hover:text-primary mb-2" style="font-size: 32px;">upload_file</span>
+<p class="font-body-sm text-body-sm text-on-surface">Drag &amp; drop CSV file or <span class="text-primary font-medium">browse</span></p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Format: room_id, category, capacity</p>
+</div>
+</div>
+</section>
+</div>
+<!-- 5. Operation Status (Feedback Area) -->
+<section class="border-t border-outline-variant pt-4 mt-8 pb-lg">
+<h2 class="font-label-md text-label-md text-on-surface-variant uppercase mb-3">System Status</h2>
+<div class="flex flex-wrap gap-4">
+<!-- Success Toast -->
+<div class="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded p-3 shadow-sm min-w-[250px]">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">check_circle</span>
+<div class="font-body-sm text-body-sm text-on-surface">Data synced successfully</div>
+</div>
+<!-- Loading State -->
+<div class="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded p-3 shadow-sm min-w-[250px] opacity-70">
+<span class="material-symbols-outlined text-outline animate-spin" style="font-size: 20px;">sync</span>
+<div class="font-body-sm text-body-sm text-on-surface-variant">Processing batch upload...</div>
+</div>
+<!-- Error State -->
+<div class="flex items-center gap-2 bg-error-container/20 border border-error-container rounded p-3 shadow-sm min-w-[250px]">
+<span class="material-symbols-outlined text-error" style="font-size: 20px;">error</span>
+<div class="font-body-sm text-body-sm text-on-surface">Validation failed for RM-104C</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar Component (Mobile Only) -->
+<div style="display:none" data-backend-contract="unit-directory"><form id="unitUpsertForm"><input name="unit_id"><input name="unit_name"></form><button id="loadUnitsBtn"></button><button id="downloadUnitTemplate"></button><input id="unitCsvFile" type="file"><button id="importUnitCsv"></button><tbody id="unitRows"></tbody><pre id="unitResult"></pre><div id="unitStatus"></div></div>
+<script>const csrf=@json(csrf_token());const appBase=@json(url(''));function appUrl(p){return appBase+'/'+String(p).replace(/^\/+/, '')}</script></body></html>

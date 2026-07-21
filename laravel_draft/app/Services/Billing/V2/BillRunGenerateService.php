@@ -15,7 +15,7 @@ class BillRunGenerateService
         private readonly BillRunGateService $gate,
     ) {}
 
-    public function generate(?string $monthCycle, ?int $actorUserId = null, ?string $role = null): array
+    public function generate(?string $monthCycle, ?int $actorUserId = null, ?string $role = null, ?string $methodCode = null): array
     {
         // ===== PHASE 1: resolve + guard + draft + preflight + preview_ready =====
         $ctx = $this->readiness->resolveCycleContext($monthCycle);
@@ -99,14 +99,26 @@ class BillRunGenerateService
 
         // engine run (own internal transaction)
         try {
-            $er = app(OrchestrationService::class)->run($billMonth, $cycleStart, $cycleEnd, (float)$rate);
+            if ($methodCode && $methodCode !== 'ATTENDANCE_PRORATED') {
+                $pv = (new \App\Services\BillingEngine\Engine())->preview($methodCode, $cycleStart, $cycleEnd, (float)$rate);
+                if (!($pv['ok'] ?? false)) { return ['status'=>'blocked','reason'=>'Method not found: '.$methodCode]; }
+                $engRunId = 'RUN-'.substr(md5(uniqid()),0,12);
+                $w = (new \App\Services\BillingEngine\Support\OutputWriter())->write($pv, $engRunId);
+                $er = ['run_id'=>$engRunId, 'final_output_rows'=>$w['final_rows'], 'drilldown_output_rows'=>$w['drill_rows'], 'exception_rows'=>count($pv['issues'] ?? [])];
+            } else {
+                $er = app(OrchestrationService::class)->run($billMonth, $cycleStart, $cycleEnd, (float)$rate);
+            }
         } catch (\Throwable $e) {
             return ['status'=>'blocked','reason'=>'Generation failed during calculation: '.$e->getMessage()];
         }
 
         // summary_json (run_uuid = public ref, RUN-xxxx = internal)
+        $run->method_code = $methodCode ?: 'ATTENDANCE_PRORATED';
+        $exceptionCount = (int) ($er['exception_rows'] ?? 0);
         $run->summary_json = json_encode([
             'bill_reference'        => $run->run_uuid,
+            'generated_with_exceptions' => $exceptionCount > 0,
+            'exception_count'       => $exceptionCount,
             'electric_engine_run_id'=> $er['run_id'] ?? null,
             'engine'                => 'electric_v1',
             'final_rows'            => $er['final_output_rows'] ?? 0,

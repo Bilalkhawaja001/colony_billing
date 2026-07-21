@@ -23,7 +23,10 @@ Route::middleware([ControlRoomAuthGuard::class])
     ->group(function () {
         Route::get('/', [ControlRoomController::class, 'index'])->name('home');
 
+        Route::get('/wizard', [\App\Http\Controllers\Billing\ControlRoom\WizardController::class, 'index'])->name('wizard');
+        Route::post('/wizard/cycle', [\App\Http\Controllers\Billing\ControlRoom\WizardController::class, 'saveCycle'])->name('wizard.cycle');
         Route::get('/readiness', [ReadinessController::class, 'index'])->name('readiness');
+        Route::post('/readiness/decision', [\App\Http\Controllers\Billing\ControlRoom\IssueDecisionController::class, 'store'])->name('readiness.decision');
 
         Route::get('/readings', [MeterReadingController::class, 'index'])->name('readings');
         Route::post('/readings', [MeterReadingController::class, 'save'])->name('readings.save');
