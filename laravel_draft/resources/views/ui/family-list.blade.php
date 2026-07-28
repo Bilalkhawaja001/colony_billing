@@ -48,7 +48,46 @@
       <span class="fam-badge">Present <b>{{ collect($familyRows ?? [])->where('current_status','PRESENT')->count() }}</b></span>
       <span class="fam-badge">School <b>{{ collect($familyRows ?? [])->where('school_going',1)->count() }}</b></span>
     </div>
+    <div class="fam-export-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px">
+      <select id="famDept" class="fam-search" style="max-width:160px"><option value="">All Departments</option>
+        @foreach(($deptList ?? []) as $d)<option value="{{ $d }}">{{ $d }}</option>@endforeach
+      </select>
+      <select id="famHouse" class="fam-search" style="max-width:150px"><option value="">All House Types</option></select>
+      <select id="famFloor" class="fam-search" style="max-width:130px"><option value="">All Floors</option></select>
+      <select id="famRoom" class="fam-search" style="max-width:150px"><option value="">All Rooms</option></select>
+      <select id="famSchool" class="fam-search" style="max-width:150px">
+        <option value="">All (School)</option>
+        <option value="going">School-going</option>
+        <option value="not">Not going</option>
+      </select>
+      <select id="famSchoolName" class="fam-search" style="max-width:170px"><option value="">Any School</option>
+        @foreach(($schoolList ?? []) as $sn)<option value="{{ $sn }}">{{ $sn }}</option>@endforeach
+      </select>
+      <button type="button" id="famExportBtn" class="fam-badge" style="cursor:pointer;background:#166534;color:#fff;border:none;font-weight:600;padding:6px 14px">Export Excel</button>
+    </div>
   </div>
+  <script>
+  (function(){
+    var MAP = @json($cascadeMap ?? []);
+    var house=document.getElementById('famHouse'), floor=document.getElementById('famFloor'), room=document.getElementById('famRoom');
+    Object.keys(MAP).sort().forEach(function(h){ house.add(new Option(h,h)); });
+    function fill(sel,items,label){ sel.innerHTML=''; sel.add(new Option(label,'')); (items||[]).forEach(function(x){ if(x!=='') sel.add(new Option(x,x)); }); }
+    house.addEventListener('change',function(){
+      fill(floor, Object.keys(MAP[house.value]||{}), 'All Floors');
+      fill(room, [], 'All Rooms');
+    });
+    floor.addEventListener('change',function(){
+      var rooms=((MAP[house.value]||{})[floor.value])||[];
+      fill(room, [...new Set(rooms)].sort(), 'All Rooms');
+    });
+    document.getElementById('famExportBtn').addEventListener('click',function(){
+      var p=new URLSearchParams();
+      var m={department:'famDept',house_type:'famHouse',floor:'famFloor',room_no:'famRoom',school:'famSchool',school_name:'famSchoolName'};
+      Object.keys(m).forEach(function(k){ var v=document.getElementById(m[k]).value; if(v) p.set(k,v); });
+      window.location.href='/billing/family-list/export'+(p.toString()?'?'+p.toString():'');
+    });
+  })();
+  </script>
 
 
   @if(!empty($familyCards ?? []))

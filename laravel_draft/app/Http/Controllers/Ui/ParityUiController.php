@@ -188,11 +188,39 @@ class ParityUiController extends Controller
         $tree['Outside Colony'] = ['—' => [['unit' => 'OUTSIDE', 'room' => 'Outside Colony', 'n' => 0]]];
 
         $DB = \Illuminate\Support\Facades\DB::class;
-        $noResidence = \Illuminate\Support\Facades\DB::table('employees_master as m')
-            ->leftJoin('electric_v1_occupancy as o', 'o.company_id', '=', 'm.company_id')
-            ->where('m.active', 'Yes')->whereNull('o.company_id')
-            ->select('m.company_id', 'm.name', 'm.department', 'm.designation')
-            ->orderBy('m.company_id')->get();
+        $noResidence = \Illuminate\Support\Facades\DB::table('employees_master')
+            ->where('active', 'Yes')
+            ->where(function ($w) {
+                $w->whereNull('residence_status')->orWhere('residence_status', 'UNASSIGNED');
+            })
+            ->select('company_id', 'name', 'department', 'designation')
+            ->orderBy('company_id')->get();
+
+        $formPending = \Illuminate\Support\Facades\DB::table('employees_master')
+            ->where('active', 'Yes')->where('residence_status', 'FORM_PENDING')
+            ->select('company_id', 'name', 'department', 'designation')
+            ->orderBy('company_id')->get();
+
+        $outsideEmployees = \Illuminate\Support\Facades\DB::table('employees_master')
+            ->where('active', 'Yes')->where('residence_status', 'OUTSIDE')
+            ->select('company_id', 'name', 'department', 'designation', 'updated_at')
+            ->orderBy('company_id')->get()
+            ->map(function ($r) {
+                $r->marked_on = $r->updated_at ? substr((string) $r->updated_at, 0, 10) : '';
+                return $r;
+            });
+
+        $exportRows = ['no_residence' => [], 'outside' => []];
+        foreach ($noResidence as $r) {
+            $exportRows['no_residence'][] = ['="'.$r->company_id.'"', (string) $r->name, (string) ($r->department ?? ''), (string) ($r->designation ?? '')];
+        }
+        $exportRows['form_pending'] = [];
+        foreach ($formPending as $r) {
+            $exportRows['form_pending'][] = ['="'.$r->company_id.'"', (string) $r->name, (string) ($r->department ?? ''), (string) ($r->designation ?? '')];
+        }
+        foreach ($outsideEmployees as $r) {
+            $exportRows['outside'][] = ['="'.$r->company_id.'"', (string) $r->name, (string) ($r->department ?? ''), (string) ($r->designation ?? ''), (string) $r->marked_on];
+        }
 
         $crowded = \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
             ->select('unit_id', 'room_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) people'))
@@ -213,6 +241,9 @@ class ParityUiController extends Controller
             'empMissing' => $empMissing,
             'tree' => $tree,
             'noResidence' => $noResidence,
+            'outsideEmployees' => $outsideEmployees,
+            'exportRows' => $exportRows,
+            'formPending' => $formPending,
             'crowded' => $crowded,
         ]);
     }
@@ -222,6 +253,7 @@ class ParityUiController extends Controller
     {
         $q = trim((string) $request->query('q', ''));
         $colony = trim((string) $request->query('colony', ''));
+        $type = strtoupper(trim((string) $request->query('type', '')));
 
         $query = \Illuminate\Support\Facades\DB::table('util_unit');
         if ($q !== '') {
@@ -233,20 +265,51 @@ class ParityUiController extends Controller
         }
         if ($colony !== '') { $query->where('colony_type', $colony); }
 
-        $type = strtoupper(trim((string) $request->query('type', '')));
-        if ($type !== '') {
-            $query->where(function ($w) use ($type) {
-                if ($type === 'BACHELOR')      { $w->where('colony_type', 'like', '%Bachelor%'); }
-                elseif ($type === 'HOSTEL')    { $w->where('colony_type', 'like', '%Hostel%'); }
-                elseif ($type === 'CONTAINER') { $w->where('colony_type', 'like', '%Container%'); }
-                elseif ($type === 'HOUSE') {
-                    $w->where('colony_type', 'like', '%Family%')
-                      ->orWhere('colony_type', 'like', '%A+%')
-                      ->orWhere('colony_type', 'like', '%Palidar%')
-                      ->orWhere('colony_type', 'like', '%Abaseen%');
-                }
-                elseif ($type === 'UNSET') { $w->whereNull('colony_type'); }
+        $matchAllRooms = static function ($query, callable $match): void {
+            $query->whereExists(function ($exists) {
+                $exists->selectRaw('1')
+                    ->from('util_unit_rooms as r_any')
+                    ->whereColumn('r_any.unit_id', 'util_unit.unit_id')
+                    ->where('r_any.is_active', 1);
+            })->whereNotExists(function ($not) use ($match) {
+                $not->selectRaw('1')
+                    ->from('util_unit_rooms as r_bad')
+                    ->whereColumn('r_bad.unit_id', 'util_unit.unit_id')
+                    ->where('r_bad.is_active', 1)
+                    ->where(function ($w) use ($match) {
+                        $match($w, 'r_bad', true);
+                    });
             });
+        };
+
+        if ($type !== '') {
+            if ($type === 'BACHELOR') {
+                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.occupant_grade', '<>', 'BACHELOR')->orWhereNull($alias.'.occupant_grade'));
+            } elseif ($type === 'HOSTEL') {
+                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.occupant_grade', '<>', 'SENIOR_STAFF')->orWhereNull($alias.'.occupant_grade'));
+            } elseif ($type === 'CONTAINER') {
+                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.residence_type', '<>', 'CONTAINER')->orWhereNull($alias.'.residence_type'));
+            } elseif ($type === 'HOUSE') {
+                $houseTypes = ['HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C'];
+                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->whereNotIn($alias.'.residence_type', $houseTypes)->orWhereNull($alias.'.residence_type'));
+            } elseif ($type === 'COMMON') {
+                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where(function ($x) use ($alias) {
+                    $x->where($alias.'.residence_type', '<>', 'COMMON')->orWhereNull($alias.'.residence_type');
+                })->where(function ($x) use ($alias) {
+                    $x->where($alias.'.occupant_grade', '<>', 'COMMON')->orWhereNull($alias.'.occupant_grade');
+                }));
+            } elseif ($type === 'UNSET') {
+                $query->whereExists(function ($exists) {
+                    $exists->selectRaw('1')
+                        ->from('util_unit_rooms as r_unset')
+                        ->whereColumn('r_unset.unit_id', 'util_unit.unit_id')
+                        ->where('r_unset.is_active', 1)
+                        ->where(function ($w) {
+                            $w->whereNull('r_unset.residence_type')
+                              ->orWhereNull('r_unset.occupant_grade');
+                        });
+                });
+            }
         }
 
         $units = $query->orderBy('unit_id')->get();
@@ -258,24 +321,7 @@ class ParityUiController extends Controller
         $colonies = \Illuminate\Support\Facades\DB::table('util_unit')
             ->whereNotNull('colony_type')->distinct()->orderBy('colony_type')->pluck('colony_type');
 
-        $typeStats = \Illuminate\Support\Facades\DB::select("
-            SELECT
-              CASE
-                WHEN u.colony_type LIKE '%Bachelor%'  THEN 'BACHELOR'
-                WHEN u.colony_type LIKE '%Hostel%'    THEN 'HOSTEL'
-                WHEN u.colony_type LIKE '%Container%' THEN 'CONTAINER'
-                WHEN u.colony_type LIKE '%Family%' OR u.colony_type LIKE '%A+%'
-                  OR u.colony_type LIKE '%Palidar%' OR u.colony_type LIKE '%Abaseen%' THEN 'HOUSE'
-                ELSE 'UNSET'
-              END AS type,
-              COUNT(*) total,
-              SUM(CASE WHEN o.c IS NULL OR o.c=0 THEN 1 ELSE 0 END) vacant,
-              SUM(CASE WHEN o.c>0 THEN 1 ELSE 0 END) occupied
-            FROM util_unit u
-            LEFT JOIN (SELECT unit_id, COUNT(DISTINCT company_id) c FROM electric_v1_occupancy GROUP BY unit_id) o
-              ON o.unit_id=u.unit_id
-            WHERE u.is_active=1
-            GROUP BY type ORDER BY total DESC");
+        $typeStats = \Illuminate\Support\Facades\DB::select("\n            SELECT type, COUNT(*) total,\n                   SUM(CASE WHEN occ_count IS NULL OR occ_count=0 THEN 1 ELSE 0 END) vacant,\n                   SUM(CASE WHEN occ_count>0 THEN 1 ELSE 0 END) occupied\n            FROM (\n                SELECT u.unit_id, o.c occ_count,\n                       CASE\n                         WHEN SUM(CASE WHEN r.residence_type IS NULL OR r.occupant_grade IS NULL THEN 1 ELSE 0 END) > 0 THEN 'UNSET'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.occupant_grade = 'BACHELOR' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'BACHELOR'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.occupant_grade = 'SENIOR_STAFF' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'HOSTEL'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type = 'CONTAINER' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'CONTAINER'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type IN ('HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C') THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'HOUSE'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type = 'COMMON' OR r.occupant_grade = 'COMMON' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'COMMON'\n                         ELSE NULL\n                       END AS type\n                FROM util_unit u\n                LEFT JOIN util_unit_rooms r ON r.unit_id=u.unit_id AND r.is_active=1\n                LEFT JOIN (SELECT unit_id, COUNT(DISTINCT company_id) c FROM electric_v1_occupancy GROUP BY unit_id) o\n                  ON o.unit_id=u.unit_id\n                WHERE u.is_active=1\n                GROUP BY u.unit_id, o.c\n            ) typed\n            WHERE type IS NOT NULL\n            GROUP BY type ORDER BY total DESC");
 
         return view('ui.unit-master', [
             'roomEmployees' => \Illuminate\Support\Facades\DB::table('electric_v1_occupancy as o')
@@ -297,7 +343,6 @@ class ParityUiController extends Controller
             'totalUnits' => $units->count(),
         ]);
     }
-
 
     public function familyList()
     {
@@ -389,7 +434,24 @@ class ParityUiController extends Controller
             })
             ->all();
 
+        $houseCascade = \Illuminate\Support\Facades\DB::table('util_unit_rooms')
+            ->where('is_active', 1)->whereNotNull('residence_type')
+            ->orderBy('residence_type')->orderBy('floor')->orderBy('room_no')
+            ->get(['residence_type', 'floor', 'room_no']);
+        $cascadeMap = [];
+        foreach ($houseCascade as $hc) {
+            $ht = (string) $hc->residence_type; $fl = (string) ($hc->floor ?? '');
+            $cascadeMap[$ht][$fl][] = (string) $hc->room_no;
+        }
+        $deptList = ['SPINNING', 'WEAVING', 'CENTRALIZED'];
+        $schoolList = \Illuminate\Support\Facades\DB::table('family_members')
+            ->where('is_active', 1)->whereNotNull('school_name')->where('school_name', '<>', '')
+            ->distinct()->orderBy('school_name')->pluck('school_name')->all();
+
         return view('ui.family-list', [
+            'cascadeMap' => $cascadeMap,
+            'deptList' => $deptList,
+            'schoolList' => $schoolList,
             'familyRows' => $rows,
             'familyCards' => $familyCards,
         ]);
