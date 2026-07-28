@@ -589,8 +589,11 @@ class PeopleResidencyService
 
             DB::table('employees_master')->where('company_id', $companyId)->update([
                 'unit_id' => null, 'colony_type' => null, 'block_floor' => null, 'room_no' => null, 'shared_room' => null,
+                'residence_status' => 'UNASSIGNED',
                 'updated_at' => now(),
             ]);
+
+            DB::table('electric_v1_occupancy')->where('company_id', $companyId)->delete();
 
             return [
                 'status' => 'ok', 'engine' => 'V2', 'message' => 'Residence vacated successfully.',
@@ -770,6 +773,27 @@ class PeopleResidencyService
                 return $this->error('New residence must be different from the current residence.', 409);
             }
 
+            // OUTSIDE: no physical room. Close assignment, mark OUTSIDE, stop billing.
+            if ($unitId === 'Outside Colony' || $unitId === 'OUTSIDE') {
+                if ($active) {
+                    DB::table('employee_residence_assignments')->where('id', $active->id)->update([
+                        'end_date' => Carbon::createFromFormat('Y-m-d', $date)->subDay()->toDateString(),
+                        'status' => 'CLOSED', 'closure_reason' => 'MOVED_OUTSIDE', 'updated_at' => now(),
+                    ]);
+                }
+                DB::table('employees_master')->where('company_id', $companyId)->update([
+                    'residence_status' => 'OUTSIDE',
+                    'unit_id' => 'OUTSIDE',
+                    'colony_type' => 'OUTSIDE',
+                    'room_no' => null,
+                    'block_floor' => null,
+                    'shared_room' => 'No',
+                    'updated_at' => now(),
+                ]);
+                DB::table('electric_v1_occupancy')->where('company_id', $companyId)->delete();
+                return ['status' => 'ok', 'engine' => 'V2', 'message' => 'Employee marked as Outside Colony. Billing stopped.'];
+            }
+
             $room = $this->findRoomForUpdate($unitId, $roomNo);
             if (!$room) {
                 return $this->error('Selected V2 residence room was not found.', 404);
@@ -832,6 +856,19 @@ class PeopleResidencyService
                 'block_floor' => $room->block_floor ?? null,
                 'room_no' => $roomNo,
                 'shared_room' => $shared ? 'Yes' : 'No',
+                'residence_status' => 'RESIDENT',
+                'updated_at' => now(),
+            ]);
+
+            $cyc = DB::table('util_month_cycle')->orderByDesc('cycle_start_date')->first();
+            DB::table('electric_v1_occupancy')->where('company_id', $companyId)->delete();
+            DB::table('electric_v1_occupancy')->insert([
+                'company_id' => $companyId,
+                'unit_id'    => $unitId,
+                'room_id'    => $roomNo,
+                'from_date'  => $cyc->cycle_start_date ?? $date,
+                'to_date'    => $cyc->cycle_end_date ?? $date,
+                'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
@@ -955,8 +992,9 @@ class PeopleResidencyService
 
     private function findRoomForUpdate(string $unitId, string $roomNo): ?object
     {
-        return DB::table('util_unit_room_snapshot')
-            ->where('month_cycle', $this->roomSnapshotCycle($this->latestCycle()))
+        return DB::table('util_unit_rooms')
+            ->select('unit_id','room_no','residence_type','floor as block_floor','residence_type as category')
+            ->where('is_active', 1)
             ->where('unit_id', $unitId)
             ->where('room_no', $roomNo)
             ->lockForUpdate()
@@ -966,12 +1004,14 @@ class PeopleResidencyService
     private function isEligibleResidence(string $type): bool
     {
         $type = strtoupper(trim($type));
-        return str_starts_with($type, 'HOUSE') || in_array($type, ['BACHELOR','HOSTEL','CONTAINER'], true);
+        return str_starts_with($type, 'HOUSE') || in_array($type, ['ROOM','CONTAINER'], true);
     }
 
     private function isHouse(string $type): bool
     {
-        return str_starts_with(strtoupper(trim($type)), 'HOUSE');
+        $t = strtoupper(trim($type));
+        // HOUSE_A+ (executive banglow) is shared, not single-occupancy
+        return $t !== 'HOUSE_A+' && str_starts_with($t, 'HOUSE');
     }
 
     private function validPastOrTodayDate(mixed $raw): ?string
@@ -982,7 +1022,7 @@ class PeopleResidencyService
         } catch (Throwable) {
             return null;
         }
-        if ($date->format('Y-m-d') !== $value || $date->isFuture()) {
+        if ($date->format("Y-m-d") !== $value) {
             return null;
         }
         return $value;
