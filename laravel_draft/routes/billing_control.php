@@ -37,6 +37,7 @@ Route::middleware([ControlRoomAuthGuard::class])
         Route::get('/generate', [BillRunController::class, 'index'])->name('generate');
         Route::post('/generate', [BillRunController::class, 'store'])->name('generate.store');
         Route::post('/generate/official', [BillRunController::class, 'generate'])->name('generate.official');
+        Route::post('/generate/void-regenerate', [BillRunController::class, 'voidRegenerate'])->name('generate.void_regenerate');
 
         Route::get('/runs/{run}/status', [BillRunController::class, 'status'])->name('runs.status');
         Route::get('/runs/{run}', [BillRunController::class, 'show'])->name('runs.show');
@@ -44,4 +45,5 @@ Route::middleware([ControlRoomAuthGuard::class])
 
         Route::get('/export', [ExportController::class, 'index'])->name('export');
         Route::post('/export/download', [ExportController::class, 'download'])->name('export.download');
+        Route::post('/export/detailed-electric-breakdown', [ExportController::class, 'detailedElectricBreakdown'])->name('export.detailed-electric-breakdown');
     });
