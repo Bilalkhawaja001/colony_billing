@@ -218,8 +218,12 @@ class PeopleResidencyService
                     continue;
                 }
 
-                DB::table('employees_master')->insert($this->employeeWriteData($data, true));
-                $inserted++;
+                try {
+                    DB::table('employees_master')->insert($this->employeeWriteData($data, true));
+                    $inserted++;
+                } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                    $rejected[] = ['row_no' => $rowNo, 'company_id' => $companyId, 'error' => 'CompanyID already exists (race)'];
+                }
             }
         });
 
@@ -1093,6 +1097,7 @@ class PeopleResidencyService
 
     private function parseEmployeeCsv(string $csvText): array
     {
+        $csvText = preg_replace('/^\\xEF\\xBB\\xBF/', '', $csvText);
         $csvText = trim($csvText);
         if ($csvText === '') {
             return $this->error('csv_text is required.', 422);
