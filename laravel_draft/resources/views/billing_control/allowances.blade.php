@@ -289,9 +289,9 @@
                         $inactive = !$row['is_active'];
                         $typeStyles = match($row['allowance_type']) {
                             'BACHELOR' => 'bg-[#e0e7ff] text-[#3730a3]',
-                            'HOUSE' => 'bg-[#fef3c7] text-[#92400e]',
-                            'HOSTEL' => 'bg-[#f3f4f6] text-[#4b5563]',
-                            'CONTAINER' => 'bg-[#e5e7eb] text-[#1f2937]',
+                            'FAMILY' => 'bg-[#fef3c7] text-[#92400e]',
+                            'SENIOR_STAFF' => 'bg-[#f3f4f6] text-[#4b5563]',
+                            'COMMON' => 'bg-[#e5e7eb] text-[#1f2937]',
                             default => 'bg-[#fff4e5] text-[#b54708]'
                         };
                     @endphp
@@ -498,7 +498,7 @@
             note.classList.remove('flex');
             return;
         }
-        document.getElementById('mappingText').textContent = 'Internal Mapping: ' + (type === 'HOUSE' ? 'HOUSE' : 'ROOM');
+        document.getElementById('mappingText').textContent = 'Internal Mapping: ' + (type === 'FAMILY' ? 'HOUSE' : 'ROOM');
         note.classList.remove('hidden');
         note.classList.add('flex');
     };

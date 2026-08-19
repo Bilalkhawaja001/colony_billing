@@ -1,7 +1,9 @@
 @php
     $navGroups = [
         ['key'=>'dashboard','label'=>'Dashboard','href'=>url('dashboard'),'patterns'=>['dashboard','dashboard-v2','/'],'children'=>[]],
-        ['key'=>'billing','label'=>'Billing','patterns'=>['control-room*','allowances*','meters-readings*','rates*','active-days-monthly*'], 'children'=>[
+        ['key'=>'billing','label'=>'Billing','patterns'=>['control-room*','allowances*','meters-readings*','rates*','active-days-monthly*','control-room/wizard*','control-room/readiness*'], 'children'=>[
+            ['label'=>'Bill Wizard','href'=>url('control-room/wizard'),'patterns'=>['control-room/wizard*']],
+            ['label'=>'Check & Fix Data','href'=>url('control-room/readiness'),'patterns'=>['control-room/readiness*']],
             ['label'=>'Bill Generation','href'=>url('control-room'),'patterns'=>['control-room','control-room/generate*','control-room/runs*']],
             ['label'=>'Free Allowances','href'=>url('allowances'),'patterns'=>['allowances*']],
             ['label'=>'Meter Readings','href'=>url('meters-readings'),'patterns'=>['meters-readings*','control-room/readings*']],

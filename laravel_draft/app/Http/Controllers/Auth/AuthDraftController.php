@@ -33,12 +33,22 @@ class AuthDraftController extends Controller
         $username = trim((string) $request->input('username', ''));
         $password = trim((string) $request->input('password', ''));
 
+        $throttleKey = strtolower($username).'|'.$request->ip();
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($throttleKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($throttleKey);
+            $this->audit('LOGIN_THROTTLED', null, 'FAIL', ['retry_after' => $seconds], substr($username, 0, 3).'***');
+            return back()->withErrors(['auth' => 'Too many attempts. Try again in '.ceil($seconds / 60).' minute(s).']);
+        }
+
         $user = AuthUser::query()->where('username', $username)->first();
 
         if (!$user || (int)$user->is_active !== 1 || !FlaskParityAuth::verifyPassword($password, (string)$user->password_hash)) {
+            \Illuminate\Support\Facades\RateLimiter::hit($throttleKey, 900);
             $this->audit('LOGIN_FAILED', $user?->id, 'FAIL', ['reason' => 'invalid_credentials_or_request'], substr($username, 0, 3).'***');
             return back()->withErrors(['auth' => 'Invalid credentials or request']);
         }
+
+        \Illuminate\Support\Facades\RateLimiter::clear($throttleKey);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
