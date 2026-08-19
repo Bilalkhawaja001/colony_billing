@@ -343,34 +343,122 @@ class EmployeesMeterParityService
         $readingValue = $payload['reading_value'] ?? null;
 
         if ($meterId === '' || $unitId === '' || $readingValue === null || $readingValue === '') {
-            return ['status' => 'error', 'error' => 'meter_id, unit_id, reading_value are required', '_http' => 400];
-        }
-
-        $exists = DB::table('util_meter_readings')
-            ->where('meter_id', $meterId)
-            ->where('reading_date', $readingDate)
-            ->exists();
-
-        if ($exists) {
             return [
-                'status' => 'duplicate',
-                'error' => 'Meter reading already exists',
-                'meter_id' => $meterId,
-                'reading_date' => $readingDate,
-                '_http' => 409,
+                'status' => 'error',
+                'error' => 'meter_id, unit_id, reading_value are required',
+                '_http' => 400,
             ];
         }
 
-        DB::table('util_meter_readings')->insert([
-            'meter_id' => $meterId,
-            'unit_id' => $unitId,
-            'reading_value' => (float) $readingValue,
-            'reading_date' => $readingDate,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        return DB::transaction(function () use ($meterId, $unitId, $readingDate, $readingValue) {
+            $existing = DB::table('util_meter_readings')
+                ->where('meter_id', $meterId)
+                ->where('reading_date', $readingDate)
+                ->first();
 
-        return ['status' => 'ok', 'inserted' => 1, 'meter_id' => $meterId, 'reading_date' => $readingDate];
+            if ($existing) {
+                $storedUnit = trim((string) $existing->unit_id);
+                $storedValue = (float) $existing->reading_value;
+
+                $sync = $this->syncElectricV1CycleEnd(
+                    $storedUnit,
+                    $readingDate,
+                    $storedValue
+                );
+
+                return [
+                    'status' => 'duplicate',
+                    'error' => 'Meter reading already exists',
+                    'meter_id' => $meterId,
+                    'reading_date' => $readingDate,
+                    'billing_sync' => $sync,
+                    '_http' => 409,
+                ];
+            }
+
+            DB::table('util_meter_readings')->insert([
+                'meter_id' => $meterId,
+                'unit_id' => $unitId,
+                'reading_value' => (float) $readingValue,
+                'reading_date' => $readingDate,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $sync = $this->syncElectricV1CycleEnd(
+                $unitId,
+                $readingDate,
+                (float) $readingValue
+            );
+
+            return [
+                'status' => 'ok',
+                'inserted' => 1,
+                'meter_id' => $meterId,
+                'reading_date' => $readingDate,
+                'billing_sync' => $sync,
+            ];
+        });
+    }
+
+    private function syncElectricV1CycleEnd(
+        string $unitId,
+        string $readingDate,
+        float $readingValue
+    ): array {
+        $cycle = DB::table('util_month_cycle')
+            ->whereDate('cycle_end_date', $readingDate)
+            ->first();
+
+        if (!$cycle) {
+            return [
+                'status' => 'raw_only',
+                'reason' => 'reading_date_not_cycle_end',
+            ];
+        }
+
+        $previous = (float) (
+            DB::table('electric_v1_readings')
+                ->where('unit_id', $unitId)
+                ->where('cycle_end_date', '<', $cycle->cycle_start_date)
+                ->orderByDesc('cycle_end_date')
+                ->value('current_reading') ?? 0
+        );
+
+        $status = $readingValue < $previous ? 'REVERSED' : 'NORMAL';
+
+        $q = DB::table('electric_v1_readings')
+            ->where('cycle_start_date', $cycle->cycle_start_date)
+            ->where('cycle_end_date', $cycle->cycle_end_date)
+            ->where('unit_id', $unitId);
+
+        if ($q->exists()) {
+            $q->update([
+                'previous_reading' => $previous,
+                'current_reading' => $readingValue,
+                'reading_status' => $status,
+                'updated_at' => now(),
+            ]);
+        } else {
+            DB::table('electric_v1_readings')->insert([
+                'cycle_start_date' => $cycle->cycle_start_date,
+                'cycle_end_date' => $cycle->cycle_end_date,
+                'unit_id' => $unitId,
+                'previous_reading' => $previous,
+                'current_reading' => $readingValue,
+                'reading_status' => $status,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        return [
+            'status' => 'synced',
+            'month_cycle' => $cycle->month_cycle,
+            'previous_reading' => $previous,
+            'current_reading' => $readingValue,
+            'reading_status' => $status,
+        ];
     }
 
     public function meterUnit(array $query): array

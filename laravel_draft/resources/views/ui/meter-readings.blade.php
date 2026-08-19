@@ -19,6 +19,7 @@
    <div class="mr-field"><label>Reading Value</label><input class="mr-input mr-mono" name="reading_value" type="number" step="0.0001" min="0" required></div>
    <div class="mr-field"><label>Reading Date</label><input class="mr-input" name="reading_date" type="date" required></div>
    <button class="mr-btn primary full" type="submit">Save Reading</button>
+<div id="quickReadingMsg" style="display:none;margin-top:10px;padding:10px;border-radius:7px;font-weight:700"></div>
   </form></section>
   <section class="mr-card"><h2 class="mr-title"><i>⌕</i> Latest Lookup</h2><div class="mr-field"><label>Unit ID</label><div class="mr-row"><input class="mr-input mr-mono" id="latestUnit" placeholder="Search ID..."><button class="mr-btn" id="latestBtn" type="button">Search</button></div></div><pre class="mr-result" id="readingsResult">Ready.</pre></section>
   <section class="mr-card">
@@ -46,10 +47,33 @@
 
     @php($pv = session('reading_preview'))
     @if($pv)
-      <pre class="mr-result">{{ count($pv['rows']) }} rows · {{ $pv['cycle_start'] }} → {{ $pv['cycle_end'] }}@if(count($pv['errors'])) · {{ count($pv['errors']) }} warning(s)@endif</pre>
+      <pre class="mr-result">{{ count($pv['rows']) }} rows · {{ $pv['cycle_start'] }} → {{ $pv['cycle_end'] }}@if(!empty($pv['issues'])) · {{ count($pv['issues']) }} problem row(s)@endif</pre>
+
+      @if(!empty($pv['issues']))
+        <div class="mr-tablewrap" style="max-height:260px;overflow:auto">
+          <table class="mr-table">
+            <thead><tr><th>Line</th><th>Unit</th><th>Meter</th><th>Masla</th></tr></thead>
+            <tbody>
+            @foreach($pv['issues'] as $ix)
+              <tr><td>{{ $ix['line'] }}</td><td><b>{{ $ix['unit_id'] }}</b></td><td>{{ $ix['meter_id'] }}</td><td style="color:#b91c1c">{{ $ix['message'] }}</td></tr>
+            @endforeach
+            </tbody>
+          </table>
+        </div>
+      @endif
+
+      @if(!empty($pv['missing']))
+        <div class="mr-result" style="color:#92400e">CSV me nahi aaye ({{ count($pv['missing']) }}): {{ implode(', ', array_slice($pv['missing'], 0, 25)) }}@if(count($pv['missing']) > 25) ...@endif</div>
+      @endif
+
       <form method="post" action="{{ route('billing.readings.import.commit') }}" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="month_cycle" value="{{ $pv['month_cycle'] }}">
+        @if(!empty($pv['issues']))
+          <label style="display:block;margin:8px 0;font-size:13px">
+            <input type="checkbox" name="skip_flagged" value="1"> Skip flagged rows and proceed ({{ count($pv['issues']) }} rows chhod di jayengi)
+          </label>
+        @endif
         <div class="mr-row">
           <input class="mr-input" type="file" name="csv_file" accept=".csv" required>
           <button class="mr-btn" type="submit" onclick="return confirm('Import these readings?')">Confirm Import</button>
@@ -79,11 +103,59 @@
 <footer class="mr-foot"><div class="mr-footin"><b>Colony Billing Operations</b><span class="mr-links">Meter readings and employee allocation</span></div></footer>
 <script>
 const csrf=@json(csrf_token()), out=document.getElementById('readingsResult');
+
+const quickReadingForm=document.getElementById('quickReadingForm');
+const latestBtn=document.getElementById('latestBtn');
+const latestUnit=document.getElementById('latestUnit');
+
+const mr_department=document.getElementById('mr_department');
+const mr_building=document.getElementById('mr_building');
+const mr_unit=document.getElementById('mr_unit');
+const mr_room=document.getElementById('mr_room');
+const mr_from=document.getElementById('mr_from');
+const mr_to=document.getElementById('mr_to');
+const mr_run=document.getElementById('mr_run');
+const mr_reset=document.getElementById('mr_reset');
+const mr_status=document.getElementById('mr_status');
+const mr_kpi_meters=document.getElementById('mr_kpi_meters');
+const mr_kpi_consumption=document.getElementById('mr_kpi_consumption');
+const mr_kpi_unmapped=document.getElementById('mr_kpi_unmapped');
+const mr_kpi_source=document.getElementById('mr_kpi_source');
+const mr_rows=document.getElementById('mr_rows');
+const meterMode=document.getElementById('meterMode');
+const employeeMode=document.getElementById('employeeMode');
+
+const emp_month=document.getElementById('emp_month');
+const emp_search=document.getElementById('emp_search');
+const emp_run=document.getElementById('emp_run');
+const emp_status=document.getElementById('emp_status');
+const emp_rows=document.getElementById('emp_rows');
+
 const esc=v=>String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 function show(v){out.textContent=JSON.stringify(v,null,2)}
 async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf,'Accept':'application/json'}};if(payload!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload)}const r=await fetch(url,o),j=await r.json().catch(()=>({error:'Non-JSON response'}));show({status:r.status,body:j});return {r,j}}
 latestBtn.onclick=()=>req('{{ url('/meter-reading/latest') }}/'+encodeURIComponent(latestUnit.value.trim()));
-quickReadingForm.onsubmit=async e=>{e.preventDefault();const b=e.submitter;b.disabled=true;try{await req('{{ url('/meter-reading/upsert') }}','POST',Object.fromEntries(new FormData(e.target)))}finally{b.disabled=false}};
+quickReadingForm.onsubmit=async e=>{
+e.preventDefault();
+const b=e.submitter,msg=document.getElementById('quickReadingMsg');
+b.disabled=true;
+msg.style.display='none';
+try{
+ const {r,j}=await req('{{ url('/meter-reading/upsert') }}','POST',Object.fromEntries(new FormData(e.target)));
+ msg.style.display='block';
+ if(r.ok){
+   msg.style.background='#ecfdf5';
+   msg.style.color='#047857';
+   msg.textContent='✓ Reading saved successfully';
+ }else{
+   msg.style.background='#fef2f2';
+   msg.style.color='#b91c1c';
+   msg.textContent='✕ '+(j.error||j.message||'Reading could not be saved');
+ }
+}finally{
+ b.disabled=false;
+}
+};
 let mrCascadeRows=[],mrCascadeLoaded=false;
 function uniq(rows,key){return [...new Set(rows.map(r=>String(r[key]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
 function options(el,values,label){const keep=el.value;el.innerHTML=`<option value="">${label}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(values.includes(keep))el.value=keep}

@@ -23,6 +23,19 @@ class ReadingImportController extends Controller
             return back()->with('error', $data['error']);
         }
 
+        $skip = $request->boolean('skip_flagged');
+        if (!empty($data['issues']) && !$skip) {
+            return back()->with('reading_preview', $data)
+                ->with('error', count($data['issues']).' row(s) me masla hai. Fix karo ya "Skip flagged rows" tick kar ke proceed karo.');
+        }
+
+        $skipped = 0;
+        if ($skip) {
+            $before = count($data['rows']);
+            $data['rows'] = array_values(array_filter($data['rows'], fn($r) => empty($r['flagged'])));
+            $skipped = $before - count($data['rows']);
+        }
+
         $inserted = 0; $updated = 0;
         DB::transaction(function () use ($data, &$inserted, &$updated) {
             foreach ($data['rows'] as $r) {
@@ -59,7 +72,9 @@ class ReadingImportController extends Controller
             }
         });
 
-        return back()->with('status', "Readings imported — {$inserted} new, {$updated} updated.");
+        $msg = "Readings imported — {$inserted} new, {$updated} updated.";
+        if ($skipped > 0) { $msg .= " Skipped: {$skipped}."; }
+        return back()->with('status', $msg);
     }
 
     private function parse(Request $request): array
@@ -72,7 +87,6 @@ class ReadingImportController extends Controller
         $mc = $request->input('month_cycle');
         $cycle = DB::table('util_month_cycle')->where('month_cycle', $mc)->first();
 
-        // agar cycle mojood nahi to default (16 -> 15) bana do
         if (!$cycle) {
             if (!preg_match('/^(\d{2})-(\d{4})$/', (string) $mc, $m)) {
                 return ['error' => 'Invalid month format: '.$mc];
@@ -94,7 +108,7 @@ class ReadingImportController extends Controller
         $headers = fgetcsv($handle);
         if (!$headers) { fclose($handle); return ['error' => 'CSV is empty.']; }
 
-        $headers = array_map(fn($h) => strtolower(trim((string) $h)), $headers);
+        $headers = array_map(fn($h) => strtolower(trim(preg_replace('/^\\xEF\\xBB\\xBF/', '', (string) $h))), $headers);
         $iUnit = array_search('unit_id', $headers, true);
         $iCurr = array_search('current_reading', $headers, true);
         $iPrev = array_search('previous_reading', $headers, true);
@@ -104,7 +118,12 @@ class ReadingImportController extends Controller
             return ['error' => 'CSV must contain unit_id and current_reading columns.'];
         }
 
-        $rows = []; $errors = []; $line = 1;
+        $meterMap = DB::table('util_meter_unit')
+            ->where('is_active', 1)
+            ->where('meter_type', 'ELEC')
+            ->pluck('meter_id', 'unit_id')->toArray();
+
+        $rows = []; $issues = []; $seen = []; $line = 1;
         while (($l = fgetcsv($handle)) !== false) {
             $line++;
             if ($l === [null] || $l === []) { continue; }
@@ -112,12 +131,25 @@ class ReadingImportController extends Controller
             $unit = trim((string) ($l[$iUnit] ?? ''));
             if ($unit === '') { continue; }
 
-            $curr = (float) ($l[$iCurr] ?? 0);
-            $prev = null;
+            $rawCurr = trim((string) ($l[$iCurr] ?? ''));
+            $meter   = $meterMap[$unit] ?? null;
+            $block   = null;
+
+            if ($meter === null) {
+                $block = 'Unit system me nahi mila (koi active ELEC meter nahi)';
+            } elseif (isset($seen[$unit])) {
+                $block = 'Duplicate row — line '.$seen[$unit].' par pehle aa chuka hai';
+            } elseif ($rawCurr === '') {
+                $block = 'current_reading blank hai';
+            } elseif (!is_numeric($rawCurr)) {
+                $block = 'current_reading numeric nahi: "'.$rawCurr.'"';
+            }
+            if (!isset($seen[$unit])) { $seen[$unit] = $line; }
+
+            $curr = (float) $rawCurr;
             if ($iPrev !== false && trim((string) ($l[$iPrev] ?? '')) !== '') {
                 $prev = (float) $l[$iPrev];
             } else {
-                // previous cycle se uthao
                 $prev = (float) (DB::table('electric_v1_readings')
                     ->where('unit_id', $unit)
                     ->where('cycle_end_date', '<', $cycle->cycle_start_date)
@@ -126,24 +158,42 @@ class ReadingImportController extends Controller
             }
 
             $status = 'NORMAL';
-            if ($curr < $prev) { $status = 'REVERSED'; $errors[] = "Row {$line} ({$unit}): current < previous"; }
+            if ($block === null && $curr < $prev) {
+                $status = 'REVERSED';
+                $block  = 'Current ('.$curr.') previous ('.$prev.') se kam hai';
+            }
+
+            if ($block !== null) {
+                $issues[] = [
+                    'line'     => $line,
+                    'unit_id'  => $unit,
+                    'meter_id' => $meter ?? '-',
+                    'message'  => $block,
+                ];
+            }
 
             $rows[] = [
                 'unit_id'          => $unit,
+                'meter_id'         => $meter ?? '-',
                 'previous_reading' => $prev,
                 'current_reading'  => $curr,
                 'consumption'      => max($curr - $prev, 0),
                 'status'           => $status,
+                'flagged'          => $block !== null,
             ];
         }
         fclose($handle);
+
+        $missing = array_values(array_diff(array_keys($meterMap), array_column($rows, 'unit_id')));
 
         return [
             'cycle_start' => $cycle->cycle_start_date,
             'cycle_end'   => $cycle->cycle_end_date,
             'month_cycle' => $request->input('month_cycle'),
             'rows'        => $rows,
-            'errors'      => $errors,
+            'issues'      => $issues,
+            'missing'     => $missing,
+            'errors'      => array_column($issues, 'message'),
         ];
     }
 }

@@ -24,42 +24,107 @@ class SnapshotBuilder
         $consumptionByUnit = [];
         foreach ($readings as $r) {
             $u = trim((string)$r->unit_id);
-            if (($r->reading_status ?? '') !== 'NORMAL') {
+            if (!in_array(strtoupper(trim((string) ($r->reading_status ?? ''))), ['OK', 'NORMAL'], true)) {
                 $issues[] = ['unit'=>$u, 'code'=>'READING_STATUS_'.$r->reading_status];
                 continue;
             }
             $consumptionByUnit[$u] = (float)$r->current_reading - (float)$r->previous_reading;
         }
 
-        // 2. allowance (room-level, active only)
-        $allowRows = DB::table('electric_v1_allowance')->where('is_active', 1)->get();
+        // 2. allowance sources
+        // Dedicated room table is authoritative.
+        // Legacy table is fallback for non-migrated rooms / unit-level allowance.
+        $roomAllowRows = DB::table('electric_v1_room_allowance')->get();
+        $legacyAllowRows = DB::table('electric_v1_allowance')->where('is_active', 1)->get();
+
+        $roomAllowByUnit = [];
+        foreach ($roomAllowRows as $a) {
+            $u = trim((string)$a->unit_id);
+            $room = trim((string)$a->room_no);
+
+            if ($u === '' || $room === '') {
+                continue;
+            }
+
+            $roomAllowByUnit[$u][$room] = [
+                'allowance' => (float)$a->room_free_allowance,
+                'active' => (bool)$a->is_active,
+            ];
+        }
+
+        $legacyRoomAllowByUnit = [];
+        $unitFallbackAllow = [];
+
+        foreach ($legacyAllowRows as $a) {
+            $u = trim((string)$a->unit_id);
+            $room = trim((string)($a->room_no ?? ''));
+
+            if ($u === '') {
+                continue;
+            }
+
+            if ($room === '') {
+                $unitFallbackAllow[$u] = (float)$a->free_electric;
+            } else {
+                $legacyRoomAllowByUnit[$u][$room] = (float)$a->free_electric;
+            }
+        }
 
         // 3. occupancy (unit -> room -> employees) + active days
         $occ = DB::table('electric_v1_occupancy')->get();
         $monthDate = substr($cycleEnd, 0, 7).'-01';
+
         $daysByEmp = DB::table('electric_active_days_monthly')
             ->where('billing_month_date', $monthDate)
             ->pluck('active_days', 'company_id');
 
-        // structure banao
         $units = [];
+
         foreach ($occ as $o) {
             $u = trim((string)$o->unit_id);
             $room = trim((string)($o->room_id ?? ''));
+
+            // Blank room + exactly one defined room = safely map to that room.
+            if (
+                $room === ''
+                && isset($roomAllowByUnit[$u])
+                && count($roomAllowByUnit[$u]) === 1
+            ) {
+                $room = array_key_first($roomAllowByUnit[$u]);
+            }
+
             $units[$u]['rooms'][$room]['employees'][] = [
                 'company_id'  => (string)$o->company_id,
                 'active_days' => (float)($daysByEmp[$o->company_id] ?? 0),
             ];
         }
 
-        // allowance attach (unit_id + room_no match)
-        foreach ($allowRows as $a) {
-            $u = trim((string)$a->unit_id);
-            $room = trim((string)($a->room_no ?? ''));
-            if ($room !== '' && isset($units[$u]['rooms'][$room])) {
-                $units[$u]['rooms'][$room]['allowance'] = (float)$a->free_electric;
+        // Attach allowance.
+        foreach ($units as $u => &$unit) {
+            foreach ($unit['rooms'] as $rn => &$room) {
+
+                // Dedicated room record exists: it is authoritative.
+                if ($rn !== '' && isset($roomAllowByUnit[$u][$rn])) {
+                    if ($roomAllowByUnit[$u][$rn]['active']) {
+                        $room['allowance'] = $roomAllowByUnit[$u][$rn]['allowance'];
+                    }
+                    continue;
+                }
+
+                // Legacy fallback only if room does not exist in dedicated table.
+                if ($rn !== '' && isset($legacyRoomAllowByUnit[$u][$rn])) {
+                    $room['allowance'] = $legacyRoomAllowByUnit[$u][$rn];
+                    continue;
+                }
+
+                // Blank room uses active unit-level legacy allowance.
+                if ($rn === '' && isset($unitFallbackAllow[$u])) {
+                    $room['allowance'] = $unitFallbackAllow[$u];
+                }
             }
+            unset($room);
         }
+        unset($unit);
 
         // consumption attach + missing flags
         foreach ($units as $u => &$unit) {

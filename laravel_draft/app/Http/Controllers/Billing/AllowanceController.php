@@ -18,9 +18,9 @@ class AllowanceController extends Controller
 {
     private const ALLOWANCE_TYPES = [
         'BACHELOR',
-        'CONTAINER',
-        'HOSTEL',
-        'HOUSE',
+        'SENIOR_STAFF',
+        'FAMILY',
+        'COMMON',
     ];
 
     public function index(Request $request): View
@@ -75,9 +75,12 @@ class AllowanceController extends Controller
                     $unitKey = strtoupper(trim((string) $room->unit_id));
                     $parent = $parentByUnit->get($unitKey);
                     $meta = $roomMeta->get($this->roomKey((string) $room->unit_id, (string) $room->room_no));
-                    $allowanceType = $parent
-                        ? $this->normalizedAllowanceType($parent)
-                        : $this->classifyType((string) ($meta->residence_type ?? ''));
+                    $storedAllowanceType = strtoupper(trim((string) ($room->allowance_type ?? '')));
+                    $allowanceType = in_array($storedAllowanceType, self::ALLOWANCE_TYPES, true)
+                        ? $storedAllowanceType
+                        : ($parent
+                            ? $this->normalizedAllowanceType($parent)
+                            : $this->classifyType((string) ($meta->residence_type ?? '')));
 
                     return [
                         'source' => 'room',
@@ -94,7 +97,18 @@ class AllowanceController extends Controller
                     ];
                 });
 
-            $rows = $rows->concat($roomRows);
+            // Hide legacy parent-room rows when the same room exists
+            // in the dedicated room allowance table. Parent-only rooms remain visible.
+            $roomUnits = $roomRows->mapWithKeys(fn (array $row) => [
+                strtoupper(trim((string) $row['unit_id'])) => true,
+            ]);
+
+            $rows = $rows
+                ->reject(fn (array $row) =>
+                    $row['source'] === 'unit'
+                    && $roomUnits->has(strtoupper(trim((string) $row['unit_id'])))
+                )
+                ->concat($roomRows);
         }
 
         $rows = $rows
@@ -220,6 +234,7 @@ class AllowanceController extends Controller
                 ->update([
                     'room_no' => $data['room_no'],
                     'room_free_allowance' => $data['free_electric'],
+                    'allowance_type' => $data['allowance_type'],
                     'updated_at' => now(),
                 ]);
 
@@ -541,6 +556,7 @@ class AllowanceController extends Controller
                 'unit_id' => $data['unit_id'],
                 'room_no' => $data['room_no'],
                 'room_free_allowance' => $data['free_electric'],
+                'allowance_type' => $data['allowance_type'],
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -625,7 +641,7 @@ class AllowanceController extends Controller
 
     private function billingResidenceType(string $allowanceType): string
     {
-        return $allowanceType === 'HOUSE' ? 'HOUSE' : 'ROOM';
+        return $allowanceType === 'FAMILY' ? 'HOUSE' : 'ROOM';
     }
 
     private function roomKey(string $unitId, string $roomNo): string
