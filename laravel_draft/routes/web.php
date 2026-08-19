@@ -58,8 +58,10 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/imports-validation', [ParityUiController::class, 'imports']);
     Route::get('/reporting', [ParityUiController::class, 'reports']);
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
+    Route::post('/people-residency/residence-status', [\App\Http\Controllers\Billing\UnitDirectoryController::class, 'setResidenceStatus'])->name('billing.residence.status');
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
     Route::get('/family-list', [ParityUiController::class, 'familyList']);
+    Route::get('/family-list/export', [\App\Http\Controllers\Billing\FamilyExportController::class, 'export']);
     Route::get('/staff-check', [ParityUiController::class, 'staffCheck']);
     Route::post('/staff-check/compare', [ParityUiController::class, 'staffCheckCompare']);
     Route::post('/staff-check/action', [ParityUiController::class, 'staffCheckAction']);
@@ -298,6 +300,8 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
     Route::get('/statement-v2', [\App\Http\Controllers\Billing\StatementV2Controller::class, 'show'])->name('billing.statement.v2');
     Route::post('/readings/import/preview', [\App\Http\Controllers\Billing\ReadingImportController::class, 'preview'])->name('billing.readings.import.preview');
     Route::post('/readings/import/commit', [\App\Http\Controllers\Billing\ReadingImportController::class, 'commit'])->name('billing.readings.import.commit');
+    Route::get('/bulk-leave', [\App\Http\Controllers\Billing\EmployeeStatusController::class, 'bulkLeaveForm'])->name('billing.emp.bulkleave.form');
+    Route::post('/bulk-leave', [\App\Http\Controllers\Billing\EmployeeStatusController::class, 'bulkLeave'])->name('billing.emp.bulkleave');
     Route::post('/employees/{companyId}/leave', [\App\Http\Controllers\Billing\EmployeeStatusController::class, 'setLeave'])->name('billing.emp.leave');
     Route::post('/employees/{companyId}/reactivate', [\App\Http\Controllers\Billing\EmployeeStatusController::class, 'reactivate'])->name('billing.emp.reactivate');
     Route::get('/pending-employees', [\App\Http\Controllers\Billing\PendingEmployeeController::class, 'index'])->name('billing.pending.index');
