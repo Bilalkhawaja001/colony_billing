@@ -62,11 +62,14 @@ class OccupiedRoomEqualSplit implements BillingMethod
                 $emps = $room['employees'];
                 $empCount = count($emps);
                 $perEmp = $billable / $empCount;
+                $empUsedUnits = $perRoom / $empCount;
+                $eligibleUnits = $allowance / $empCount;
 
                 // remainder handling: last employee ko rounding ka farq
                 $allocated = 0.0;
                 foreach ($emps as $i => $emp) {
                     $companyId = is_array($emp) ? $emp['company_id'] : $emp;
+                    $activeDays = is_array($emp) && array_key_exists('active_days', $emp) ? (float) $emp['active_days'] : null;
                     $isLast = ($i === $empCount - 1);
                     $units = $isLast ? ($billable - $allocated) : round($perEmp, 4);
                     $allocated += $units;
@@ -82,6 +85,13 @@ class OccupiedRoomEqualSplit implements BillingMethod
                         'billable_units'=> round($units, 4),
                         'rate'          => $rate,
                         'amount'        => $amount,
+                        'room_persons'  => $empCount,
+                        'emp_used_units'=> round($empUsedUnits, 4),
+                        'eligible_units'=> round($eligibleUnits, 4),
+                        'unit_used_elec'=> round($consumption, 4),
+                        'unit_total_attendance' => null,
+                        'active_days'   => $activeDays,
+                        'employee_attendance_in_unit' => $activeDays,
                     ];
                 }
             }

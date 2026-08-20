@@ -34,6 +34,7 @@
 
   @if(session('status'))<div class="bg-ok/10 border border-ok/30 text-ok rounded-lg px-4 py-2 mb-4 text-sm font-semibold">{{ session('status') }}</div>@endif
   @if(session('error'))<div class="bg-bad/10 border border-bad/30 text-bad rounded-lg px-4 py-2 mb-4 text-sm font-semibold">{{ session('error') }}</div>@endif
+  @if(session('warning'))<div class="bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-4 py-2 mb-4 text-sm font-semibold">{{ session('warning') }}</div>@endif
 
   <div style="display:flex;flex-direction:column;gap:12px">
     @foreach($steps as $i => $s)

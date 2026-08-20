@@ -73,7 +73,7 @@ class EmployeeProfileService
 
         $familyResidenceStatus = $hasHouseholdResidence
             ? 'Active Family House'
-            : 'Outside Colony / No Active Family House';
+            : 'No Active Family House';
 
         $residenceHistory = DB::table('employee_residence_assignments')
             ->where('company_id', $companyId)

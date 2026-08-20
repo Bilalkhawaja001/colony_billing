@@ -152,7 +152,7 @@ class ExplicitElectricBillingCalculator
 
                 foreach (array_keys($occupants) as $companyId) {
                     $attendanceDays = max(0.0, (float)($attendanceByCompany[$companyId] ?? 0.0));
-                    $attendanceFactor = min(1.0, $attendanceDays / $readingCycleDays);
+                    $attendanceFactor = 1.0; /* EQUAL_SPLIT: attendance ignored */
                     $presence[$companyId] = ($presence[$companyId] ?? 0.0) + $attendanceFactor;
                     $allowance[$companyId] = ($allowance[$companyId] ?? 0.0) + ($perPersonAllowance * $attendanceFactor);
                 }

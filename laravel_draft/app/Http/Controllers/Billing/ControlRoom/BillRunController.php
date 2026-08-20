@@ -71,6 +71,48 @@ class BillRunController extends Controller
             'status' => 'DRY_RUN_ONLY',
         ]);
     }
+    public function voidRegenerate(Request $request, BillRunGenerateService $generator)
+    {
+        if (!$request->boolean('confirm_regenerate')) {
+            return back()->with('error', 'Please tick the confirmation box to void and regenerate.');
+        }
+        $monthCycle = $request->input('month_cycle');
+        $methodCode = $request->input('method_code', 'OCCUPIED_ROOM_EQUAL_SPLIT');
+        $reason     = trim((string) $request->input('reason', ''));
+        if ($reason === '') {
+            return back()->with('error', 'A reason is required before voiding an official bill run.');
+        }
+        $role = optional($request->user())->role ?? 'SUPER_ADMIN';
+
+        $run = \App\Models\BillRun::where('month_cycle', $monthCycle)
+            ->where('status', \App\Services\Billing\V2\BillRunStateMachine::GENERATED)
+            ->orderByDesc('id')->first();
+        if (!$run) {
+            return back()->with('error', 'No GENERATED run found for '.$monthCycle.'.');
+        }
+
+        try {
+            app(\App\Services\Billing\V2\BillRunGateService::class)
+                ->transition($run->id, 'void', $role, optional($request->user())->id, $reason);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Could not void the run: '.$e->getMessage());
+        }
+
+        \Illuminate\Support\Facades\DB::table('electric_v1_output_employee_final')
+            ->where('cycle_start_date', $run->cycle_start_date)
+            ->where('cycle_end_date', $run->cycle_end_date)->delete();
+        \Illuminate\Support\Facades\DB::table('electric_v1_output_employee_unit_drilldown')
+            ->where('cycle_start_date', $run->cycle_start_date)
+            ->where('cycle_end_date', $run->cycle_end_date)->delete();
+
+        $result = $generator->generate($monthCycle, optional($request->user())->id, $role, $methodCode);
+        if (($result['status'] ?? '') !== 'ok') {
+            return back()->with('error', 'Voided run '.$run->run_uuid.', but regeneration failed: '.($result['reason'] ?? 'unknown'));
+        }
+        return redirect()->route('billing.control.export', ['month_cycle'=>$monthCycle])
+            ->with('success', 'Voided '.$run->run_uuid.' and regenerated. New Bill Reference: '.$result['bill_reference']);
+    }
+
     public function generate(Request $request, BillRunGenerateService $generator)
     {
         if (!$request->boolean('confirm_official')) {

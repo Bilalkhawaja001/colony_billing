@@ -327,7 +327,7 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
                 {{ $member['current_status'] }}
               </span>
             </td>
-            <td>{{ $member['current_house'] ?: 'Outside Colony / None' }}</td>
+            <td>{{ $member['current_house'] ?: 'Not assigned' }}</td>
             <td>
               @if($member['latest_movement'])
                 {{ $member['latest_movement']['movement_type'] === 'MOVE_OUT' ? 'Move Out' : 'Move In' }}

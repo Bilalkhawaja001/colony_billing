@@ -50,9 +50,17 @@ class BillRunGenerateService
         }
 
         // DRAFT run header
-        $run = BillRun::query()->firstOrNew([
-            'month_cycle'=>$month, 'bill_type'=>$billType, 'scope_hash'=>$scopeHash,
-        ]);
+        $run = BillRun::query()
+            ->where('month_cycle', $month)
+            ->where('bill_type', $billType)
+            ->where('scope_hash', $scopeHash)
+            ->where('status', '<>', BillRunStateMachine::VOIDED)
+            ->first();
+        if (!$run) {
+            $run = new BillRun([
+                'month_cycle'=>$month, 'bill_type'=>$billType, 'scope_hash'=>$scopeHash,
+            ]);
+        }
         if (BillRunStateMachine::isCommitted($run->status)) {
             return ['status'=>'blocked',
                     'reason'=>'A committed run already exists. Bill Reference: '.$run->run_uuid,

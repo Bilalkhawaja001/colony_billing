@@ -66,6 +66,43 @@
     </section>
 @endif
 
+@php($generatedRun = \App\Models\BillRun::where('month_cycle', $month)->where('status','GENERATED')->orderByDesc('id')->first())
+@if($generatedRun)
+    <section class="card" style="margin-top:24px;border:1px solid #fed7aa;background:#fffbeb">
+        <h2 style="margin-top:0">Void &amp; Regenerate</h2>
+        <p style="font-size:13px;color:#92400e;margin-bottom:16px">
+            An official run already exists for <strong>@include('billing_control.components.month-label', ['value' => $month])</strong>
+            (Ref: <code>{{ $generatedRun->run_uuid }}</code>, generated {{ $generatedRun->generated_at }}).
+            Use this only after correcting data — the current run will be voided and its bill rows replaced.
+            The voided run stays in the audit trail.
+        </p>
+        <form method="POST" action="{{ route('billing.control.generate.void_regenerate') }}"
+              onsubmit="return confirm('This will VOID the current official bills and generate new ones. Continue?');"
+              style="text-align:left;max-width:520px">
+            @csrf
+            <input type="hidden" name="month_cycle" value="{{ $month }}">
+            <div style="margin-bottom:14px">
+                <label style="display:block;font-weight:600;margin-bottom:6px">Billing Method</label>
+                <select class="form-select" name="method_code" required>
+                    @foreach(\App\Services\BillingEngine\MethodRegistry::options() as $mc => $ml)
+                        <option value="{{ $mc }}" @selected($mc === 'OCCUPIED_ROOM_EQUAL_SPLIT')>{{ $ml }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div style="margin-bottom:14px">
+                <label style="display:block;font-weight:600;margin-bottom:6px">Reason <span style="color:#b91c1c">*</span></label>
+                <input class="form-input" type="text" name="reason" required maxlength="255"
+                       placeholder="e.g. occupancy corrections applied" style="width:100%">
+            </div>
+            <label style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px">
+                <input type="checkbox" name="confirm_regenerate" value="1" required>
+                <span>I understand the existing official bills will be voided and replaced.</span>
+            </label>
+            <button class="btn btn-danger" type="submit">Void &amp; Regenerate</button>
+        </form>
+    </section>
+@endif
+
 <section class="stat-grid" style="margin-top:24px">
     @include('billing_control.components.status-card', ['value' => data_get($stats, 'active_employees', '-'), 'title' => 'Employees'])
     @include('billing_control.components.status-card', ['value' => data_get($stats, 'current_readings', '-'), 'title' => 'Readings In'])

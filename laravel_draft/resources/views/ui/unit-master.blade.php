@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
-<html class="light" lang="en"><head>
-<meta charset="utf-8"/>
+<html class="light" lang="en"><head><meta charset="utf-8">
+
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>NodeSky Billing - Housing Unit Directory</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -145,7 +145,11 @@
 @php
   $tsTotal = collect($typeStats)->sum('total');
   $tsVacant = collect($typeStats)->sum('vacant');
-  $icons = ['HOUSE'=>'home','HOSTEL'=>'apartment','BACHELOR'=>'single_bed','CONTAINER'=>'inventory_2','UNSET'=>'help'];
+  $icons = ['HOUSE'=>'home','HOSTEL'=>'apartment','BACHELOR'=>'single_bed','CONTAINER'=>'inventory_2','COMMON'=>'domain_disabled','UNSET'=>'help'];
+  $residenceTypes = ['ROOM', 'CONTAINER', 'HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C', 'COMMON'];
+  $occupantGrades = ['BACHELOR', 'SENIOR_STAFF', 'FAMILY', 'COMMON'];
+  $departments = ['Weaving', 'Spinning', 'Centralized', 'External'];
+  $floors = ['Ground', '1st', '2nd', '3rd', '4th'];
 @endphp
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
   <a href="{{ url('unit-directory') }}" class="block bg-surface-container-lowest border rounded p-3 hover:shadow-md transition {{ $type === '' ? 'border-primary ring-2 ring-primary/30' : 'border-outline-variant' }}">
@@ -192,6 +196,7 @@
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Room No</th>
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Location</th>
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Block / Floor</th>
+<th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Department</th>
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Occupants</th>
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase">Status</th>
 <th class="py-2 px-4 font-label-md text-label-md text-on-surface-variant uppercase text-right">Actions</th>
@@ -220,7 +225,7 @@
 </td>
 </tr>
 <tr class="bg-surface-container-low/40">
-<td colspan="7" class="px-4 pb-3 pt-0">
+<td colspan="8" class="px-4 pb-3 pt-0">
   <details>
     <summary class="cursor-pointer text-xs font-semibold text-primary select-none">Rooms ({{ count($rooms[$u->unit_id] ?? []) }})</summary>
     <div class="mt-2 flex flex-wrap gap-2 items-center">
@@ -257,6 +262,35 @@
             @else
               <div class="text-xs text-on-surface-variant">No residents in this room.</div>
             @endif
+            <form method="post" action="{{ route('billing.units.room.store') }}" class="mt-2 grid grid-cols-2 gap-2 items-end border-t border-outline-variant pt-2">
+              @csrf
+              <input type="hidden" name="unit_id" value="{{ $u->unit_id }}">
+              <input type="hidden" name="room_no" value="{{ $rm->room_no }}">
+              <label class="text-xs text-on-surface-variant">Residence Type
+                <select name="residence_type" class="mt-1 w-full border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+                  <option value="">â€”</option>
+                  @foreach($residenceTypes as $rt)
+                    <option value="{{ $rt }}" @selected($rm->residence_type === $rt)>{{ $rt }}</option>
+                  @endforeach
+                </select>
+              </label>
+              <label class="text-xs text-on-surface-variant">Occupant Grade
+                <select name="occupant_grade" class="mt-1 w-full border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+                  <option value="">â€”</option>
+                  @foreach($occupantGrades as $og)
+                    <option value="{{ $og }}" @selected($rm->occupant_grade === $og)>{{ $og }}</option>
+                  @endforeach
+                </select>
+              </label>
+              <label class="text-xs text-on-surface-variant">Floor
+                <select name="floor" class="mt-1 w-full border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+                  @foreach($floors as $fl)
+                    <option value="{{ $fl }}" @selected(($rm->floor ?: 'Ground') === $fl)>{{ $fl }}</option>
+                  @endforeach
+                </select>
+              </label>
+              <button type="submit" class="text-primary text-xs font-semibold hover:underline text-left">Save room</button>
+            </form>
             <form method="post" action="{{ route('billing.units.room.toggle', $rm->id) }}" class="mt-2">@csrf @method('PATCH')
               <button type="submit" class="text-xs font-semibold {{ $rm->is_active ? 'text-red-600' : 'text-green-700' }} hover:underline">{{ $rm->is_active ? 'Deactivate room' : 'Activate room' }}</button>
             </form>
@@ -267,6 +301,17 @@
         @csrf
         <input type="hidden" name="unit_id" value="{{ $u->unit_id }}">
         <input name="room_no" required placeholder="{{ $u->unit_id }}-1" class="border border-outline-variant rounded px-2 py-1 text-xs w-32">
+        <select name="residence_type" class="border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+          <option value="">Type</option>
+          @foreach($residenceTypes as $rt)<option value="{{ $rt }}">{{ $rt }}</option>@endforeach
+        </select>
+        <select name="occupant_grade" class="border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+          <option value="">Grade</option>
+          @foreach($occupantGrades as $og)<option value="{{ $og }}">{{ $og }}</option>@endforeach
+        </select>
+        <select name="floor" class="border border-outline-variant rounded px-2 py-1 text-xs bg-surface-container-lowest">
+          @foreach($floors as $fl)<option value="{{ $fl }}" @selected($fl === 'Ground')>{{ $fl }}</option>@endforeach
+        </select>
         <button type="submit" class="bg-primary text-white rounded px-2 py-1 text-xs font-semibold">+ Room</button>
       </form>
     </div>
@@ -274,7 +319,7 @@
 </td>
 </tr>
 @empty
-<tr><td colspan="7" class="px-4 py-8 text-center text-on-surface-variant">No units found.</td></tr>
+<tr><td colspan="8" class="px-4 py-8 text-center text-on-surface-variant">No units found.</td></tr>
 @endforelse
 </tbody>
 </table>

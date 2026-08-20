@@ -68,8 +68,20 @@ class AttendanceProrated implements BillingMethod
             // employee share = unitBillable * (days / unitAttendance)
             $allEmps = [];
             foreach ($rooms as $roomNo => $room) {
-                foreach (($room['employees'] ?? []) as $e) {
-                    $allEmps[] = ['room'=>$roomNo, 'company_id'=>$e['company_id'], 'days'=>(float)($e['active_days'] ?? 0), 'allowance'=>(float)($room['allowance'] ?? 0)];
+                $roomEmployees = $room['employees'] ?? [];
+                $persons = count($roomEmployees);
+                foreach ($roomEmployees as $e) {
+                    $days = (float)($e['active_days'] ?? 0);
+                    $allowance = (float)($room['allowance'] ?? 0);
+                    $allEmps[] = [
+                        'room'=>$roomNo,
+                        'company_id'=>$e['company_id'],
+                        'days'=>$days,
+                        'allowance'=>$allowance,
+                        'room_persons'=>$persons,
+                        'eligible_units'=>($allowance * ($days / $cycleDays)) / $persons,
+                        'emp_used_units'=>$consumption * ($days / $unitAttendance),
+                    ];
                 }
             }
 
@@ -92,6 +104,13 @@ class AttendanceProrated implements BillingMethod
                     'billable_units'=> round($units, 4),
                     'rate'          => $rate,
                     'amount'        => $amount,
+                    'room_persons'  => $e['room_persons'],
+                    'emp_used_units'=> round($e['emp_used_units'], 4),
+                    'eligible_units'=> round($e['eligible_units'], 4),
+                    'unit_used_elec'=> round($consumption, 4),
+                    'unit_total_attendance' => round($unitAttendance, 4),
+                    'active_days'   => $e['days'],
+                    'employee_attendance_in_unit' => $e['days'],
                 ];
             }
         }
