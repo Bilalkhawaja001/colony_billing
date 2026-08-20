@@ -103,6 +103,73 @@ class MonthlyActiveDaysController extends Controller
         ]);
     }
 
+    public function employees(Request $request)
+    {
+        return response()->json([
+            'status' => 'ok',
+            'employees' => $this->service->searchEmployees((string) $request->query('q', ''), 20),
+        ]);
+    }
+
+    public function grid(Request $request)
+    {
+        $billingMonthDate = $this->normalizeMonth((string) $request->query('billing_month_date', ''));
+        if ($billingMonthDate === '') {
+            return response()->json(['status' => 'error', 'error' => 'billing_month_date required'], 400);
+        }
+
+        $cycle = $this->service->cycleForMonth($billingMonthDate);
+
+        return response()->json([
+            'status' => 'ok',
+            'billing_month_date' => $billingMonthDate,
+            'cycle' => $cycle,
+            'rows' => $this->service->rowsForMonthDetailed($billingMonthDate, [
+                'cycle_start_date' => $cycle['cycle_start_date'] ?? '',
+                'q' => (string) $request->query('q', ''),
+                'department' => (string) $request->query('department', ''),
+                'status' => (string) $request->query('status', 'ALL'),
+                'entry' => (string) $request->query('entry', 'ALL'),
+                'source' => (string) $request->query('source', ''),
+                'limit' => (int) $request->query('limit', 500),
+            ]),
+        ]);
+    }
+
+    public function storeRow(Request $request)
+    {
+        $billingMonthDate = $this->normalizeMonth((string) $request->input('billing_month_date', ''));
+        $companyId = trim((string) $request->input('company_id', ''));
+        if ($billingMonthDate === '' || $companyId === '') {
+            return response()->json(['status' => 'error', 'error' => 'billing_month_date and company_id required'], 400);
+        }
+
+        $result = $this->service->upsertRow(
+            $billingMonthDate,
+            $companyId,
+            $request->input('active_days'),
+            $request->input('remarks'),
+            (string) (optional($request->user())->name ?? $request->session()->get('auth_user_name', 'manual')),
+            $request->input('cycle_start_date') ? (string) $request->input('cycle_start_date') : null,
+            $request->input('cycle_end_date') ? (string) $request->input('cycle_end_date') : null
+        );
+
+        return response()->json($result, $result['_http'] ?? 200);
+    }
+
+    public function destroyRow(Request $request)
+    {
+        $billingMonthDate = $this->normalizeMonth((string) $request->input('billing_month_date', ''));
+        $companyId = trim((string) $request->input('company_id', ''));
+        if ($billingMonthDate === '' || $companyId === '') {
+            return response()->json(['status' => 'error', 'error' => 'billing_month_date and company_id required'], 400);
+        }
+
+        $result = $this->service->deleteRow($billingMonthDate, $companyId);
+
+        return response()->json($result, $result['_http'] ?? 200);
+    }
+
     private function normalizeMonth(string $value): string
     {
         $value = trim($value);

@@ -198,6 +198,163 @@ class MonthlyActiveDaysImportService
             ->toArray();
     }
 
+    public function searchEmployees(string $q, int $limit = 20): array
+    {
+        $q = trim($q);
+        return DB::table('employees_master')
+            ->when($q !== '', function ($b) use ($q) {
+                $b->where(function ($w) use ($q) {
+                    $w->where('company_id', 'like', "%{$q}%")
+                      ->orWhere('name', 'like', "%{$q}%")
+                      ->orWhere('cnic_no', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('company_id')
+            ->limit($limit)
+            ->get(['company_id', 'name', 'department', 'section', 'designation', 'unit_id', 'block_floor', 'room_no', 'active', 'join_date', 'leave_date'])
+            ->map(fn ($r) => (array) $r)
+            ->all();
+    }
+
+    public function cycleForMonth(string $billingMonthDate): ?array
+    {
+        $mc = date('m-Y', strtotime($billingMonthDate));
+        $row = DB::table('util_month_cycle')->where('month_cycle', $mc)->first(['cycle_start_date', 'cycle_end_date', 'state']);
+        if (!$row) {
+            return null;
+        }
+        return ['cycle_start_date' => (string) $row->cycle_start_date, 'cycle_end_date' => (string) $row->cycle_end_date, 'state' => (string) $row->state];
+    }
+
+    public function rowsForMonthDetailed(string $billingMonthDate, array $filters = []): array
+    {
+        $q = DB::table('employees_master as em')
+            ->leftJoin('electric_active_days_monthly as ad', function ($j) use ($billingMonthDate) {
+                $j->on('ad.company_id', '=', 'em.company_id')
+                  ->where('ad.billing_month_date', '=', $billingMonthDate);
+            });
+
+        $search = trim((string) ($filters['q'] ?? ''));
+        if ($search !== '') {
+            $q->where(function ($w) use ($search) {
+                $w->where('em.company_id', 'like', "%{$search}%")
+                  ->orWhere('em.name', 'like', "%{$search}%")
+                  ->orWhere('em.cnic_no', 'like', "%{$search}%");
+            });
+        }
+        if (!empty($filters['department'])) {
+            $q->where('em.department', $filters['department']);
+        }
+        $cycleStart = trim((string) ($filters['cycle_start_date'] ?? ''));
+        if ($cycleStart !== '') {
+            $q->where(function ($w) use ($cycleStart) {
+                $w->whereNull('em.leave_date')->orWhere('em.leave_date', '')->orWhere('em.leave_date', '>=', $cycleStart);
+            });
+        }
+
+        $status = (string) ($filters['status'] ?? 'ALL');
+        if ($status === 'ACTIVE') {
+            $q->where('em.active', 'Yes');
+        } elseif ($status === 'LEFT') {
+            $q->where('em.active', '!=', 'Yes');
+        }
+        $entry = (string) ($filters['entry'] ?? 'ALL');
+        if ($entry === 'MISSING') {
+            $q->whereNull('ad.id');
+        } elseif ($entry === 'HAS') {
+            $q->whereNotNull('ad.id');
+        }
+        if (!empty($filters['source'])) {
+            if ($filters['source'] === 'MANUAL') {
+                $q->where('ad.source_file', 'MANUAL');
+            } else {
+                $q->whereNotNull('ad.id')->where(function ($w) {
+                    $w->whereNull('ad.source_file')->orWhere('ad.source_file', '!=', 'MANUAL');
+                });
+            }
+        }
+
+        return $q->orderBy('em.company_id')
+            ->limit((int) ($filters['limit'] ?? 500))
+            ->get([
+                'em.company_id', 'em.name', 'em.department', 'em.section', 'em.unit_id',
+                'em.block_floor', 'em.room_no', 'em.active', 'em.residence_status', 'em.join_date', 'em.leave_date',
+                'ad.id as entry_id', 'ad.active_days', 'ad.remarks', 'ad.source_file', 'ad.uploaded_by', 'ad.updated_at',
+            ])
+            ->map(fn ($r) => (array) $r)
+            ->all();
+    }
+
+    public function upsertRow(string $billingMonthDate, string $companyId, $activeDays, ?string $remarks, string $uploadedBy, ?string $cycleStartDate = null, ?string $cycleEndDate = null): array
+    {
+        $companyId = trim($companyId);
+        $emp = DB::table('employees_master')->where('company_id', $companyId)->first(['company_id', 'join_date', 'leave_date']);
+        if (!$emp) {
+            return ['status' => 'error', 'error' => 'Employee not found in employees_master', '_http' => 422];
+        }
+        $rs = DB::table('employees_master')->where('company_id', $companyId)->value('residence_status');
+        if ((string) $rs === 'OUTSIDE') {
+            return ['status' => 'error', 'error' => 'Employee is OUTSIDE colony — attendance not applicable', '_http' => 422];
+        }
+        if (!is_numeric($activeDays) || (float) $activeDays < 0) {
+            return ['status' => 'error', 'error' => 'active_days must be a non-negative number', '_http' => 422];
+        }
+        $activeDays = round((float) $activeDays, 4);
+
+        if ($cycleStartDate && $cycleEndDate) {
+            $cycleStart = new DateTimeImmutable($cycleStartDate);
+            $cycleEnd = new DateTimeImmutable($cycleEndDate);
+            if ($cycleEnd < $cycleStart) {
+                return ['status' => 'error', 'error' => 'cycle_end_date cannot be before cycle_start_date', '_http' => 422];
+            }
+            $max = $this->maxActiveDaysForCycle([
+                'join_date' => $emp->join_date ? new DateTimeImmutable((string) $emp->join_date) : null,
+                'leave_date' => $emp->leave_date ? new DateTimeImmutable((string) $emp->leave_date) : null,
+            ], $cycleStart, $cycleEnd);
+            if ($activeDays > $max) {
+                return ['status' => 'error', 'error' => "active_days exceeds allowed maximum ({$max}) for this cycle", '_http' => 422];
+            }
+        }
+
+        $existing = ElectricActiveDaysMonthly::query()
+            ->whereDate('billing_month_date', $billingMonthDate)
+            ->where('company_id', $companyId)
+            ->first();
+
+        $payload = [
+            'active_days' => $activeDays,
+            'remarks' => $remarks !== null && trim($remarks) !== '' ? trim($remarks) : null,
+            'source_file' => 'MANUAL',
+            'uploaded_by' => $uploadedBy !== '' ? $uploadedBy : null,
+        ];
+
+        if ($existing) {
+            $existing->fill($payload)->save();
+            return ['status' => 'ok', 'action' => 'updated', 'company_id' => $companyId, 'active_days' => $activeDays];
+        }
+
+        ElectricActiveDaysMonthly::query()->create(array_merge($payload, [
+            'billing_month_date' => $billingMonthDate,
+            'company_id' => $companyId,
+        ]));
+
+        return ['status' => 'ok', 'action' => 'created', 'company_id' => $companyId, 'active_days' => $activeDays];
+    }
+
+    public function deleteRow(string $billingMonthDate, string $companyId): array
+    {
+        $deleted = ElectricActiveDaysMonthly::query()
+            ->whereDate('billing_month_date', $billingMonthDate)
+            ->where('company_id', trim($companyId))
+            ->delete();
+
+        if ($deleted === 0) {
+            return ['status' => 'error', 'error' => 'Row not found', '_http' => 404];
+        }
+
+        return ['status' => 'ok', 'action' => 'deleted', 'company_id' => $companyId];
+    }
+
     private function maxActiveDaysForCycle(array $employee, DateTimeImmutable $cycleStart, DateTimeImmutable $cycleEnd): int
     {
         $start = $cycleStart;
