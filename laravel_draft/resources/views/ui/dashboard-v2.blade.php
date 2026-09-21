@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+@include('partials.material-symbols-local')
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Colony Billing — Dashboard</title>
@@ -46,7 +48,7 @@
       <div class="dv2-phr">
         <div class="dv2-msel">
           <div class="i"><svg width="20" height="20"><rect x="2" y="3" width="16" height="15" rx="2.5"/><path d="M2 8h16M6 1v4M14 1v4"/></svg></div>
-          <div><div class="l">Billing Month</div><div class="v">{{ $monthCycle ?? now()->format('m-Y') }}</div></div>
+          <div><div class="l">Billing Month</div><select id="dv2MonthSel" style="border:0;background:transparent;font:inherit;font-weight:800;color:inherit;cursor:pointer;padding:0;outline:none">@foreach(($monthOptions ?? []) as $mo)<option value="{{ $mo }}" @if($mo === ($monthCycle ?? '')) selected @endif>{{ $mo }}</option>@endforeach</select></div>
           <span class="c"><svg width="16" height="16"><path d="M4 6l4 4 4-4"/></svg></span>
         </div>
         <div class="dv2-spill"><svg width="17" height="17"><circle cx="8.5" cy="8.5" r="7"/><path d="M5 8.5l2.5 2.5 4.5-5"/></svg> Open</div>
@@ -165,5 +167,9 @@
 
   </main>
 </div>
+<script>
+(function(){var s=document.getElementById('dv2MonthSel');if(!s)return;
+s.addEventListener('change',function(){var u=new URL(window.location.href);u.searchParams.set('month_cycle',s.value);window.location.href=u.toString();});})();
+</script>
 </body>
 </html>

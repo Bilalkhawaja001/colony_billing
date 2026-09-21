@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 
-<html class="light" lang="en"><head><meta charset="utf-8">
+<html class="light" lang="en"><head>
+@include('partials.material-symbols-local')
+<meta charset="utf-8">
 
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Admin Users - Enterprise Dashboard</title>
 <!-- Material Symbols -->
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <!-- Design System Configuration -->

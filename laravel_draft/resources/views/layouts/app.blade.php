@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+@include('partials.material-symbols-local')
+
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('page_title', 'Colony Billing')</title>
@@ -569,6 +571,46 @@
     <script defer src="/js/crud-grids.js?v=20260520-1611"></script>
     <link rel="stylesheet" href="{{ asset('css/enterprise-shell.css') }}?v={{ filemtime(public_path('css/enterprise-shell.css')) }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+
+<link
+    rel="preload"
+    href="{{ route('material-symbols-local') }}"
+    as="font"
+    type="font/ttf"
+    crossorigin
+    id="nodesky-material-symbols-preload"
+>
+
+<style id="nodesky-local-material-symbols">
+@font-face {
+    font-family: 'Material Symbols Outlined';
+    font-style: normal;
+    font-weight: 400;
+    src: url("{{ asset('fonts/material-symbols-outlined.ttf') }}") format('truetype');
+    font-display: block;
+}
+
+.material-symbols-outlined {
+    font-family: 'Material Symbols Outlined' !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: 'liga' !important;
+    -webkit-font-feature-settings: 'liga' !important;
+    -webkit-font-smoothing: antialiased;
+}
+</style>
 
 </head>
 <body>

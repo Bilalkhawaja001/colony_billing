@@ -60,6 +60,7 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     Route::get('/people-residency', [ParityUiController::class, 'employeeMaster']);
     Route::post('/people-residency/residence-status', [\App\Http\Controllers\Billing\UnitDirectoryController::class, 'setResidenceStatus'])->name('billing.residence.status');
     Route::get('/unit-directory', [ParityUiController::class, 'unitMaster']);
+    Route::get('/unit-directory/export', [\App\Http\Controllers\Billing\UnitDirectoryExportController::class, '__invoke'])->name('billing.units.export');
     Route::get('/family-list', [ParityUiController::class, 'familyList']);
     Route::get('/family-list/export', [\App\Http\Controllers\Billing\FamilyExportController::class, 'export']);
     Route::get('/staff-check', [ParityUiController::class, 'staffCheck']);
@@ -364,3 +365,16 @@ if (file_exists(__DIR__ . '/billing_control.php')) {
 // END billing-control-route-loader
 
 require __DIR__.'/monthly_active_days.php';
+
+// NODESKY LOCAL MATERIAL SYMBOLS FONT
+Route::get('/fonts/material-symbols-outlined.ttf', function () {
+    $path = public_path('fonts/material-symbols-outlined.ttf');
+
+    abort_unless(is_file($path), 404);
+
+    return response()->file($path, [
+        'Content-Type' => 'font/ttf',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->name('material-symbols-local');
+

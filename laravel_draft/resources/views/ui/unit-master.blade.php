@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 
-<html class="light" lang="en"><head><meta charset="utf-8">
+<html class="light" lang="en"><head>
+@include('partials.material-symbols-local')
+<meta charset="utf-8">
 
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>NodeSky Billing - Housing Unit Directory</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <style>
         .material-symbols-outlined {
             font-family: 'Material Symbols Outlined';
@@ -134,7 +134,7 @@
 <p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage housing categories, sub-categories, rooms, and resident allocations.</p>
 </div>
 <div class="flex gap-2">
-<button class="bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md px-3 py-1.5 rounded flex items-center gap-1 hover:bg-surface-container-low transition-colors">
+<button type="button" onclick="window.location.href=window.location.pathname+'/export'+window.location.search" class="bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md text-label-md px-3 py-1.5 rounded flex items-center gap-1 hover:bg-surface-container-low transition-colors">
 <span class="material-symbols-outlined" style="font-size: 16px;">download</span> Export
                 </button>
 </div>

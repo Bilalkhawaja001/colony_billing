@@ -1,6 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
+@include('partials.material-symbols-local')
+
     <meta charset="utf-8">
     <title>{{ $pageTitle ?? 'Colony Billing | Billing Center' }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">

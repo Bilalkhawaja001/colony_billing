@@ -1,4 +1,6 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Active Days Import</title>
+<!doctype html><html><head>
+@include('partials.material-symbols-local')
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Active Days Import</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#fcf8ff;color:#1b1b24;font:13px/1.5 Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;-webkit-font-smoothing:antialiased}

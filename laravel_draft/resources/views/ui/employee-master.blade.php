@@ -3,7 +3,7 @@
 @section('page_subtitle','Employee, family, occupancy and data operations workspace.')
 @section('content')
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 body{background:#f8f9fb!important;font-family:Inter,Arial,sans-serif!important}
 body .sidebar,body .top,body .page-head,body .cb-shell{display:none!important}
 body .app,body .main{display:block!important;min-height:100vh!important;padding:0!important;margin:0!important}body .sidebar,body .top,body .page-head,body .cb-shell{display:none!important;height:0!important;min-height:0!important;padding:0!important;margin:0!important;border:0!important;overflow:hidden!important}body .content,body .page,body .wrap,body .main-inner{padding-top:0!important;margin-top:0!important}
@@ -231,12 +231,12 @@ body .container{padding:0!important;margin:0!important;max-width:none!important;
       <div class="rm-field wide"><label class="rm-label">Remarks</label><textarea id="rmEmpRemarks" class="rm-textarea" rows="3"></textarea></div>
     </div></div>
     <div class="rm-form-section"><div class="rm-form-section-title">Residence Assignment</div><div class="rm-form-grid">
-      <div class="rm-field"><label class="rm-label">Residence Type</label><select id="rmEmpResidenceType" class="rm-select"><option value="">Select</option></select></div>
-      <div class="rm-field"><label class="rm-label">Colony Type</label><select id="rmEmpColony" class="rm-select"><option value="">Select</option></select></div>
-      <div class="rm-field"><label class="rm-label">Block / Floor</label><select id="rmEmpBlock" class="rm-select"><option value="">Select</option></select></div>
-      <div class="rm-field"><label class="rm-label">Room No</label><select id="rmEmpRoom" class="rm-select"><option value="">Select</option></select></div>
-      <div class="rm-field"><label class="rm-label">Shared Room</label><select id="rmEmpShared" class="rm-select"><option>No</option><option>Yes</option></select></div>
-      <div class="rm-field"><label class="rm-label">Unit ID <span class="rm-required">*</span></label><input id="rmEmpUnit" class="rm-input"></div>
+      <div class="rm-field"><label class="rm-label">Residence Type</label><select id="rmEmpResidenceType" class="rm-select" disabled><option value="">Select</option></select></div>
+      <div class="rm-field"><label class="rm-label">Colony Type</label><select id="rmEmpColony" class="rm-select" disabled><option value="">Select</option></select></div>
+      <div class="rm-field"><label class="rm-label">Block / Floor</label><select id="rmEmpBlock" class="rm-select" disabled><option value="">Select</option></select></div>
+      <div class="rm-field"><label class="rm-label">Room No</label><select id="rmEmpRoom" class="rm-select" disabled><option value="">Select</option></select></div>
+      <div class="rm-field"><label class="rm-label">Shared Room</label><select id="rmEmpShared" class="rm-select" disabled><option>No</option><option>Yes</option></select></div>
+      <div class="rm-field"><label class="rm-label">Unit ID</label><input id="rmEmpUnit" class="rm-input" readonly></div><div class="rm-field wide" id="rmResidenceLockNote" style="display:none"><div class="rm-subtext" style="color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 10px">Residence fields are read-only when editing. Use <strong>Transfer Residence</strong> to shift a room.</div></div>
     </div></div>
   </div>
   <div class="rm-drawer-foot"><button data-close="rmEmployeeDrawer" class="rm-btn">Cancel</button><button id="rmSaveRegistry" class="rm-btn"><span class="material-symbols-outlined">save</span>Save to Registry</button><button id="rmSaveEmployee" class="rm-btn rm-btn-primary">Add Employee</button></div>
@@ -310,7 +310,7 @@ bind('rmEmployeeSearch','input',applyEmployeeFilters);bind('rmGlobalSearch','inp
 bind('rmEmployeeRows','click',event=>{const btn=event.target.closest('[data-action]');if(!btn)return;const employee=state.employees.find(r=>empId(r)===btn.dataset.id);if(btn.dataset.action==='view')openProfile(btn.dataset.id);if(btn.dataset.action==='edit')openEmployee(employee);if(btn.dataset.action==='residence')openResidence(employee);if(btn.dataset.action==='left')openConfirm('left',employee)});
 const employeeFields={rmEmpId:['CompanyID','company_id'],rmEmpName:['Name','name'],rmEmpFather:["Father's Name",'father_name'],rmEmpCnic:['CNIC_No.','cnic_no'],rmEmpMobile:['Mobile_No.','mobile_no'],rmEmpDepartment:['Department','department'],rmEmpSection:['Section','section'],rmEmpSubSection:['Sub Section','sub_section'],rmEmpDesignation:['Designation','designation'],rmEmpType:['Employee Type','employee_type'],rmEmpJoinDate:['Join Date','join_date'],rmEmpActive:['Active','active'],rmEmpColony:['Colony Type','colony_type'],rmEmpBlock:['Block Floor','block_floor'],rmEmpRoom:['Room No','room_no'],rmEmpShared:['Shared Room','shared_room'],rmEmpUnit:['Unit_ID','unit_id'],rmEmpRemarks:['Remarks','remarks']};
 function employeePayload(){const payload={};for(const [id,keys] of Object.entries(employeeFields))payload[keys[0]]=$(id).value.trim();return payload}
-function openEmployee(employee=null){state.editing=employee;$('rmEmployeeDrawerTitle').textContent=employee?'Edit Employee':'Add New Employee';$('rmSaveEmployee').textContent=employee?'Save Changes':'Add Employee';for(const [id,keys] of Object.entries(employeeFields))$(id).value=employee?pick(employee,...keys):'';$('rmEmpActive').value=employee?(pick(employee,'Active','active')||'Yes'):'Yes';$('rmEmpId').disabled=!!employee;$('rmEmployeeMessage').innerHTML='';openLayer('rmEmployeeDrawer')}
+function openEmployee(employee=null){state.editing=employee;$('rmEmployeeDrawerTitle').textContent=employee?'Edit Employee':'Add New Employee';$('rmSaveEmployee').textContent=employee?'Save Changes':'Add Employee';for(const [id,keys] of Object.entries(employeeFields))$(id).value=employee?pick(employee,...keys):'';$('rmEmpActive').value=employee?(pick(employee,'Active','active')||'Yes'):'Yes';$('rmEmpId').disabled=!!employee;const lockRes=!!employee;['rmEmpResidenceType','rmEmpColony','rmEmpBlock','rmEmpRoom','rmEmpShared'].forEach(i=>{const el=$(i);if(el)el.disabled=lockRes});const uEl=$('rmEmpUnit');if(uEl)uEl.readOnly=lockRes;const nEl=$('rmResidenceLockNote');if(nEl)nEl.style.display=lockRes?'block':'none';$('rmEmployeeMessage').innerHTML='';openLayer('rmEmployeeDrawer')}
 bind('rmAddEmployee','click',()=>openEmployee());bind('rmSaveEmployee','click',async()=>{try{const body=employeePayload();const url=state.editing?route(URLS.employees,empId(state.editing)):URLS.add;await api(url,{method:state.editing?'PATCH':'POST',body});closeLayer('rmEmployeeDrawer');toast('Employee saved successfully.');await loadEmployees()}catch(error){$('rmEmployeeMessage').innerHTML=`<div class="rm-error-box">${esc(error.message)}</div>`}});bind('rmSaveRegistry','click',async()=>{try{await api(URLS.registry,{method:'POST',body:employeePayload()});toast('Employee saved to registry.')}catch(error){toast(error.message,true)}});
 async function loadResidenceCascades(){try{const data=await api(V2_BASE+'/residence-types');const types=data.rows||[];$('rmEmpResidenceType').innerHTML='<option value="">Select</option>'+types.map(v=>`<option>${esc(v)}</option>`).join('')+'<option value="OUTSIDE">Outside Colony</option>'}catch(_){}}
 bind('rmEmpResidenceType','change',async()=>{if($('rmEmpResidenceType').value==='OUTSIDE'){$('rmEmpColony').innerHTML='<option value="OUTSIDE">Outside Colony</option>';$('rmEmpBlock').innerHTML='<option value="">—</option>';$('rmEmpRoom').innerHTML='<option value="">—</option>';$('rmEmpUnit').value='OUTSIDE';return}try{const data=await api(V2_BASE+'/colonies?residence_type='+encodeURIComponent($('rmEmpResidenceType').value));const rows=data.rows||[];$('rmEmpColony').innerHTML='<option value="">Select</option>'+rows.map(v=>`<option value="${esc(v)}">${esc(v==='__uncategorized'?'Uncategorized':v)}</option>`).join('')}catch(_){}});bind('rmEmpColony','change',async()=>{try{const url=V2_BASE+'/blocks/'+encodeURIComponent($('rmEmpColony').value)+'?residence_type='+encodeURIComponent($('rmEmpResidenceType').value);const data=await api(url);const rows=data.rows||[];$('rmEmpBlock').innerHTML='<option value="">Select</option>'+rows.map(v=>`<option>${esc(v)}</option>`).join('')}catch(_){}});bind('rmEmpBlock','change',async()=>{try{const url=V2_BASE+'/rooms/'+encodeURIComponent($('rmEmpColony').value)+'/'+encodeURIComponent($('rmEmpBlock').value)+'?residence_type='+encodeURIComponent($('rmEmpResidenceType').value);const data=await api(url);const rows=data.rows||[];$('rmEmpRoom').innerHTML='<option value="">Select</option>'+rows.map(v=>`<option value="${esc(v.room_no)}" data-unit="${esc(v.unit_id)}">${esc(v.room_no)}</option>`).join('')}catch(_){}});bind('rmEmpRoom','change',()=>{$('rmEmpUnit').value=$('rmEmpRoom').selectedOptions[0]?.dataset.unit||$('rmEmpUnit').value});
@@ -386,6 +386,244 @@ bind('rmWorkbookChoose','click',()=>$('rmWorkbookFile')?.click());bind('rmWorkbo
 loadEmployees();loadResidenceCascades();
 })();
 </script>
+
+<style id="nodesky-svg-icon-fallback">
+/*
+ * Do not allow Material ligature words to affect layout.
+ * SVG is rendered inside the same span.
+ */
+.material-symbols-outlined {
+    font-size: 0 !important;
+    line-height: 1 !important;
+    overflow: visible;
+    vertical-align: middle;
+}
+
+.material-symbols-outlined > svg {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+}
+
+.material-symbols-outlined[data-svg-size="16"] > svg {
+    width: 16px;
+    height: 16px;
+}
+
+.material-symbols-outlined[data-svg-size="18"] > svg {
+    width: 18px;
+    height: 18px;
+}
+
+.material-symbols-outlined[data-svg-size="24"] > svg {
+    width: 24px;
+    height: 24px;
+}
+</style>
+
+<script id="nodesky-svg-material-converter">
+(function () {
+    'use strict';
+
+    const icons = {
+        search:
+            '<circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path>',
+
+        expand_more:
+            '<path d="m6 9 6 6 6-6"></path>',
+
+        expand_less:
+            '<path d="m6 15 6-6 6 6"></path>',
+
+        chevron_right:
+            '<path d="m9 18 6-6-6-6"></path>',
+
+        chevron_left:
+            '<path d="m15 18-6-6 6-6"></path>',
+
+        arrow_forward:
+            '<path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path>',
+
+        arrow_back:
+            '<path d="M19 12H5"></path><path d="m11 18-6-6 6-6"></path>',
+
+        add:
+            '<path d="M12 5v14"></path><path d="M5 12h14"></path>',
+
+        close:
+            '<path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>',
+
+        visibility:
+            '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12"></path><circle cx="12" cy="12" r="2.5"></circle>',
+
+        edit:
+            '<path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path>',
+
+        person_add:
+            '<circle cx="9" cy="7" r="4"></circle><path d="M3 21v-2a6 6 0 0 1 6-6h2"></path><path d="M19 8v6"></path><path d="M16 11h6"></path>',
+
+        person_remove:
+            '<circle cx="9" cy="7" r="4"></circle><path d="M3 21v-2a6 6 0 0 1 6-6h2"></path><path d="M16 11h6"></path>',
+
+        group_add:
+            '<circle cx="8" cy="8" r="3"></circle><path d="M2 20v-2a5 5 0 0 1 5-5h2"></path><path d="M16 8v6"></path><path d="M13 11h6"></path>',
+
+        groups:
+            '<circle cx="9" cy="8" r="3"></circle><circle cx="17" cy="9" r="2.5"></circle><path d="M3 20v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2"></path><path d="M15 14h2a4 4 0 0 1 4 4v2"></path>',
+
+        check_circle:
+            '<circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path>',
+
+        pause_circle:
+            '<circle cx="12" cy="12" r="9"></circle><path d="M10 9v6"></path><path d="M14 9v6"></path>',
+
+        warning:
+            '<path d="M10.3 3.6 2.4 18a2 2 0 0 0 1.8 3h15.6a2 2 0 0 0 1.8-3L13.7 3.6a2 2 0 0 0-3.4 0Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>',
+
+        home_work:
+            '<path d="M3 21V9l9-6 9 6v12"></path><path d="M9 21v-6h6v6"></path><path d="M6 12h2"></path><path d="M16 12h2"></path>',
+
+        location_off:
+            '<path d="M9.5 5.2A7 7 0 0 1 19 12c0 3-3 6.5-7 10"></path><path d="M8 20C5 16.5 3 14 3 12a8.5 8.5 0 0 1 .7-3.4"></path><path d="m3 3 18 18"></path>',
+
+        description:
+            '<path d="M6 2h8l4 4v16H6Z"></path><path d="M14 2v5h5"></path><path d="M9 13h6"></path><path d="M9 17h6"></path>',
+
+        filter_list:
+            '<path d="M4 6h16"></path><path d="M7 12h10"></path><path d="M10 18h4"></path>',
+
+        refresh:
+            '<path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M18 11a7 7 0 0 0-12-4L4 11"></path><path d="M6 13a7 7 0 0 0 12 4l2-4"></path>',
+
+        sync:
+            '<path d="M20 7h-5V2"></path><path d="M4 17h5v5"></path><path d="M18 11a7 7 0 0 0-12-5L4 8"></path><path d="M6 13a7 7 0 0 0 12 5l2-2"></path>',
+
+        download:
+            '<path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path>',
+
+        upload:
+            '<path d="M12 15V3"></path><path d="m7 8 5-5 5 5"></path><path d="M5 21h14"></path>',
+
+        upload_file:
+            '<path d="M6 2h8l4 4v16H6Z"></path><path d="M14 2v5h5"></path><path d="M12 18v-7"></path><path d="m9 14 3-3 3 3"></path>',
+
+        table_view:
+            '<rect x="3" y="4" width="18" height="16" rx="1"></rect><path d="M3 9h18"></path><path d="M9 9v11"></path><path d="M15 9v11"></path>',
+
+        history:
+            '<path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v6h6"></path><path d="M12 7v5l3 2"></path>',
+
+        folder:
+            '<path d="M3 6h6l2 2h10v11H3Z"></path>',
+
+        lock:
+            '<rect x="5" y="10" width="14" height="11" rx="2"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path>',
+
+        save:
+            '<path d="M5 3h12l3 3v15H4V3Z"></path><path d="M8 3v6h8V3"></path><path d="M8 21v-7h8v7"></path>',
+
+        badge:
+            '<rect x="3" y="5" width="18" height="16" rx="2"></rect><circle cx="9" cy="11" r="2.5"></circle><path d="M5.5 18a4 4 0 0 1 7 0"></path><path d="M15 10h3"></path><path d="M15 14h3"></path>',
+
+        radio_button_unchecked:
+            '<circle cx="12" cy="12" r="9"></circle>',
+
+        settings:
+            '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"></path>',
+
+        notifications:
+            '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path><path d="M10 21h4"></path>',
+
+        help:
+            '<circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.7 2.7 0 1 1 4.5 2c-1.3 1-2 1.4-2 3"></path><path d="M12 18h.01"></path>',
+
+        help_outline:
+            '<circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.7 2.7 0 1 1 4.5 2c-1.3 1-2 1.4-2 3"></path><path d="M12 18h.01"></path>',
+
+        more_vert:
+            '<circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="19" r="1"></circle>'
+    };
+
+    const fallback =
+        '<circle cx="12" cy="12" r="9"></circle>' +
+        '<circle cx="8" cy="12" r=".7" fill="currentColor" stroke="none"></circle>' +
+        '<circle cx="12" cy="12" r=".7" fill="currentColor" stroke="none"></circle>' +
+        '<circle cx="16" cy="12" r=".7" fill="currentColor" stroke="none"></circle>';
+
+    function convert(el) {
+        if (!el || el.dataset.svgConverted === '1') return;
+
+        const name = (el.textContent || '').trim();
+
+        if (!name) return;
+
+        el.dataset.materialName = name;
+        el.dataset.svgConverted = '1';
+
+        el.innerHTML =
+            '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+            (icons[name] || fallback) +
+            '</svg>';
+    }
+
+    function scan(root) {
+        if (!root) return;
+
+        if (
+            root.nodeType === 1 &&
+            root.classList &&
+            root.classList.contains('material-symbols-outlined')
+        ) {
+            convert(root);
+        }
+
+        if (root.querySelectorAll) {
+            root.querySelectorAll('.material-symbols-outlined')
+                .forEach(convert);
+        }
+    }
+
+    /*
+     * Convert existing page.
+     */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function () {
+            scan(document);
+        }, { once: true });
+    } else {
+        scan(document);
+    }
+
+    /*
+     * Convert icons inserted later by renderEmployees(),
+     * drawers, occupancy, family table, etc.
+     */
+    const observer = new MutationObserver(function (mutations) {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node.nodeType === 1) {
+                    scan(node);
+                }
+            }
+        }
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+
+})();
+</script>
+
+
 @endsection
 
 <script>document.addEventListener('DOMContentLoaded',function(){['rmEmployeeSearch','rmDepartmentFilter','rmStatusFilter'].forEach(function(id){var el=document.getElementById(id);if(!el)return;el.addEventListener(id==='rmEmployeeSearch'?'input':'change',function(){if(window.reloadFiltered)window.reloadFiltered()});});});</script>
