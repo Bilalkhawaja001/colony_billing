@@ -39,9 +39,9 @@
         return false;
     };
 @endphp
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<style>
+{!! file_get_contents(public_path('css/fonts-local.css')) !!}
+</style>
 <style>
 {!! file_get_contents(public_path('css/global-navbar.css')) !!}
 </style>
@@ -75,9 +75,11 @@
             </div>
         </div>
         <div class="ns-nav-actions">
-            <label class="ns-search" aria-label="Visual search control">
+            <label class="ns-search"
+                   aria-label="Global search"
+                   data-global-search-url="{{ url('global-search') }}">
                 <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                <input type="search" placeholder="Search..." autocomplete="off" aria-label="Search">
+                <input type="text" inputmode="search" placeholder="Search..." autocomplete="off" aria-label="Search">
             </label>
             <button type="button" class="ns-icon-btn" aria-label="Notifications" data-visual-only="notifications"><span class="material-symbols-outlined">notifications</span></button>
             <a class="ns-icon-btn" href="{{ url('ui/admin/users') }}" aria-label="Settings"><span class="material-symbols-outlined">settings</span></a>
@@ -86,7 +88,7 @@
         </div>
     </div>
     <div class="ns-mobile-panel" data-mobile-panel hidden>
-        <div class="ns-mobile-search"><span class="material-symbols-outlined">search</span><input type="search" placeholder="Search..." aria-label="Mobile search"></div>
+        <div class="ns-mobile-search"><span class="material-symbols-outlined">search</span><input type="text" inputmode="search" placeholder="Search..." aria-label="Mobile search"></div>
         @foreach($navGroups as $group)
             @php $groupActive = $isActive($group['patterns']); @endphp
             @if(empty($group['children']))

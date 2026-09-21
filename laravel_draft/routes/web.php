@@ -378,3 +378,14 @@ Route::get('/fonts/material-symbols-outlined.ttf', function () {
     ]);
 })->name('material-symbols-local');
 
+
+// NODESKY GLOBAL SEARCH
+Route::get(
+    '/global-search',
+    \App\Http\Controllers\GlobalSearchController::class
+)->middleware([
+    'ensure.auth',
+    'force.password.change',
+    'role:SUPER_ADMIN,BILLING_ADMIN,DATA_ENTRY,VIEWER',
+])->name('global-search');
+
