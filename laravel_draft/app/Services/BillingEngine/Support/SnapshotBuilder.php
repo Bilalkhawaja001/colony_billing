@@ -71,7 +71,34 @@ class SnapshotBuilder
         }
 
         // 3. occupancy (unit -> room -> employees) + active days
-        $occ = DB::table('electric_v1_occupancy')->get();
+        // Only this cycle's occupancy. Without this filter every past cycle's
+        // rows are pulled in, so an employee who changed rooms appears once
+        // per historical room and is billed multiple times.
+        /*
+         * Residence history is authoritative for billing occupancy.
+         *
+         * Include every assignment that overlaps the selected billing cycle.
+         * This correctly handles:
+         * - current residents
+         * - residents closed during the cycle
+         * - employees shifted between rooms/units
+         *
+         * Assignments ending before cycle start are excluded automatically.
+         */
+        $occ = DB::table('employee_residence_assignments')
+            ->whereDate('start_date', '<=', $cycleEnd)
+            ->where(function ($q) use ($cycleStart) {
+                $q->whereNull('end_date')
+                  ->orWhereDate('end_date', '>=', $cycleStart);
+            })
+            ->whereRaw("UPPER(TRIM(unit_id)) NOT IN ('OUTSIDE','OUTSIDE COLONY')")
+            ->get([
+                'company_id',
+                'unit_id',
+                DB::raw('room_no as room_id'),
+                'start_date',
+                'end_date',
+            ]);
         $monthDate = substr($cycleEnd, 0, 7).'-01';
 
         $daysByEmp = DB::table('electric_active_days_monthly')

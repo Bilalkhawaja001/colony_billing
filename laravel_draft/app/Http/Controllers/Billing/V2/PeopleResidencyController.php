@@ -103,9 +103,26 @@ class PeopleResidencyController extends Controller
         return $this->respond($this->service->blocks(urldecode($colony), trim((string) $request->query('residence_type', ''))));
     }
 
+    public function blocksQuery(Request $request): JsonResponse
+    {
+        return $this->respond($this->service->blocks(
+            trim((string) $request->query('colony', '')),
+            trim((string) $request->query('residence_type', ''))
+        ));
+    }
+
     public function rooms(Request $request, string $colony, string $block): JsonResponse
     {
         return $this->respond($this->service->rooms(urldecode($colony), urldecode($block), trim((string) $request->query('residence_type', ''))));
+    }
+
+    public function roomsQuery(Request $request): JsonResponse
+    {
+        return $this->respond($this->service->rooms(
+            trim((string) $request->query('colony', '')),
+            trim((string) $request->query('block', '')),
+            trim((string) $request->query('residence_type', ''))
+        ));
     }
 
     private function withUser(Request $request): array

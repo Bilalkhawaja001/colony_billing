@@ -55,6 +55,7 @@
         <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center">
             <button class="btn btn-cta" type="submit">Download & Records</button>
             <button class="btn btn-cta" type="submit" formaction="{{ route('billing.control.export.detailed-electric-breakdown') }}">Detailed Electric Breakdown (Excel)</button>
+            <button class="btn btn-cta" type="submit" formaction="{{ route('billing.control.export.simple-breakdown') }}">Simple Breakdown (Excel)</button>
         </div>
         <div class="col-caption">Filtered download will follow approved billing records and Excel format.</div>
     </form>

@@ -24,6 +24,8 @@ class ExportController extends Controller
 
     public function download(ExportBillRequest $request)
     {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
         $billType = (string) $request->input('bill_type', 'electric_v1');
 
         if ($billType !== 'electric_v1') {
@@ -33,8 +35,129 @@ class ExportController extends Controller
         return $this->downloadDetailedElectricity($request);
     }
 
+    public function simpleBreakdown(ExportBillRequest $request)
+    {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
+
+        $monthCycle = $request->input('billing_month') ?: $request->input('month_cycle') ?: now()->format('m-Y');
+        $monthCycle = $this->normalizeMonthCycle((string) $monthCycle);
+        $cycle = $this->resolveElectricCycle($monthCycle);
+        if (!$cycle) {
+            return back()->with('error', 'Is month ka cycle nahi mila: '.$monthCycle);
+        }
+
+        $rows = DB::table('electric_v1_output_employee_unit_drilldown as d')
+            ->leftJoin('employees_master as e', 'e.company_id', '=', 'd.company_id')
+            ->leftJoin('util_unit as u', 'u.unit_id', '=', 'd.unit_id')
+            ->leftJoin('util_unit_rooms as ur', function ($j) {
+                $j->on('ur.unit_id', '=', 'd.unit_id')->on('ur.room_no', '=', 'd.room_no');
+            })
+            ->leftJoin('employee_residence_assignments as a', function ($j) {
+                $j->on('a.company_id', '=', 'd.company_id')->where('a.status', 'ACTIVE');
+            })
+            ->where('d.cycle_start_date', $cycle->cycle_start_date)
+            ->where('d.cycle_end_date', $cycle->cycle_end_date)
+            ->orderBy('d.unit_id')->orderBy('d.room_no')->orderBy('d.company_id')
+            ->get([
+                'd.month_cycle', 'd.company_id', 'd.name', 'd.residence_type',
+                'a.residence_type as assign_type', 'ur.occupant_grade',
+                'u.colony_type', 'e.block_floor', 'd.unit_id', 'd.room_no',
+                'd.active_days', 'd.emp_used_units', 'd.eligible_units',
+                'd.billable_units', 'd.rate', 'd.amount',
+            ]);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Breakdown');
+
+        $headers = [
+            'Month Cycle', 'Employee Code', 'Employee Name', 'Residence Type',
+            'Mill Residence Category', 'Block/Floor', 'Meter No.', 'Room No.',
+            'Present Days', 'Current Month Individual Used Units', 'Eligible Units',
+            'Billable Units', 'Per Units Rate', 'Amount',
+        ];
+        $sheet->fromArray($headers, null, 'A1');
+        $sheet->getStyle('A1:N1')->getFont()->setBold(true)->getColor()->setARGB('FFFFFFFF');
+        $sheet->getStyle('A1:N1')->getFill()->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF1F4E79');
+        $sheet->freezePane('A2');
+
+        $r = 2;
+        foreach ($rows as $row) {
+            $sheet->fromArray([
+                $row->month_cycle,
+                $row->company_id,
+                $row->name,
+                $this->normalizeResidenceType($row->assign_type ?? $row->residence_type, $row->occupant_grade ?? null),
+                $row->colony_type,
+                $row->block_floor,
+                $row->unit_id,
+                $row->room_no,
+                $row->active_days !== null ? (float) $row->active_days : null,
+                round((float) ($row->emp_used_units ?? 0), 4),
+                round((float) ($row->eligible_units ?? 0), 4),
+                round((float) ($row->billable_units ?? 0), 4),
+                (float) ($row->rate ?? 0),
+                round((float) ($row->amount ?? 0), 2),
+            ], null, 'A'.$r);
+            $r++;
+        }
+
+        // Simple Breakdown: numeric cells must never remain blank.
+        $lastDataRow = $r - 1;
+        if ($lastDataRow >= 2) {
+            foreach (range('I', 'N') as $col) {
+                for ($rowNo = 2; $rowNo <= $lastDataRow; $rowNo++) {
+                    $cell = $sheet->getCell($col.$rowNo);
+                    if ($cell->getValue() === null || $cell->getValue() === '') {
+                        $cell->setValue(0);
+                    }
+                }
+            }
+        }
+
+        foreach (range('A', 'N') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+        $sheet->setAutoFilter('A1:N'.max(1, $r - 1));
+
+        $filename = 'electricity-simple-'.$monthCycle.'-'.date('Ymd_His').'.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        ob_start();
+        $writer->save('php://output');
+        $content = ob_get_clean();
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function normalizeResidenceType(?string $type, ?string $grade): string
+    {
+        $t = strtoupper(str_replace([' ', '-'], '_', trim((string) $type)));
+        $g = strtoupper(trim((string) $grade));
+
+        if ($t === 'ROOM' || $t === '' || $t === 'COMMON') {
+            if ($g === 'SENIOR_STAFF') { return 'Hostel'; }
+            if ($g === 'FAMILY') { return 'House B Type'; }
+            return 'Bachelor';
+        }
+        if (str_starts_with($t, 'CONTAINER')) { return 'Container'; }
+        if (str_starts_with($t, 'HOSTEL') || $t === 'SENIOR_STAFF') { return 'Hostel'; }
+        if (str_starts_with($t, 'BACHELOR')) { return 'Bachelor'; }
+        if ($t === 'HOUSE_A' || $t === 'HOUSE_A+' || $t === 'HOUSE_A_TYPE' || $t === 'WEAVING_A+') { return 'House A Type'; }
+        if ($t === 'HOUSE_B' || $t === 'HOUSE_B_TYPE') { return 'House B Type'; }
+        if ($t === 'HOUSE_C' || $t === 'HOUSE_C_TYPE') { return 'House C Type'; }
+        if ($g === 'SENIOR_STAFF') { return 'Hostel'; }
+        if ($g === 'FAMILY') { return 'House B Type'; }
+        return 'Bachelor';
+    }
+
     public function detailedElectricBreakdown(ExportBillRequest $request)
     {
+        @set_time_limit(600);
+        @ini_set('memory_limit', '1024M');
         $monthCycle = $request->input('billing_month') ?: $request->input('month_cycle') ?: now()->format('m-Y');
         $monthCycle = $this->normalizeMonthCycle((string) $monthCycle);
         $cycle = $this->resolveElectricCycle($monthCycle);

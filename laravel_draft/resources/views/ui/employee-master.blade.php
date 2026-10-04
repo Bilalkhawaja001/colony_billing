@@ -624,6 +624,12 @@ loadEmployees();loadResidenceCascades();
 </script>
 
 
+
+{{-- NODESKY RESIDENCE DROPDOWN FIX V2 --}}
+<script>
+{!! file_get_contents(public_path('js/people-residency-residence-fix.js')) !!}
+</script>
+
 @endsection
 
 <script>document.addEventListener('DOMContentLoaded',function(){['rmEmployeeSearch','rmDepartmentFilter','rmStatusFilter'].forEach(function(id){var el=document.getElementById(id);if(!el)return;el.addEventListener(id==='rmEmployeeSearch'?'input':'change',function(){if(window.reloadFiltered)window.reloadFiltered()});});});</script>

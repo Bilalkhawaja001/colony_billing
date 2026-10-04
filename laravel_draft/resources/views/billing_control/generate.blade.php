@@ -31,7 +31,7 @@
                 <label style="display:block;font-weight:600;margin-bottom:6px">Billing Method</label>
                 <select class="form-select" name="method_code" required>
                     @foreach(\App\Services\BillingEngine\MethodRegistry::options() as $mc => $ml)
-                        <option value="{{ $mc }}">{{ $ml }}</option>
+                        <option value="{{ $mc }}" @selected($mc === 'OCCUPIED_ROOM_EQUAL_SPLIT')>{{ $ml }}</option>
                     @endforeach
                 </select>
             </div>
@@ -48,7 +48,7 @@
                 <label style="display:block;font-weight:600;margin-bottom:6px">Billing Method</label>
                 <select class="form-select" name="method_code" required>
                     @foreach(\App\Services\BillingEngine\MethodRegistry::options() as $mc => $ml)
-                        <option value="{{ $mc }}">{{ $ml }}</option>
+                        <option value="{{ $mc }}" @selected($mc === 'OCCUPIED_ROOM_EQUAL_SPLIT')>{{ $ml }}</option>
                     @endforeach
                 </select>
             </div>

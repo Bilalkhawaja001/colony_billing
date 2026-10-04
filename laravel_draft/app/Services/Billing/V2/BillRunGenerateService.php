@@ -83,14 +83,40 @@ class BillRunGenerateService
         $this->preflight->saveResult($run, $pf);
         $sum = $pf['summary'] ?? [];
         if (($sum['stop'] ?? 0) > 0 || ($sum['fail'] ?? 0) > 0) {
-            return ['status'=>'blocked','reason'=>'Preflight checks failed. Fix data before generating.','preflight'=>$sum];
+
+            $failedChecks = array_values(array_filter(
+                $pf['checks'] ?? [],
+                fn ($c) => ($c['status'] ?? '') === 'fail'
+            ));
+
+            $details = array_map(
+                fn ($c) =>
+                    ($c['title'] ?? $c['code'] ?? 'Check failed')
+                    .': '
+                    .($c['message'] ?? 'Unknown problem'),
+                $failedChecks
+            );
+
+            $reason = 'Preflight failed';
+
+            if ($details !== []) {
+                $reason .= ': '.implode(' | ', $details);
+            }
+
+            return [
+                'status' => 'blocked',
+                'reason' => $reason,
+                'preflight' => $sum,
+            ];
         }
 
         // DRAFT -> PREVIEW_READY
-        try {
-            $this->gate->transition($run->id, 'mark_preview_ready', $role, $actorUserId);
-        } catch (\Throwable $e) {
-            return ['status'=>'blocked','reason'=>'Cannot move to preview-ready: '.$e->getMessage()];
+        if ((string) $run->status !== BillRunStateMachine::PREVIEW_READY) {
+            try {
+                $this->gate->transition($run->id, 'mark_preview_ready', $role, $actorUserId);
+            } catch (\Throwable $e) {
+                return ['status'=>'blocked','reason'=>'Cannot move to preview-ready: '.$e->getMessage()];
+            }
         }
 
         // ===== PHASE 2: engine + summary + mark_generated (Option D: NO outer wrapper) =====
@@ -120,6 +146,26 @@ class BillRunGenerateService
             return ['status'=>'blocked','reason'=>'Generation failed during calculation: '.$e->getMessage()];
         }
 
+        /*
+         * Never mark a run GENERATED if the engine produced no billing rows.
+         */
+        $finalRows = (int) ($er['final_output_rows'] ?? 0);
+
+        $drillRows = (int) (
+            $er['drilldown_rows']
+            ?? $er['drilldown_output_rows']
+            ?? 0
+        );
+
+        if ($finalRows <= 0 || $drillRows <= 0) {
+            return [
+                'status' => 'blocked',
+                'reason' => 'Generation produced no usable bill output. '
+                    .'Final rows='.$finalRows.', Detail rows='.$drillRows.'. '
+                    .'Official bill was NOT marked generated.',
+            ];
+        }
+
         // summary_json (run_uuid = public ref, RUN-xxxx = internal)
         $run->method_code = $methodCode ?: 'ATTENDANCE_PRORATED';
         $exceptionCount = (int) ($er['exception_rows'] ?? 0);
@@ -129,8 +175,8 @@ class BillRunGenerateService
             'exception_count'       => $exceptionCount,
             'electric_engine_run_id'=> $er['run_id'] ?? null,
             'engine'                => 'electric_v1',
-            'final_rows'            => $er['final_output_rows'] ?? 0,
-            'drilldown_rows'        => $er['drilldown_rows'] ?? 0,
+            'final_rows'            => $finalRows,
+            'drilldown_rows'        => $drillRows,
             'processed_count'       => $er['processed_count'] ?? 0,
             'skipped_count'         => $er['skipped_count'] ?? 0,
             'exception_count'       => $er['exception_count'] ?? 0,
@@ -154,7 +200,7 @@ class BillRunGenerateService
             'bill_reference'=>$run->run_uuid,
             'summary'=>[
                 'final_rows'    => $er['final_output_rows'] ?? 0,
-                'drilldown_rows'=> $er['drilldown_rows'] ?? 0,
+                'drilldown_rows'=> $er['drilldown_rows'] ?? $er['drilldown_output_rows'] ?? 0,
                 'exceptions'    => $er['exception_count'] ?? 0,
             ],
         ];

@@ -27,7 +27,7 @@ class BillRunController extends Controller
     public function store(Request $request, GenerateDryRunService $dryRunService)
     {
         $month = $request->input('month_cycle');
-        $methodCode = $request->input('method_code', 'ATTENDANCE_PRORATED');
+        $methodCode = $request->input('method_code', 'OCCUPIED_ROOM_EQUAL_SPLIT');
 
         $ctx = app(\App\Services\Billing\ControlRoom\ReadinessService::class)->resolveCycleContext($month);
         $preview = (new \App\Services\BillingEngine\Engine())->preview(
@@ -115,19 +115,21 @@ class BillRunController extends Controller
 
     public function generate(Request $request, BillRunGenerateService $generator)
     {
+        \Illuminate\Support\Facades\Log::error("GEN_ENTER", ['all'=>$request->all()]);
         if (!$request->boolean('confirm_official')) {
             return back()->with('error','Please confirm you understand this creates official bill records.');
         }
         $monthCycle  = $request->input('month_cycle');
-        $actorUserId = optional($request->user())->id;
-        $role        = optional($request->user())->role ?? null;
+        $actorUserId = optional($request->user())->id ?? $request->session()->get('user_id');
+        $role        = optional($request->user())->role ?? $request->session()->get('role');
 
-        $methodCode  = $request->input('method_code', 'ATTENDANCE_PRORATED');
+        $methodCode  = $request->input('method_code', 'OCCUPIED_ROOM_EQUAL_SPLIT');
         // Phase 3 gate: har data issue ka decision zaroori
         $readiness = app(\App\Services\Billing\ControlRoom\ReadinessService::class)->summary($monthCycle);
         $pending = (int) ($readiness['pendingDecisions'] ?? 0);
         $issueCount = (int) ($readiness['dataIssueCount'] ?? 0);
 
+        \Illuminate\Support\Facades\Log::error("GEN_READINESS", ['pending'=>$pending,'issues'=>$issueCount]);
         if ($pending > 0 && !$request->boolean('continue_anyway')) {
             return back()->with('error', $pending.' data issue(s) still need a decision. Review them on the Readiness page, or tick "Continue Anyway".');
         }
@@ -136,9 +138,48 @@ class BillRunController extends Controller
         $result = $generator->generate($monthCycle, $actorUserId, $role, $methodCode);
 
         if (($result['status'] ?? '') !== 'ok') {
+            \Illuminate\Support\Facades\Log::error("GENERATE_BLOCKED", ['month'=>$monthCycle,'method'=>$methodCode,'result'=>$result]);
             return back()->with('error', $result['reason'] ?? 'Generation blocked.');
         }
-        return redirect()->route('billing.control.export', ['month_cycle'=>$monthCycle])
-            ->with('success','Official bills generated. Bill Reference: '.$result['bill_reference']);
+        $ctx = app(\App\Services\Billing\ControlRoom\ReadinessService::class)
+            ->resolveCycleContext($monthCycle);
+
+        $finalRows = \Illuminate\Support\Facades\DB::table(
+                'electric_v1_output_employee_final'
+            )
+            ->where('cycle_start_date', $ctx['cycle_start_date'])
+            ->where('cycle_end_date', $ctx['cycle_end_date'])
+            ->count();
+
+        $drillRows = \Illuminate\Support\Facades\DB::table(
+                'electric_v1_output_employee_unit_drilldown'
+            )
+            ->where('cycle_start_date', $ctx['cycle_start_date'])
+            ->where('cycle_end_date', $ctx['cycle_end_date'])
+            ->count();
+
+        if ($finalRows <= 0 || $drillRows <= 0) {
+            \Illuminate\Support\Facades\Log::error('GENERATE_EMPTY_OUTPUT', [
+                'month' => $monthCycle,
+                'final_rows' => $finalRows,
+                'drill_rows' => $drillRows,
+            ]);
+
+            return back()->with(
+                'error',
+                'Bill generation failed: output rows are empty. '
+                .'Final='.$finalRows.', Details='.$drillRows
+            );
+        }
+
+        return redirect()
+            ->route('billing.control.export', ['month_cycle'=>$monthCycle])
+            ->with(
+                'success',
+                'Bills generated successfully — '
+                .number_format($finalRows).' employees, '
+                .number_format($drillRows).' detail rows. '
+                .'Bill Reference: '.$result['bill_reference']
+            );
     }
 }

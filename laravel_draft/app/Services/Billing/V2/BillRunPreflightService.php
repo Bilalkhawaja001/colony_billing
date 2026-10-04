@@ -14,7 +14,7 @@ final class BillRunPreflightService
 
         $this->checkTable($checks, 'bill_runs', 'Bill run table');
         $this->checkTable($checks, 'audit_log', 'Audit trail table');
-        $this->checkTable($checks, 'electric_v1_hr_attendance', 'Attendance source');
+        $this->checkTable($checks, 'electric_active_days_monthly', 'Active days source');
         $this->checkTable($checks, 'electric_v1_readings', 'Reading source');
         $this->checkTable($checks, 'electric_v1_room_allowance', 'Room allowance source');
         $this->checkTable($checks, 'util_monthly_rates_config', 'Rate source');
@@ -95,34 +95,52 @@ final class BillRunPreflightService
 
     private function checkAttendance(array &$checks, BillRun $run): void
     {
-        if (!Schema::hasTable('electric_v1_hr_attendance')) {
+        /*
+         * Current Electric V1 billing uses electric_active_days_monthly
+         * as the primary monthly active-days source.
+         */
+        if (!Schema::hasTable('electric_active_days_monthly')) {
             return;
         }
 
-        $q = DB::table('electric_v1_hr_attendance')
-            ->whereDate('cycle_start_date', $this->dateString($run->cycle_start_date))
-            ->whereDate('cycle_end_date', $this->dateString($run->cycle_end_date));
+        $billingMonthDate = date(
+            'Y-m-01',
+            strtotime($this->dateString($run->cycle_end_date))
+        );
+
+        $q = DB::table('electric_active_days_monthly')
+            ->whereDate('billing_month_date', $billingMonthDate);
 
         $count = (clone $q)->count();
-        $over = (clone $q)->where('attendance_days', '>', $run->cycle_days)->count();
+
+        $over = (clone $q)
+            ->where('active_days', '>', $run->cycle_days)
+            ->count();
 
         $checks[] = [
-            'code' => 'attendance_loaded',
+            'code' => 'active_days_loaded',
             'severity' => $count > 0 ? 'info' : 'stop',
             'status' => $count > 0 ? 'pass' : 'fail',
-            'title' => 'Attendance loaded',
-            'message' => $count > 0 ? 'Attendance rows found' : 'No attendance rows found for cycle',
-            'source_table' => 'electric_v1_hr_attendance',
-            'meta' => ['count' => $count],
+            'title' => 'Active days loaded',
+            'message' => $count > 0
+                ? 'Monthly active-day rows found'
+                : 'No monthly active-day rows found for billing month',
+            'source_table' => 'electric_active_days_monthly',
+            'meta' => [
+                'count' => $count,
+                'billing_month_date' => $billingMonthDate,
+            ],
         ];
 
         $checks[] = [
-            'code' => 'attendance_days_within_cycle',
+            'code' => 'active_days_within_cycle',
             'severity' => $over === 0 ? 'info' : 'stop',
             'status' => $over === 0 ? 'pass' : 'fail',
-            'title' => 'Attendance days within cycle',
-            'message' => $over === 0 ? 'No over-cycle attendance found' : 'Attendance exceeds cycle days',
-            'source_table' => 'electric_v1_hr_attendance',
+            'title' => 'Active days within cycle',
+            'message' => $over === 0
+                ? 'No over-cycle active days found'
+                : 'Active days exceed cycle days',
+            'source_table' => 'electric_active_days_monthly',
             'meta' => ['over_cycle_count' => $over],
         ];
     }

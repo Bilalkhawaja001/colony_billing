@@ -76,7 +76,7 @@ class OutputWriter
                     'month_cycle'      => $monthCycle,
                     'unit_id'          => $unitId,
                     'room_no'          => $roomNo,
-                    'residence_type'   => $roomResidenceTypes[$roomKey] ?? null,
+                    'residence_type'   => $roomResidenceTypes[$roomKey] ?? 'ROOM',
                     'room_persons'     => $r['room_persons'] ?? null,
                     'active_days'      => $r['active_days'] ?? null,
                     'employee_attendance_in_unit' => $r['employee_attendance_in_unit'] ?? null,

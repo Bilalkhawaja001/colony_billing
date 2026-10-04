@@ -3,181 +3,1057 @@
 <head>
 @include('partials.material-symbols-local')
 
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Meter Readings | Colony Billing</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Monthly Meter Readings | Colony Billing</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f7f9fb;color:#191c1e;font:14px Inter,Arial,sans-serif}.mr-top{background:#fff;border-bottom:1px solid #e2e8f0}.mr-topin,.mr-main,.mr-footin{max-width:1440px;margin:auto;padding:16px 24px}.mr-topin{display:flex;align-items:center;justify-content:space-between;gap:20px}.mr-brand{font-size:25px;font-weight:800;color:#0f172a}.mr-brand b{color:#0051d5}.mr-nav{display:flex;gap:8px}.mr-nav a{padding:9px 13px;border-radius:8px;color:#475569;text-decoration:none;font-weight:700}.mr-nav a.active{color:#0051d5;background:#eff6ff}.mr-main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(560px,2fr);gap:24px;padding-top:24px;padding-bottom:32px}.mr-left{display:flex;flex-direction:column;gap:20px}.mr-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:24px;box-shadow:0 4px 10px rgba(15,23,42,.04)}.mr-title{margin:0 0 22px;font-size:22px;color:#0f172a}.mr-title i{font-style:normal;color:#0051d5}.mr-field{margin-bottom:17px}.mr-field label{display:block;margin-bottom:6px;color:#475569;font-size:12px;font-weight:700}.mr-input,.mr-select{width:100%;height:40px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:8px 11px;color:#0f172a;outline:0}.mr-input:focus,.mr-select:focus{border-color:#0051d5;box-shadow:0 0 0 3px rgba(0,81,213,.1)}.mr-mono{font-family:"Courier New",monospace}.mr-btn{height:40px;border:1px solid #d7dce3;border-radius:8px;background:#f2f4f6;color:#334155;padding:0 15px;font-weight:700;cursor:pointer}.mr-btn.primary{background:#0051d5;border-color:#0051d5;color:#fff}.mr-btn.full{width:100%}.mr-row{display:flex;gap:10px}.mr-result{margin-top:16px;padding:14px;border-radius:8px;background:#f2f4f6;border:1px solid #e2e8f0;white-space:pre-wrap;min-height:72px;max-height:220px;overflow:auto;font:12px/1.5 "Courier New",monospace}.mr-head{display:flex;justify-content:space-between;align-items:center;gap:18px;border-bottom:1px solid #e2e8f0;padding-bottom:16px;margin-bottom:22px}.mr-head h1{margin:0;font-size:29px}.mr-switch{display:flex;background:#f2f4f6;border:1px solid #e2e8f0;border-radius:9px;padding:5px}.mr-mode{border:0;border-radius:6px;padding:9px 16px;font-weight:700;color:#475569;background:transparent;cursor:pointer}.mr-mode.active{background:#0051d5;color:#fff}.mr-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.mr-actions{display:flex;align-items:end;gap:8px}.mr-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:23px 0}.mr-kpi{background:#f2f4f6;border:1px solid #e2e8f0;border-radius:12px;padding:17px}.mr-kpi label{display:block;color:#64748b;font-size:12px;font-weight:700;margin-bottom:8px}.mr-kpi strong{display:block;font-size:24px;color:#0f172a;overflow-wrap:anywhere}.mr-kpi.warn strong{color:#d97706}.mr-tablewrap{overflow:auto;border:1px solid #e2e8f0;border-radius:12px}.mr-table{width:100%;border-collapse:collapse;min-width:790px}.mr-table th{background:#f2f4f6;color:#64748b;font-size:11px;text-transform:uppercase;text-align:left;padding:12px}.mr-table td{padding:12px;border-top:1px solid #e2e8f0}.mr-num{text-align:right}.mr-badge{display:inline-block;padding:4px 8px;border-radius:5px;background:#ecfdf5;color:#059669;font-size:10px;font-weight:800;text-transform:uppercase}.mr-status{color:#64748b;font-size:12px;margin:10px 0}.mr-hidden{display:none!important}.mr-employee-filters{display:grid;grid-template-columns:1fr 1fr auto;gap:16px;align-items:end}.mr-foot{background:#fff;border-top:1px solid #e2e8f0;color:#64748b}.mr-footin{display:flex;justify-content:space-between}.mr-links a{color:#64748b;text-decoration:none;margin-left:18px}.mr-back{color:#0051d5;text-decoration:none;font-weight:700}@media(max-width:950px){.mr-main{grid-template-columns:1fr}.mr-filters{grid-template-columns:repeat(2,1fr)}}@media(max-width:620px){.mr-nav{display:none}.mr-filters,.mr-kpis,.mr-employee-filters{grid-template-columns:1fr}.mr-head{align-items:flex-start;flex-direction:column}.mr-main{padding:16px}.mr-card{padding:17px}}
+*{box-sizing:border-box}
+body{
+    margin:0;
+    background:#f6f8fb;
+    color:#172033;
+    font:14px Inter,Arial,sans-serif
+}
+
+.mm-top{
+    background:#fff;
+    border-bottom:1px solid #e2e8f0
+}
+
+.mm-topin,
+.mm-main{
+    max-width:1450px;
+    margin:auto;
+    padding:16px 24px
+}
+
+.mm-topin{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px
+}
+
+.mm-brand{
+    font-size:25px;
+    font-weight:800
+}
+
+.mm-brand span{color:#075bd8}
+
+.mm-nav{
+    display:flex;
+    gap:8px
+}
+
+.mm-nav a{
+    text-decoration:none;
+    color:#475569;
+    padding:9px 13px;
+    border-radius:8px;
+    font-weight:700
+}
+
+.mm-nav a.active{
+    color:#075bd8;
+    background:#eef5ff
+}
+
+.mm-back{
+    color:#075bd8;
+    font-weight:700;
+    text-decoration:none
+}
+
+.mm-main{
+    padding-top:24px;
+    padding-bottom:40px
+}
+
+.mm-card{
+    background:#fff;
+    border:1px solid #e1e7ef;
+    border-radius:14px;
+    box-shadow:0 4px 14px rgba(15,23,42,.04);
+    overflow:hidden
+}
+
+.mm-head{
+    padding:22px 24px;
+    border-bottom:1px solid #e5eaf0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px
+}
+
+.mm-title{
+    margin:0;
+    font-size:27px;
+    font-weight:800
+}
+
+.mm-title span{color:#075bd8}
+
+.mm-sub{
+    margin-top:5px;
+    color:#64748b;
+    font-size:13px
+}
+
+.mm-controls{
+    padding:18px 24px;
+    display:flex;
+    align-items:end;
+    gap:12px;
+    flex-wrap:wrap;
+    background:#fbfcfe;
+    border-bottom:1px solid #e5eaf0
+}
+
+.mm-field label{
+    display:block;
+    font-size:12px;
+    color:#526075;
+    font-weight:700;
+    margin-bottom:6px
+}
+
+.mm-input{
+    height:40px;
+    border:1px solid #cfd8e5;
+    border-radius:8px;
+    background:#fff;
+    padding:8px 11px;
+    outline:none;
+    min-width:190px
+}
+
+.mm-input:focus{
+    border-color:#075bd8;
+    box-shadow:0 0 0 3px rgba(7,91,216,.10)
+}
+
+.mm-search{min-width:250px}
+
+.mm-btn{
+    border:0;
+    height:40px;
+    border-radius:8px;
+    padding:0 17px;
+    font-weight:700;
+    cursor:pointer
+}
+
+.mm-btn-primary{
+    background:#075bd8;
+    color:#fff
+}
+
+.mm-btn-light{
+    background:#edf2f7;
+    color:#334155;
+    border:1px solid #d7e0ea
+}
+
+.mm-btn:disabled{
+    opacity:.55;
+    cursor:not-allowed
+}
+
+.mm-summary{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:14px;
+    padding:18px 24px
+}
+
+.mm-kpi{
+    border:1px solid #e1e7ef;
+    background:#f8fafc;
+    border-radius:10px;
+    padding:15px
+}
+
+.mm-kpi label{
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    color:#64748b;
+    text-transform:uppercase;
+    margin-bottom:7px
+}
+
+.mm-kpi strong{
+    font-size:22px;
+    color:#0f172a
+}
+
+.mm-status{
+    display:none !important;
+}
+
+.mm-status.ok{
+    background:#ecfdf5;
+    color:#047857
+}
+
+.mm-status.err{
+    background:#fef2f2;
+    color:#b91c1c
+}
+
+.mm-tablewrap{
+    margin:0 24px 24px;
+    border:1px solid #dfe6ee;
+    border-radius:10px;
+    overflow:auto;
+    max-height:650px
+}
+
+.mm-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0;
+    min-width:760px
+}
+
+.mm-table thead th{
+    position:sticky;
+    top:0;
+    z-index:2;
+    background:#eef2f6;
+    color:#53657c;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    text-align:left;
+    padding:13px 16px;
+    border-bottom:1px solid #dce4ed
+}
+
+.mm-table th.num,
+.mm-table td.num{
+    text-align:right
+}
+
+.mm-table td{
+    padding:11px 16px;
+    border-bottom:1px solid #edf1f5;
+    vertical-align:middle
+}
+
+.mm-table tbody tr:hover{
+    background:#f8fbff
+}
+
+.mm-meter{
+    font-weight:800;
+    color:#172033
+}
+
+.mm-unit{
+    font-size:11px;
+    color:#8492a6;
+    margin-top:3px
+}
+
+.readonly-value{
+    display:inline-block;
+    min-width:95px;
+    padding:9px 11px;
+    background:#f1f5f9;
+    border:1px solid #e2e8f0;
+    border-radius:7px;
+    text-align:right;
+    font-family:"Courier New",monospace
+}
+
+.current-reading{
+    width:150px;
+    height:38px;
+    border:1px solid #cbd5e1;
+    border-radius:7px;
+    padding:7px 10px;
+    text-align:right;
+    font-family:"Courier New",monospace;
+    font-size:14px;
+    outline:none
+}
+
+.current-reading:focus{
+    border-color:#075bd8;
+    box-shadow:0 0 0 3px rgba(7,91,216,.10)
+}
+
+.consume{
+    font-family:"Courier New",monospace;
+    font-weight:800
+}
+
+.consume.negative{
+    color:#dc2626
+}
+
+.consume.positive{
+    color:#047857
+}
+
+.changed{
+    background:#fffdf3 !important
+}
+
+.mm-empty{
+    padding:35px !important;
+    text-align:center !important;
+    color:#64748b
+}
+
+@media(max-width:850px){
+    .mm-head{
+        align-items:flex-start;
+        flex-direction:column
+    }
+
+    .mm-summary{
+        grid-template-columns:repeat(2,1fr)
+    }
+}
+
+@media(max-width:600px){
+    .mm-nav{display:none}
+
+    .mm-main{
+        padding:14px
+    }
+
+    .mm-summary{
+        grid-template-columns:1fr
+    }
+
+    .mm-controls,
+    .mm-head{
+        padding-left:16px;
+        padding-right:16px
+    }
+
+    .mm-tablewrap{
+        margin-left:16px;
+        margin-right:16px
+    }
+}
 </style>
 </head>
+
 <body>
+
 @include('partials.global-navbar')
 
-<header class="mr-top"><div class="mr-topin"><div class="mr-brand"><b>⚡</b> Colony Billing</div><nav class="mr-nav"><a href="{{ url('/dashboard-v2') }}">Dashboard</a><a class="active" href="{{ url('/meters-readings') }}">Operations</a><a href="{{ url('/reports') }}">Reports</a></nav><a class="mr-back" href="{{ url('/meters-readings') }}">← Meters Hub</a></div></header>
-<main class="mr-main" data-grid="meterReadings">
- <aside class="mr-left">
-  <section class="mr-card"><h2 class="mr-title"><i>⚙</i> Quick Entry</h2><form id="quickReadingForm">
-   <div class="mr-field"><label>Meter ID</label><input class="mr-input mr-mono" name="meter_id" placeholder="e.g. MTR-001" required></div>
-   <div class="mr-field"><label>Unit ID</label><input class="mr-input mr-mono" name="unit_id" placeholder="e.g. U-001" required></div>
-   <div class="mr-field"><label>Reading Value</label><input class="mr-input mr-mono" name="reading_value" type="number" step="0.0001" min="0" required></div>
-   <div class="mr-field"><label>Reading Date</label><input class="mr-input" name="reading_date" type="date" required></div>
-   <button class="mr-btn primary full" type="submit">Save Reading</button>
-<div id="quickReadingMsg" style="display:none;margin-top:10px;padding:10px;border-radius:7px;font-weight:700"></div>
-  </form></section>
-  <section class="mr-card"><h2 class="mr-title"><i>⌕</i> Latest Lookup</h2><div class="mr-field"><label>Unit ID</label><div class="mr-row"><input class="mr-input mr-mono" id="latestUnit" placeholder="Search ID..."><button class="mr-btn" id="latestBtn" type="button">Search</button></div></div><pre class="mr-result" id="readingsResult">Ready.</pre></section>
-  <section class="mr-card">
-    <h2 class="mr-title"><i>⇪</i> Bulk Import (CSV)</h2>
-
-    @if(session('status'))<div class="mr-result" style="color:#047857">{{ session('status') }}</div>@endif
-    @if(session('error'))<div class="mr-result" style="color:#b91c1c">{{ session('error') }}</div>@endif
-
-    <form method="post" action="{{ route('billing.readings.import.preview') }}" enctype="multipart/form-data">
-      @csrf
-      <div class="mr-field">
-        <label>Month Cycle</label>
-        <input class="mr-input" type="month" id="impMonth" value="{{ date('Y-m') }}" required>
-        <input type="hidden" name="month_cycle" id="impMonthCycle" value="{{ date('m-Y') }}">
-      </div>
-      <div class="mr-field">
-        <label>CSV File</label>
-        <div class="mr-row">
-          <input class="mr-input" type="file" name="csv_file" accept=".csv" required>
-          <button class="mr-btn" type="submit">Preview</button>
+<header class="mm-top">
+    <div class="mm-topin">
+        <div class="mm-brand">
+            <span>⚡</span> Colony Billing
         </div>
-      </div>
-      <div class="mr-field" style="font-size:12px;opacity:.75">Columns: unit_id, current_reading (previous_reading optional)</div>
-    </form>
 
-    @php($pv = session('reading_preview'))
-    @if($pv)
-      <pre class="mr-result">{{ count($pv['rows']) }} rows · {{ $pv['cycle_start'] }} → {{ $pv['cycle_end'] }}@if(!empty($pv['issues'])) · {{ count($pv['issues']) }} problem row(s)@endif</pre>
+        <nav class="mm-nav">
+            <a href="{{ url('/dashboard-v2') }}">Dashboard</a>
+            <a class="active" href="{{ url('/meters-readings') }}">Operations</a>
+            <a href="{{ url('/reports') }}">Reports</a>
+        </nav>
 
-      @if(!empty($pv['issues']))
-        <div class="mr-tablewrap" style="max-height:260px;overflow:auto">
-          <table class="mr-table">
-            <thead><tr><th>Line</th><th>Unit</th><th>Meter</th><th>Masla</th></tr></thead>
-            <tbody>
-            @foreach($pv['issues'] as $ix)
-              <tr><td>{{ $ix['line'] }}</td><td><b>{{ $ix['unit_id'] }}</b></td><td>{{ $ix['meter_id'] }}</td><td style="color:#b91c1c">{{ $ix['message'] }}</td></tr>
-            @endforeach
-            </tbody>
-          </table>
+        <a class="mm-back" href="{{ url('/meters-readings') }}">
+            ← Meters Hub
+        </a>
+    </div>
+</header>
+
+<main class="mm-main">
+
+    <section class="mm-card">
+
+        <div class="mm-head">
+            <div>
+                <h1 class="mm-title">
+                    <span>▥</span> Monthly Meter Readings
+                </h1>
+
+                <div class="mm-sub">
+                    Select billing month, enter current units and save all readings.
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="mm-btn mm-btn-primary"
+                id="saveAllBtn"
+            >
+                Save All Readings
+            </button>
         </div>
-      @endif
 
-      @if(!empty($pv['missing']))
-        <div class="mr-result" style="color:#92400e">CSV me nahi aaye ({{ count($pv['missing']) }}): {{ implode(', ', array_slice($pv['missing'], 0, 25)) }}@if(count($pv['missing']) > 25) ...@endif</div>
-      @endif
-
-      <form method="post" action="{{ route('billing.readings.import.commit') }}" enctype="multipart/form-data">
-        @csrf
-        <input type="hidden" name="month_cycle" value="{{ $pv['month_cycle'] }}">
-        @if(!empty($pv['issues']))
-          <label style="display:block;margin:8px 0;font-size:13px">
-            <input type="checkbox" name="skip_flagged" value="1"> Skip flagged rows and proceed ({{ count($pv['issues']) }} rows chhod di jayengi)
-          </label>
-        @endif
-        <div class="mr-row">
-          <input class="mr-input" type="file" name="csv_file" accept=".csv" required>
-          <button class="mr-btn" type="submit" onclick="return confirm('Import these readings?')">Confirm Import</button>
+        <div id="statusBox" class="mm-status">
+            Loading meter readings...
         </div>
-      </form>
-    @endif
-  </section>
- </aside>
- <section class="mr-card">
-  <div class="mr-head"><h1><span style="color:#0051d5">▥</span> Consumption Analysis</h1><div class="mr-switch"><button class="mr-mode active" data-mode="meter" type="button">Meter / Unit</button><button class="mr-mode" data-mode="employee" type="button">Employee Alloc.</button></div></div>
-  <div id="meterMode">
-   <div class="mr-filters">
-    <div class="mr-field"><label>From Date</label><input class="mr-input" id="mr_from" type="date"></div><div class="mr-field"><label>To Date</label><input class="mr-input" id="mr_to" type="date"></div>
-    <div class="mr-field"><label>Department</label><select class="mr-select" id="mr_department"><option value="">All Departments</option><option>Weaving</option><option>Spinning</option><option>Centralized</option><option>Unmapped</option></select></div>
-    <div class="mr-field"><label>Building / House Type</label><select class="mr-select" id="mr_building"><option value="">All Buildings</option></select></div><div class="mr-field"><label>Unit</label><select class="mr-select" id="mr_unit"><option value="">All Units</option></select></div><div class="mr-field"><label>Room</label><select class="mr-select" id="mr_room"><option value="">All Rooms</option></select></div>
-    <div class="mr-actions"><button class="mr-btn primary" id="mr_run" type="button">▶ Run</button><button class="mr-btn" id="mr_reset" type="button">Reset</button></div>
-   </div>
-   <div class="mr-kpis"><div class="mr-kpi"><label>Meters / Rows</label><strong id="mr_kpi_meters">0</strong></div><div class="mr-kpi"><label>Total Consumption</label><strong id="mr_kpi_consumption">0</strong></div><div class="mr-kpi warn"><label>Unmapped</label><strong id="mr_kpi_unmapped">0</strong></div><div class="mr-kpi"><label>Data Source</label><strong id="mr_kpi_source" style="font-size:15px">-</strong></div></div>
-   <div class="mr-status" id="mr_status">Ready.</div><div class="mr-tablewrap"><table class="mr-table"><thead><tr><th>Department</th><th>Building</th><th>Unit</th><th>Room</th><th>Meter</th><th>Opening</th><th>Closing</th><th>Consumption</th><th>Status</th></tr></thead><tbody id="mr_rows"><tr><td colspan="9">Run analysis to view rows.</td></tr></tbody></table></div>
-  </div>
-  <div class="mr-hidden" id="employeeMode">
-   <div class="mr-employee-filters"><div class="mr-field"><label>Billing Month (MM-YYYY)</label><input class="mr-input mr-mono" id="emp_month" placeholder="MM-YYYY" value="{{ now()->format('m-Y') }}"></div><div class="mr-field"><label>Employee ID / Name</label><input class="mr-input" id="emp_search" placeholder="Search employee"></div><button class="mr-btn primary" id="emp_run" type="button">Load Allocation</button></div>
-   <div class="mr-status" id="emp_status">Uses finalized employee-wise billing allocation.</div><div class="mr-tablewrap"><table class="mr-table"><thead><tr><th>Employee</th><th>Name</th><th>Unit</th><th>Room</th><th>Active Days</th><th>Used Units</th><th>Eligible Units</th><th>Billable Units</th><th>Amount</th></tr></thead><tbody id="emp_rows"><tr><td colspan="9">Load a billing month to view employee allocation.</td></tr></tbody></table></div>
-  </div>
- </section>
+
+        <div class="mm-summary">
+
+            <div class="mm-kpi">
+                <label>Total Meters</label>
+                <strong id="kpiMeters">0</strong>
+            </div>
+
+            <div class="mm-kpi">
+                <label>Readings Entered</label>
+                <strong id="kpiEntered">0</strong>
+            </div>
+
+            <div class="mm-kpi">
+                <label>Total Consume Unit</label>
+                <strong id="kpiConsumption">0</strong>
+            </div>
+
+            <div class="mm-kpi">
+                <label>Cycle End</label>
+                <strong id="kpiCycle" style="font-size:15px">-</strong>
+            </div>
+
+        </div>
+
+        <div class="mm-controls">
+
+            <div class="mm-field">
+                <label>Billing Month</label>
+                <input
+                    type="month"
+                    id="billingMonth"
+                    class="mm-input"
+                    value="{{ now()->format('Y-m') }}"
+                >
+            </div>
+
+            <div class="mm-field">
+                <label>Search Meter</label>
+                <input
+                    type="text"
+                    id="meterSearch"
+                    class="mm-input mm-search"
+                    placeholder="Meter ID or Unit ID..."
+                >
+            </div>
+
+            <button
+                type="button"
+                class="mm-btn mm-btn-light"
+                id="loadBtn"
+            >
+                Load Readings
+            </button>
+
+        </div>
+
+
+        <div class="mm-tablewrap">
+
+            <table class="mm-table">
+
+                <thead>
+                    <tr>
+                        <th>Meter ID</th>
+                        <th class="num">Previous Unit</th>
+                        <th class="num">Current Unit</th>
+                        <th class="num">Total Consume Unit</th>
+                        <th class="num">Free Allowance</th>
+                        <th class="num">Billable Units</th>
+                    </tr>
+                </thead>
+
+                <tbody id="meterRows">
+                    <tr>
+                        <td colspan="6" class="mm-empty">
+                            Loading...
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
 </main>
-<footer class="mr-foot"><div class="mr-footin"><b>Colony Billing Operations</b><span class="mr-links">Meter readings and employee allocation</span></div></footer>
+
 <script>
-const csrf=@json(csrf_token()), out=document.getElementById('readingsResult');
+const csrf = @json(csrf_token());
 
-const quickReadingForm=document.getElementById('quickReadingForm');
-const latestBtn=document.getElementById('latestBtn');
-const latestUnit=document.getElementById('latestUnit');
+const billingMonth = document.getElementById('billingMonth');
+const loadBtn = document.getElementById('loadBtn');
+const saveAllBtn = document.getElementById('saveAllBtn');
+const meterSearch = document.getElementById('meterSearch');
+const meterRows = document.getElementById('meterRows');
+const statusBox = document.getElementById('statusBox');
 
-const mr_department=document.getElementById('mr_department');
-const mr_building=document.getElementById('mr_building');
-const mr_unit=document.getElementById('mr_unit');
-const mr_room=document.getElementById('mr_room');
-const mr_from=document.getElementById('mr_from');
-const mr_to=document.getElementById('mr_to');
-const mr_run=document.getElementById('mr_run');
-const mr_reset=document.getElementById('mr_reset');
-const mr_status=document.getElementById('mr_status');
-const mr_kpi_meters=document.getElementById('mr_kpi_meters');
-const mr_kpi_consumption=document.getElementById('mr_kpi_consumption');
-const mr_kpi_unmapped=document.getElementById('mr_kpi_unmapped');
-const mr_kpi_source=document.getElementById('mr_kpi_source');
-const mr_rows=document.getElementById('mr_rows');
-const meterMode=document.getElementById('meterMode');
-const employeeMode=document.getElementById('employeeMode');
+const kpiMeters = document.getElementById('kpiMeters');
+const kpiEntered = document.getElementById('kpiEntered');
+const kpiConsumption = document.getElementById('kpiConsumption');
+const kpiCycle = document.getElementById('kpiCycle');
 
-const emp_month=document.getElementById('emp_month');
-const emp_search=document.getElementById('emp_search');
-const emp_run=document.getElementById('emp_run');
-const emp_status=document.getElementById('emp_status');
-const emp_rows=document.getElementById('emp_rows');
+const pageBase =
+    window.location.origin +
+    window.location.pathname.replace(/\/+$/, '');
 
-const esc=v=>String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
-function show(v){out.textContent=JSON.stringify(v,null,2)}
-async function req(url,method='GET',payload=null){const o={method,headers:{'X-CSRF-TOKEN':csrf,'Accept':'application/json'}};if(payload!==null){o.headers['Content-Type']='application/json';o.body=JSON.stringify(payload)}const r=await fetch(url,o),j=await r.json().catch(()=>({error:'Non-JSON response'}));show({status:r.status,body:j});return {r,j}}
-latestBtn.onclick=()=>req('{{ url('/meter-reading/latest') }}/'+encodeURIComponent(latestUnit.value.trim()));
-quickReadingForm.onsubmit=async e=>{
-e.preventDefault();
-const b=e.submitter,msg=document.getElementById('quickReadingMsg');
-b.disabled=true;
-msg.style.display='none';
-try{
- const {r,j}=await req('{{ url('/meter-reading/upsert') }}','POST',Object.fromEntries(new FormData(e.target)));
- msg.style.display='block';
- if(r.ok){
-   msg.style.background='#ecfdf5';
-   msg.style.color='#047857';
-   msg.textContent='✓ Reading saved successfully';
- }else{
-   msg.style.background='#fef2f2';
-   msg.style.color='#b91c1c';
-   msg.textContent='✕ '+(j.error||j.message||'Reading could not be saved');
- }
-}finally{
- b.disabled=false;
+const dataUrl = pageBase + '/monthly-data';
+const saveUrl = pageBase + '/monthly-save';
+
+let allRows = [];
+
+const esc = value =>
+    String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+    }[char]));
+
+function numberText(value)
+{
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    const num = Number(value);
+
+    if (!Number.isFinite(num)) {
+        return '—';
+    }
+
+    return num.toLocaleString(undefined, {
+        maximumFractionDigits:4
+    });
 }
-};
-let mrCascadeRows=[],mrCascadeLoaded=false;
-function uniq(rows,key){return [...new Set(rows.map(r=>String(r[key]??'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b))}
-function options(el,values,label){const keep=el.value;el.innerHTML=`<option value="">${label}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(values.includes(keep))el.value=keep}
-function cascade(level){const rows=mrCascadeRows.filter(r=>(!mr_department.value||r.department===mr_department.value)&&(!mr_building.value||level==='building'||r.building===mr_building.value)&&(!mr_unit.value||level!=='room'||r.unit_id===mr_unit.value));options(mr_building,uniq(rows,'building'),'All Buildings');options(mr_unit,uniq(rows,'unit_id'),'All Units');options(mr_room,uniq(rows,'room_no'),'All Rooms')}
-async function meterData(p){const r=await fetch('{{ url('/meters-readings/readings/analysis-data') }}?'+p,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error('Analysis request failed: '+r.status);return r.json()}
-async function loadOptions(){mr_status.textContent='Loading options...';const p=new URLSearchParams({from:mr_from.value,to:mr_to.value,department:'',building:'',unit_id:'',room_no:''});const j=await meterData(p);mrCascadeRows=Array.isArray(j.options?.rows)?j.options.rows:(Array.isArray(j.rows)?j.rows:[]);mrCascadeLoaded=true;cascade('init');mr_status.textContent='Filters ready.'}
-async function runMeter(){try{if(!mrCascadeLoaded)await loadOptions();mr_status.textContent='Loading...';const p=new URLSearchParams({from:mr_from.value,to:mr_to.value,department:mr_department.value,building:mr_building.value,unit_id:mr_unit.value,room_no:mr_room.value}),j=await meterData(p),rows=Array.isArray(j.rows)?j.rows:[];mr_kpi_meters.textContent=j.summary?.meters??0;mr_kpi_consumption.textContent=j.summary?.total_consumption??0;mr_kpi_unmapped.textContent=j.summary?.unmapped??0;mr_kpi_source.textContent=j.source||'-';mr_rows.innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.department)}</td><td>${esc(x.building)}</td><td>${esc(x.unit_id)}</td><td>${esc(x.room_no)}</td><td class="mr-mono">${esc(x.meter_id)}</td><td>${esc(x.opening_date)} ${esc(x.opening_reading)}</td><td>${esc(x.closing_date)} ${esc(x.closing_reading)}</td><td class="mr-num"><b>${esc(x.consumption)}</b></td><td><span class="mr-badge">${esc(x.reading_status||'OK')}</span></td></tr>`).join(''):'<tr><td colspan="9">No rows found.</td></tr>';mr_status.textContent='Loaded '+rows.length+' rows'}catch(e){mr_status.textContent=e.message}}
-mr_department.onchange=()=>cascade('department');mr_building.onchange=()=>cascade('building');mr_unit.onchange=()=>cascade('unit');mr_from.onchange=mr_to.onchange=()=>{mrCascadeLoaded=false};mr_run.onclick=runMeter;mr_reset.onclick=()=>{mr_from.value=mr_to.value=mr_department.value=mr_building.value=mr_unit.value=mr_room.value='';mrCascadeLoaded=false;runMeter()};
-document.querySelectorAll('.mr-mode').forEach(b=>b.onclick=()=>{document.querySelectorAll('.mr-mode').forEach(x=>x.classList.toggle('active',x===b));meterMode.classList.toggle('mr-hidden',b.dataset.mode!=='meter');employeeMode.classList.toggle('mr-hidden',b.dataset.mode!=='employee')});
-let employeeRows=[];function employeeArray(j){for(const v of [j?.rows,j?.data,j?.body?.rows,j?.body?.data,j?.results])if(Array.isArray(v))return v;return Array.isArray(j)?j:[]}
-function renderEmployees(){const q=emp_search.value.trim().toLowerCase(),rows=employeeRows.filter(x=>!q||[x.employee_id,x.company_id,x.name,x.employee_name].some(v=>String(v??'').toLowerCase().includes(q)));emp_rows.innerHTML=rows.length?rows.map(x=>`<tr><td class="mr-mono">${esc(x.employee_id??x.company_id)}</td><td>${esc(x.employee_name??x.name)}</td><td>${esc(x.unit_id)}</td><td>${esc(x.room_no)}</td><td>${esc(x.active_days??x.attendance)}</td><td class="mr-num">${esc(x.emp_used_units??x.share_units)}</td><td class="mr-num">${esc(x.eligible_units??x.explain_free_share_units)}</td><td class="mr-num"><b>${esc(x.billable_units??x.explain_billable_units)}</b></td><td class="mr-num">${esc(x.amount??x.share_amount)}</td></tr>`).join(''):'<tr><td colspan="9">No employee allocation rows found.</td></tr>';emp_status.textContent='Loaded '+rows.length+' employee rows'}
-emp_run.onclick=async()=>{emp_status.textContent='Loading...';try{const r=await fetch('{{ url('/api/results/employee-wise') }}?month_cycle='+encodeURIComponent(emp_month.value.trim()),{headers:{Accept:'application/json'}}),j=await r.json();if(!r.ok)throw new Error(j.message||'Employee allocation request failed: '+r.status);employeeRows=employeeArray(j);renderEmployees()}catch(e){emp_status.textContent=e.message}};emp_search.oninput=renderEmployees;
+
+function setStatus(message, type='')
+{
+    statusBox.className = 'mm-status' + (type ? ' ' + type : '');
+    statusBox.textContent = message;
+}
+
+function calculateBillable(rowData, consumption)
+{
+    if (
+        consumption === null ||
+        !Number.isFinite(consumption) ||
+        consumption < 0
+    ) {
+        return null;
+    }
+
+    const method = String(
+        rowData.billing_method || 'ATTENDANCE_PRORATED'
+    ).toUpperCase();
+
+    const ctx = rowData.billing_context || {};
+
+    if (method === 'OCCUPIED_ROOM_EQUAL_SPLIT') {
+
+        const allowances = Array.isArray(ctx.occupied_room_allowances)
+            ? ctx.occupied_room_allowances
+            : [];
+
+        const count = Number(ctx.occupied_room_count || 0);
+
+        if (count <= 0) {
+            return null;
+        }
+
+        const perRoom = consumption / count;
+        let total = 0;
+
+        allowances.forEach(value => {
+            const allowance = Number(value);
+
+            if (Number.isFinite(allowance) && allowance > 0) {
+                total += Math.max(perRoom - allowance, 0);
+            }
+        });
+
+        return total;
+    }
+
+    if (method === 'ATTENDANCE_PRORATED') {
+
+        const attendance = Number(ctx.unit_attendance || 0);
+
+        const free = attendance > 0
+            ? Number(rowData.effective_free_allowance || 0)
+            : Number(rowData.free_allowance || 0);
+
+        return Math.max(consumption - free, 0);
+    }
+
+    return null;
+}
+
+function calculateConsumption(input)
+{
+    const tr = input.closest('tr');
+    const previousRaw = input.dataset.previous;
+    const currentRaw = input.value.trim();
+
+    const consumptionCell = tr.querySelector('.consume');
+    const billableCell = tr.querySelector('.billable');
+
+    tr.classList.toggle(
+        'changed',
+        currentRaw !== String(input.dataset.original ?? '')
+    );
+
+    if (previousRaw === '' || currentRaw === '') {
+        consumptionCell.textContent = '—';
+        consumptionCell.dataset.value = '';
+        consumptionCell.className = 'consume';
+
+        billableCell.textContent = '—';
+        billableCell.dataset.value = '';
+
+        updateKpis();
+        return;
+    }
+
+    const previous = Number(previousRaw);
+    const current = Number(currentRaw);
+
+    if (!Number.isFinite(previous) || !Number.isFinite(current)) {
+        consumptionCell.textContent = '—';
+        consumptionCell.dataset.value = '';
+
+        billableCell.textContent = '—';
+        billableCell.dataset.value = '';
+
+        updateKpis();
+        return;
+    }
+
+    const consume = current - previous;
+
+    consumptionCell.textContent = numberText(consume);
+    consumptionCell.dataset.value = consume;
+
+    consumptionCell.className =
+        'consume ' +
+        (consume < 0 ? 'negative' : 'positive');
+
+    const rowData = allRows.find(row =>
+        String(row.meter_id) === String(input.dataset.meterId)
+    );
+
+    const billable = rowData
+        ? calculateBillable(rowData, consume)
+        : null;
+
+    if (billable === null) {
+        billableCell.textContent = '—';
+        billableCell.dataset.value = '';
+    } else {
+        billableCell.textContent = numberText(billable);
+        billableCell.dataset.value = billable;
+    }
+
+    updateKpis();
+}
+
+function updateKpis()
+{
+    const visibleRows =
+        [...meterRows.querySelectorAll('tr[data-meter]')]
+            .filter(row => row.style.display !== 'none');
+
+    kpiMeters.textContent = visibleRows.length;
+
+    let entered = 0;
+    let total = 0;
+
+    visibleRows.forEach(row => {
+        const input = row.querySelector('.current-reading');
+
+        if (input && input.value.trim() !== '') {
+            entered++;
+        }
+
+        const consume = row.querySelector('.consume');
+
+        if (
+            consume &&
+            consume.dataset.value !== undefined &&
+            consume.dataset.value !== ''
+        ) {
+            const n = Number(consume.dataset.value);
+
+            if (Number.isFinite(n)) {
+                total += n;
+            }
+        }
+    });
+
+    kpiEntered.textContent = entered;
+    kpiConsumption.textContent = numberText(total);
+}
+
+function renderRows(rows)
+{
+    if (!rows.length) {
+        meterRows.innerHTML =
+            '<tr><td colspan="6" class="mm-empty">No active meters found.</td></tr>';
+
+        updateKpis();
+        return;
+    }
+
+    meterRows.innerHTML = rows.map(row => {
+
+        const previous =
+            row.previous_reading === null
+                ? ''
+                : String(row.previous_reading);
+
+        const current =
+            row.current_reading === null
+                ? ''
+                : String(row.current_reading);
+
+        let consumption = '—';
+        let consumptionValue = '';
+        let consumeClass = '';
+
+        if (previous !== '' && current !== '') {
+            const diff = Number(current) - Number(previous);
+
+            consumption = numberText(diff);
+            consumptionValue = diff;
+            consumeClass =
+                diff < 0
+                    ? 'negative'
+                    : 'positive';
+        }
+
+        return `
+            <tr
+                data-meter="${esc(row.meter_id)}"
+                data-unit="${esc(row.unit_id)}"
+            >
+                <td>
+                    <div class="mm-meter">${esc(row.meter_id)}</div>
+                    <div class="mm-unit">${esc(row.unit_id || '')}</div>
+                </td>
+
+                <td class="num">
+                    <span class="readonly-value">
+                        ${numberText(row.previous_reading)}
+                    </span>
+                </td>
+
+                <td class="num">
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        class="current-reading"
+                        value="${esc(current)}"
+                        data-original="${esc(current)}"
+                        data-previous="${esc(previous)}"
+                        data-meter-id="${esc(row.meter_id)}"
+                    >
+                </td>
+
+                <td class="num">
+                    <span
+                        class="consume ${consumeClass}"
+                        data-value="${esc(consumptionValue)}"
+                    >
+                        ${consumption}
+                    </span>
+                </td>
+
+                <td class="num">
+                    <span class="readonly-value">
+                        ${numberText(row.free_allowance)}
+                    </span>
+                </td>
+
+                <td class="num">
+                    <span
+                        class="readonly-value billable"
+                        data-value="${row.billable_units === null ? '' : esc(row.billable_units)}"
+                    >
+                        ${numberText(row.billable_units)}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    document
+        .querySelectorAll('.current-reading')
+        .forEach(input => {
+
+            input.addEventListener('input', () => {
+                calculateConsumption(input);
+            });
+
+            input.addEventListener('keydown', event => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+
+                const inputs =
+                    [...document.querySelectorAll('.current-reading')]
+                        .filter(i => i.closest('tr').style.display !== 'none');
+
+                const currentIndex = inputs.indexOf(input);
+
+                if (
+                    currentIndex >= 0 &&
+                    inputs[currentIndex + 1]
+                ) {
+                    inputs[currentIndex + 1].focus();
+                    inputs[currentIndex + 1].select();
+                }
+            });
+        });
+
+    updateKpis();
+}
+
+async function loadReadings()
+{
+    const month = billingMonth.value;
+
+    if (!month) {
+        setStatus('Please select billing month.', 'err');
+        return;
+    }
+
+    loadBtn.disabled = true;
+    saveAllBtn.disabled = true;
+
+    meterRows.innerHTML =
+        '<tr><td colspan="6" class="mm-empty">Loading readings...</td></tr>';
+
+    setStatus('Loading ' + month + ' readings...');
+
+    try {
+        const url =
+            dataUrl +
+            '?' +
+            new URLSearchParams({
+                month: month
+            }).toString();
+
+        const response = await fetch(url, {
+            method:'GET',
+            credentials:'same-origin',
+            headers:{
+                'Accept':'application/json',
+                'X-Requested-With':'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.error ||
+                data.message ||
+                'Unable to load readings.'
+            );
+        }
+
+        allRows = data.rows || [];
+
+        renderRows(allRows);
+
+        kpiCycle.textContent =
+            data.cycle_end_date || '-';
+
+        setStatus(
+            data.month_label +
+            ' loaded · Billing cycle ' +
+            data.cycle_start_date +
+            ' → ' +
+            data.cycle_end_date +
+            ' · Method: ' +
+            data.method_code,
+            'ok'
+        );
+
+    } catch (error) {
+
+        allRows = [];
+
+        meterRows.innerHTML =
+            '<tr><td colspan="6" class="mm-empty">' +
+            esc(error.message) +
+            '</td></tr>';
+
+        kpiMeters.textContent = '0';
+        kpiEntered.textContent = '0';
+        kpiConsumption.textContent = '0';
+        kpiCycle.textContent = '-';
+
+        setStatus(error.message, 'err');
+
+    } finally {
+        loadBtn.disabled = false;
+        saveAllBtn.disabled = false;
+    }
+}
+
+async function saveAll()
+{
+    const inputs =
+        [...document.querySelectorAll('.current-reading')];
+
+    const changed = inputs.filter(input => {
+        return (
+            input.value.trim() !== '' &&
+            input.value.trim() !==
+                String(input.dataset.original ?? '')
+        );
+    });
+
+    if (!changed.length) {
+        setStatus('No changed readings to save.');
+        return;
+    }
+
+    const rows = changed.map(input => ({
+        meter_id: input.dataset.meterId,
+        current_reading: input.value.trim()
+    }));
+
+    if (!confirm(
+        'Save ' +
+        rows.length +
+        ' changed meter reading(s) for ' +
+        billingMonth.value +
+        '?'
+    )) {
+        return;
+    }
+
+    saveAllBtn.disabled = true;
+    loadBtn.disabled = true;
+
+    setStatus(
+        'Saving ' +
+        rows.length +
+        ' reading(s)...'
+    );
+
+    try {
+        const response = await fetch(saveUrl, {
+            method:'POST',
+            credentials:'same-origin',
+            headers:{
+                'Accept':'application/json',
+                'Content-Type':'application/json',
+                'X-CSRF-TOKEN':csrf,
+                'X-Requested-With':'XMLHttpRequest'
+            },
+            body:JSON.stringify({
+                month: billingMonth.value,
+                rows: rows
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            let message =
+                data.error ||
+                data.message ||
+                'Readings could not be saved.';
+
+            if (
+                Array.isArray(data.errors) &&
+                data.errors.length
+            ) {
+                message +=
+                    ' ' +
+                    data.errors
+                        .slice(0, 5)
+                        .map(e =>
+                            (e.meter_id || 'Row') +
+                            ': ' +
+                            e.error
+                        )
+                        .join(' | ');
+            }
+
+            throw new Error(message);
+        }
+
+        setStatus(
+            'Saved successfully · ' +
+            data.inserted +
+            ' new · ' +
+            data.updated +
+            ' updated.',
+            'ok'
+        );
+
+        await loadReadings();
+
+    } catch (error) {
+        setStatus(error.message, 'err');
+    } finally {
+        saveAllBtn.disabled = false;
+        loadBtn.disabled = false;
+    }
+}
+
+function applySearch()
+{
+    const q =
+        meterSearch.value
+            .trim()
+            .toLowerCase();
+
+    document
+        .querySelectorAll('tr[data-meter]')
+        .forEach(row => {
+
+            const text =
+                (
+                    row.dataset.meter +
+                    ' ' +
+                    row.dataset.unit
+                ).toLowerCase();
+
+            row.style.display =
+                !q || text.includes(q)
+                    ? ''
+                    : 'none';
+        });
+
+    updateKpis();
+}
+
+loadBtn.addEventListener('click', loadReadings);
+
+billingMonth.addEventListener('change', loadReadings);
+
+saveAllBtn.addEventListener('click', saveAll);
+
+meterSearch.addEventListener('input', applySearch);
+
+loadReadings();
 </script>
-<script src="{{ url('/js/crud-grids.js') }}"></script>
-</body></html>
-<script>
-(function(){
-  var m=document.getElementById('impMonth'), h=document.getElementById('impMonthCycle');
-  if(!m||!h) return;
-  function sync(){ var v=m.value; if(!v) return; var p=v.split('-'); h.value=p[1]+'-'+p[0]; }
-  m.addEventListener('change',sync); sync();
-})();
-</script>
+
+</body>
+</html>

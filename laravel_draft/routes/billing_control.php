@@ -46,4 +46,5 @@ Route::middleware([ControlRoomAuthGuard::class])
         Route::get('/export', [ExportController::class, 'index'])->name('export');
         Route::post('/export/download', [ExportController::class, 'download'])->name('export.download');
         Route::post('/export/detailed-electric-breakdown', [ExportController::class, 'detailedElectricBreakdown'])->name('export.detailed-electric-breakdown');
+        Route::post('/export/simple-breakdown', [ExportController::class, 'simpleBreakdown'])->name('export.simple-breakdown');
     });

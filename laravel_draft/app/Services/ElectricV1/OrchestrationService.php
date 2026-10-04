@@ -39,6 +39,12 @@ class OrchestrationService
         $runId = 'RUN-'.substr(bin2hex(random_bytes(8)), 0, 12);
         $runStart = gmdate('c');
         $billingMonthDays = ExplicitElectricBillingCalculator::billingMonthDays($billingMonthDate);
+
+        // Actual meter-reading cycle days.
+        // HOUSE movement billing follows residence overlap in this cycle.
+        $readingCycleDays = (new \DateTimeImmutable($cycleStart))
+            ->diff(new \DateTimeImmutable($cycleEnd))
+            ->days + 1;
         $monthCycle = date('Y-m', strtotime($billingMonthDate));
         $monthlyActiveDays = ElectricActiveDaysMonthly::query()
             ->whereDate('billing_month_date', $billingMonthDate)
@@ -50,7 +56,127 @@ class OrchestrationService
         $allowRows = $this->allowance->listAllowances();
         $readRows = $this->readings->listCycleReadings($cycleStart, $cycleEnd);
         $attRows = $this->attendance->listCycleAttendance($cycleStart, $cycleEnd);
+        /*
+         * Cycle occupancy must follow residence history.
+         *
+         * An employee may move from one unit to another inside the same
+         * billing cycle. employee_residence_assignments keeps those periods,
+         * while electric_v1_occupancy may contain only the latest residence.
+         *
+         * For employees having residence history, rebuild their billing
+         * occupancy from the history and clip every segment to this cycle.
+         * Legacy occupancy remains as fallback for employees without history.
+         */
         $occRows = $this->occupancy->listOccupancy();
+
+        try {
+            $historyRows = DB::table('employee_residence_assignments')
+                ->whereDate('start_date', '<=', $cycleEnd)
+                ->where(function ($q) use ($cycleStart) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $cycleStart);
+                })
+                ->orderBy('company_id')
+                ->orderBy('start_date')
+                ->get();
+
+            $historyCompanies = [];
+
+            foreach ($historyRows as $h) {
+                $cid = trim((string) $h->company_id);
+                if ($cid !== '') {
+                    $historyCompanies[$cid] = true;
+                }
+            }
+
+            /*
+             * Keep legacy occupancy only where residence history is unavailable.
+             * Also discard occupancy rows that do not overlap this cycle.
+             */
+            $occRows = array_values(array_filter(
+                $occRows,
+                function ($r) use ($historyCompanies, $cycleStart, $cycleEnd) {
+                    $cid = trim((string) ($r['company_id'] ?? ''));
+
+                    if ($cid !== '' && isset($historyCompanies[$cid])) {
+                        return false;
+                    }
+
+                    $from = trim((string) ($r['from_date'] ?? ''));
+                    $to   = trim((string) ($r['to_date'] ?? ''));
+
+                    if ($from !== '' && $from > $cycleEnd) {
+                        return false;
+                    }
+
+                    if ($to !== '' && $to < $cycleStart) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+
+            /*
+             * Add every residence segment overlapping the selected cycle.
+             */
+            foreach ($historyRows as $h) {
+                $cid  = trim((string) $h->company_id);
+                $unit = trim((string) $h->unit_id);
+                $room = trim((string) $h->room_no);
+
+                if (
+                    $cid === '' ||
+                    $unit === '' ||
+                    in_array(strtoupper($unit), ['OUTSIDE', 'OUTSIDE COLONY'], true)
+                ) {
+                    continue;
+                }
+
+                $start = (string) $h->start_date;
+                $end   = $h->end_date
+                    ? (string) $h->end_date
+                    : $cycleEnd;
+
+                $from = $start > $cycleStart ? $start : $cycleStart;
+                $to   = $end < $cycleEnd ? $end : $cycleEnd;
+
+                if ($from > $to) {
+                    continue;
+                }
+
+                $occRows[] = [
+                    'company_id' => $cid,
+                    'unit_id'    => $unit,
+                    'room_id'    => $room,
+                    'from_date'  => $from,
+                    'to_date'    => $to,
+                ];
+            }
+        } catch (\Throwable $e) {
+            /*
+             * Safe fallback: retain only legacy occupancy overlapping
+             * the requested billing cycle.
+             */
+            $occRows = array_values(array_filter(
+                $occRows,
+                function ($r) use ($cycleStart, $cycleEnd) {
+                    $from = trim((string) ($r['from_date'] ?? ''));
+                    $to   = trim((string) ($r['to_date'] ?? ''));
+
+                    if ($from !== '' && $from > $cycleEnd) {
+                        return false;
+                    }
+
+                    if ($to !== '' && $to < $cycleStart) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+        }
+
         $adjRows = $this->adjustments->listCycleAdjustments($cycleStart, $cycleEnd);
 
         $issues = array_merge(
@@ -144,13 +270,11 @@ class OrchestrationService
                 $skipped++;
                 continue;
             }
-            if ($resType === 'HOUSE') {
-                if (count($employeeIds) !== 1) {
-                    $issues[] = ['code' => 'E_HOUSE_RESP_NOT_SINGLE', 'message' => 'HOUSE unit must resolve to exactly one responsible employee', 'severity' => 'ERROR', 'unit_id' => $unitId];
-                    $skipped++;
-                    continue;
-                }
-            }
+            /*
+             * A HOUSE can have multiple sequential responsible employees
+             * inside one billing cycle when residence is transferred.
+             * Their respective shares are calculated from residence days.
+             */
 
             $attendanceByEmployee = [];
             $activeDaysByEmployee = [];
@@ -160,16 +284,51 @@ class OrchestrationService
                     $issues[] = ['code' => 'E_EMP_NOT_ELIGIBLE', 'message' => 'Employee missing in master', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
                     continue;
                 }
-                $hasMonthlyOverride = $resType !== 'HOUSE' && array_key_exists($companyId, $monthlyActiveDays);
-                $attRow = $attByCompany[$companyId] ?? null;
-                if (!$hasMonthlyOverride && (!$attRow || !is_numeric($attRow['attendance_days'] ?? null))) {
-                    $issues[] = ['code' => 'E_ACTIVE_DAYS_MISSING', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
-                    continue;
-                }
-                $attendanceDays = $hasMonthlyOverride ? (float) $monthlyActiveDays[$companyId] : (float)$attRow['attendance_days'];
-                if ($attendanceDays < 0) {
-                    $issues[] = ['code' => 'E_ACTIVE_DAYS_INVALID', 'message' => 'ActiveDays missing/invalid', 'severity' => 'ERROR', 'company_id' => $companyId, 'unit_id' => $unitId];
-                    continue;
+                if ($resType === 'HOUSE') {
+                    /*
+                     * HOUSE responsibility is based on residence dates,
+                     * not office attendance.
+                     *
+                     * Passing full cycle days here makes
+                     * employeeActiveDaysInUnit() return exact stay days.
+                     */
+                    $attendanceDays = (float) $readingCycleDays;
+                } else {
+                    $hasMonthlyOverride = array_key_exists(
+                        $companyId,
+                        $monthlyActiveDays
+                    );
+
+                    $attRow = $attByCompany[$companyId] ?? null;
+
+                    if (
+                        !$hasMonthlyOverride &&
+                        (!$attRow || !is_numeric($attRow['attendance_days'] ?? null))
+                    ) {
+                        $issues[] = [
+                            'code' => 'E_ACTIVE_DAYS_MISSING',
+                            'message' => 'ActiveDays missing/invalid',
+                            'severity' => 'ERROR',
+                            'company_id' => $companyId,
+                            'unit_id' => $unitId,
+                        ];
+                        continue;
+                    }
+
+                    $attendanceDays = $hasMonthlyOverride
+                        ? (float) $monthlyActiveDays[$companyId]
+                        : (float) $attRow['attendance_days'];
+
+                    if ($attendanceDays < 0) {
+                        $issues[] = [
+                            'code' => 'E_ACTIVE_DAYS_INVALID',
+                            'message' => 'ActiveDays missing/invalid',
+                            'severity' => 'ERROR',
+                            'company_id' => $companyId,
+                            'unit_id' => $unitId,
+                        ];
+                        continue;
+                    }
                 }
 
                 $attendanceByEmployee[$companyId] = $attendanceDays;
@@ -186,19 +345,75 @@ class OrchestrationService
             }
 
             $grossUnits = (float)$cons['result']['gross_units'];
-            $employeeIds = array_values(array_filter($employeeIds, fn($cid) => array_key_exists($cid, $activeDaysByEmployee)));
+
+            $employeeIds = array_values(array_filter(
+                $employeeIds,
+                fn($cid) => array_key_exists($cid, $activeDaysByEmployee)
+            ));
+
+            // HOUSE: only employees having actual residence days get a share.
+            if ($resType === 'HOUSE') {
+                $employeeIds = array_values(array_filter(
+                    $employeeIds,
+                    fn($cid) => (float)($activeDaysByEmployee[$cid] ?? 0.0) > 0.0
+                ));
+            }
+
+            $houseRunningAllocated = 0.0;
+
             $roomShared = $resType === 'HOUSE'
                 ? ['presence' => [], 'gross' => [], 'allowance' => []]
-                : ExplicitElectricBillingCalculator::roomSharedAllocation($unitOccupancy, $attendanceByEmployee, $cycleStart, $cycleEnd, $grossUnits, $unitFreeElectric, $billingMonthDays);
+                : ExplicitElectricBillingCalculator::roomSharedAllocation(
+                    $unitOccupancy,
+                    $attendanceByEmployee,
+                    $cycleStart,
+                    $cycleEnd,
+                    $grossUnits,
+                    $unitFreeElectric,
+                    $billingMonthDays
+                );
 
             foreach ($employeeIds as $index => $companyId) {
                 $employeeActiveDays = (float)($activeDaysByEmployee[$companyId] ?? 0.0);
-                $empUsedElec = $resType === 'HOUSE'
-                    ? round($grossUnits, 4)
-                    : round((float)($roomShared['gross'][$companyId] ?? 0.0), 4);
-                $eligibleUnits = $resType === 'HOUSE'
-                    ? round($unitFreeElectric, 4)
-                    : round((float)($roomShared['allowance'][$companyId] ?? 0.0), 4);
+
+                if ($resType === 'HOUSE') {
+                    /*
+                     * Split this HOUSE meter consumption according to
+                     * actual residence days of each responsible employee.
+                     */
+                    $isLastHouseEmployee = ($index === count($employeeIds) - 1);
+
+                    $empUsedElec = ExplicitElectricBillingCalculator::allocateUsageShare(
+                        $grossUnits,
+                        $employeeActiveDays,
+                        $unitActiveDays,
+                        $isLastHouseEmployee,
+                        $houseRunningAllocated
+                    );
+
+                    /*
+                     * Free allowance also belongs only to the employee's
+                     * actual residence period in this HOUSE.
+                     */
+                    $eligibleUnits = $readingCycleDays > 0
+                        ? round(
+                            $unitFreeElectric *
+                            ($employeeActiveDays / $readingCycleDays),
+                            4
+                        )
+                        : 0.0;
+                } else {
+                    $empUsedElec = round(
+                        (float)($roomShared['gross'][$companyId] ?? 0.0),
+                        4
+                    );
+
+                    $eligibleUnits = round(
+                        (float)($roomShared['allowance'][$companyId] ?? 0.0),
+                        4
+                    );
+                }
+
                 $billableUnits = ExplicitElectricBillingCalculator::billableUnits($empUsedElec, $eligibleUnits);
                 $adj = (float)($adjMap[$companyId.'|'.$unitId] ?? 0.0);
                 $netAfterAdj = round(max(0.0, $billableUnits + $adj), 4);

@@ -84,6 +84,10 @@ Route::middleware(['ensure.auth', 'force.password.change', 'shell.rbac'])->group
     // Workspaces under the hub (no separate sidebar entries)
     Route::get('/meters-readings/registry', [ParityUiController::class, 'meterRegistry']);
     Route::get('/meters-readings/readings', [ParityUiController::class, 'meterReadings']);
+    Route::get('/meters-readings/readings/monthly-data', [ParityUiController::class, 'meterReadingsMonthlyData'])
+        ->name('meters-readings.monthly-data');
+    Route::post('/meters-readings/readings/monthly-save', [ParityUiController::class, 'meterReadingsMonthlySave'])
+        ->name('meters-readings.monthly-save');
     Route::get('/meters-readings/readings/analysis-data', [ParityUiController::class, 'meterReadingsAnalysisData']);
     Route::get('/meters-readings/water-tools', [ParityUiController::class, 'waterTools']);
     Route::get('/housing-rooms', [ParityUiController::class, 'rooms']);

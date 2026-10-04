@@ -27,30 +27,43 @@ class DashboardParityService
     public function resolveMonthCycle(?string $monthCycle = null): ?string
     {
         $monthCycle = trim((string) ($monthCycle ?? ''));
+
+        // Explicitly selected month always wins.
         if ($monthCycle !== '') {
             return $monthCycle;
         }
 
-        $row = $this->qOne("SELECT month_cycle FROM util_billing_run ORDER BY id DESC LIMIT 1");
+        /*
+         * Default dashboard month:
+         * latest billing cycle whose cycle end date has already passed/reached.
+         *
+         * Example on 22-Sep-2026:
+         * 09-2026 ends 15-Sep-2026 -> selected
+         * 10-2026 ends 15-Oct-2026 -> not selected yet
+         */
+        $row = $this->qOne(
+            "SELECT month_cycle
+             FROM util_month_cycle
+             WHERE cycle_end_date <= CURDATE()
+             ORDER BY cycle_end_date DESC
+             LIMIT 1"
+        );
 
         if ($row && !empty($row->month_cycle)) {
             return (string) $row->month_cycle;
         }
-        $fallback = $this->qOne(
-            "SELECT month_cycle FROM (
-                SELECT month_cycle FROM util_billing_line
-                UNION SELECT month_cycle FROM util_school_van_monthly_charge
-                UNION SELECT month_cycle FROM family_details
-             ) AS m
-             WHERE month_cycle IS NOT NULL AND month_cycle <> ''
-             ORDER BY STR_TO_DATE(CONCAT('01-', month_cycle), '%d-%m-%Y') DESC
+
+        // Safety fallback if no completed cycle exists.
+        $row = $this->qOne(
+            "SELECT month_cycle
+             FROM util_month_cycle
+             ORDER BY cycle_end_date DESC
              LIMIT 1"
         );
-        if ($fallback && !empty($fallback->month_cycle)) {
-            return (string) $fallback->month_cycle;
-        }
-        $mc = $this->qOne("SELECT month_cycle FROM util_month_cycle ORDER BY STR_TO_DATE(CONCAT('01-', month_cycle), '%d-%m-%Y') DESC LIMIT 1");
-        return $mc ? (string) $mc->month_cycle : null;
+
+        return ($row && !empty($row->month_cycle))
+            ? (string) $row->month_cycle
+            : null;
     }
 
     private function missingBillMonths(?string $resolvedMonth): array
@@ -58,7 +71,7 @@ class DashboardParityService
         // current calendar month as MM-YYYY
         $current = date('m-Y');
         // collect months that DO have a billing run
-        $runRows = $this->qAll("SELECT DISTINCT month_cycle FROM util_billing_run WHERE month_cycle IS NOT NULL AND month_cycle <> ''");
+        $runRows = $this->qAll("SELECT DISTINCT month_cycle FROM bill_runs WHERE month_cycle IS NOT NULL AND month_cycle <> '' AND status <> 'VOIDED'");
         $haveRun = [];
         foreach ($runRows as $r) { $haveRun[(string) $r->month_cycle] = true; }
         // start from resolved month (or current if none), walk forward to current

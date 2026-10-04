@@ -42,8 +42,12 @@ class ParityUiController extends Controller
     public function dashboardV2(Request $request)
     {
         $month = $this->dashboard->resolveMonthCycle($request->query('month_cycle'));
+        $months = \Illuminate\Support\Facades\DB::table('util_month_cycle')
+            ->orderByDesc('cycle_start_date')->pluck('month_cycle')->all();
+        if ($month && !in_array($month, $months, true)) { array_unshift($months, $month); }
         return view('ui.dashboard-v2', [
             'monthCycle' => $month,
+            'monthOptions' => $months,
             'kpis' => $this->dashboard->colonyKpis($month)['kpis'] ?? [],
             'familyRows' => $this->dashboard->familyMembers($month)['rows'] ?? [],
             'vanRows' => $this->dashboard->vanKids($month)['rows'] ?? [],
@@ -188,13 +192,24 @@ class ParityUiController extends Controller
         $tree['Outside Colony'] = ['—' => [['unit' => 'OUTSIDE', 'room' => 'Outside Colony', 'n' => 0]]];
 
         $DB = \Illuminate\Support\Facades\DB::class;
-        $noResidence = \Illuminate\Support\Facades\DB::table('employees_master')
-            ->where('active', 'Yes')
+        // Authoritative No Residence list:
+        // active employee + not Outside/Form Pending + no ACTIVE open assignment.
+        $noResidence = \Illuminate\Support\Facades\DB::table('employees_master as e')
+            ->where('e.active', 'Yes')
             ->where(function ($w) {
-                $w->whereNull('residence_status')->orWhere('residence_status', 'UNASSIGNED');
+                $w->whereNull('e.residence_status')
+                  ->orWhereNotIn('e.residence_status', ['OUTSIDE', 'FORM_PENDING']);
             })
-            ->select('company_id', 'name', 'department', 'designation')
-            ->orderBy('company_id')->get();
+            ->whereNotExists(function ($q) {
+                $q->select(\Illuminate\Support\Facades\DB::raw(1))
+                  ->from('employee_residence_assignments as a')
+                  ->whereColumn('a.company_id', 'e.company_id')
+                  ->whereRaw("UPPER(TRIM(a.status)) = 'ACTIVE'")
+                  ->whereNull('a.end_date');
+            })
+            ->select('e.company_id', 'e.name', 'e.department', 'e.designation')
+            ->orderBy('e.company_id')
+            ->get();
 
         $formPending = \Illuminate\Support\Facades\DB::table('employees_master')
             ->where('active', 'Yes')->where('residence_status', 'FORM_PENDING')
@@ -256,6 +271,7 @@ class ParityUiController extends Controller
         $type = strtoupper(trim((string) $request->query('type', '')));
 
         $query = \Illuminate\Support\Facades\DB::table('util_unit');
+
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('unit_id', 'like', '%'.$q.'%')
@@ -263,7 +279,10 @@ class ParityUiController extends Controller
                   ->orWhere('block_name', 'like', '%'.$q.'%');
             });
         }
-        if ($colony !== '') { $query->where('colony_type', $colony); }
+
+        if ($colony !== '') {
+            $query->where('colony_type', $colony);
+        }
 
         $matchAllRooms = static function ($query, callable $match): void {
             $query->whereExists(function ($exists) {
@@ -284,20 +303,45 @@ class ParityUiController extends Controller
 
         if ($type !== '') {
             if ($type === 'BACHELOR') {
-                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.occupant_grade', '<>', 'BACHELOR')->orWhereNull($alias.'.occupant_grade'));
+                $matchAllRooms(
+                    $query,
+                    fn($w, $alias, $negated = false) =>
+                        $w->where($alias.'.occupant_grade', '<>', 'BACHELOR')
+                          ->orWhereNull($alias.'.occupant_grade')
+                );
             } elseif ($type === 'HOSTEL') {
-                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.occupant_grade', '<>', 'SENIOR_STAFF')->orWhereNull($alias.'.occupant_grade'));
+                $matchAllRooms(
+                    $query,
+                    fn($w, $alias, $negated = false) =>
+                        $w->where($alias.'.occupant_grade', '<>', 'SENIOR_STAFF')
+                          ->orWhereNull($alias.'.occupant_grade')
+                );
             } elseif ($type === 'CONTAINER') {
-                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where($alias.'.residence_type', '<>', 'CONTAINER')->orWhereNull($alias.'.residence_type'));
+                $matchAllRooms(
+                    $query,
+                    fn($w, $alias, $negated = false) =>
+                        $w->where($alias.'.residence_type', '<>', 'CONTAINER')
+                          ->orWhereNull($alias.'.residence_type')
+                );
             } elseif ($type === 'HOUSE') {
                 $houseTypes = ['HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C'];
-                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->whereNotIn($alias.'.residence_type', $houseTypes)->orWhereNull($alias.'.residence_type'));
+
+                $matchAllRooms(
+                    $query,
+                    fn($w, $alias, $negated = false) =>
+                        $w->whereNotIn($alias.'.residence_type', $houseTypes)
+                          ->orWhereNull($alias.'.residence_type')
+                );
             } elseif ($type === 'COMMON') {
-                $matchAllRooms($query, fn($w, $alias, $negated = false) => $w->where(function ($x) use ($alias) {
-                    $x->where($alias.'.residence_type', '<>', 'COMMON')->orWhereNull($alias.'.residence_type');
-                })->where(function ($x) use ($alias) {
-                    $x->where($alias.'.occupant_grade', '<>', 'COMMON')->orWhereNull($alias.'.occupant_grade');
-                }));
+                $matchAllRooms($query, function ($w, $alias, $negated = false) {
+                    $w->where(function ($x) use ($alias) {
+                        $x->where($alias.'.residence_type', '<>', 'COMMON')
+                          ->orWhereNull($alias.'.residence_type');
+                    })->where(function ($x) use ($alias) {
+                        $x->where($alias.'.occupant_grade', '<>', 'COMMON')
+                          ->orWhereNull($alias.'.occupant_grade');
+                    });
+                });
             } elseif ($type === 'UNSET') {
                 $query->whereExists(function ($exists) {
                     $exists->selectRaw('1')
@@ -314,25 +358,190 @@ class ParityUiController extends Controller
 
         $units = $query->orderBy('unit_id')->get();
 
-        $occ = \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
-            ->select('unit_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) as c'))
-            ->groupBy('unit_id')->pluck('c', 'unit_id');
+        /*
+         * CURRENT RESIDENCE SOURCE
+         * employee_residence_assignments is authoritative.
+         */
+        $today = now()->toDateString();
+
+        $currentResidents =
+            \Illuminate\Support\Facades\DB::table('employee_residence_assignments as a')
+            ->leftJoin('employees_master as e', 'e.company_id', '=', 'a.company_id')
+            ->where('e.active', 'Yes')
+            ->where('a.status', 'ACTIVE')
+            ->whereDate('a.start_date', '<=', $today)
+            ->where(function ($w) use ($today) {
+                $w->whereNull('a.end_date')
+                  ->orWhereDate('a.end_date', '>=', $today);
+            })
+            ->get([
+                'a.unit_id',
+                \Illuminate\Support\Facades\DB::raw('a.room_no as room_id'),
+                'a.company_id',
+                'a.start_date',
+                'a.end_date',
+                'e.name',
+                'e.department',
+                'e.designation',
+                'e.mobile_no',
+                'e.active',
+            ]);
+
+        /*
+         * DISPLAY-ONLY room normalisation:
+         * If assignment room does not exist in room master but the unit
+         * has exactly one active room, show the resident in that room.
+         * Residence history itself is NOT modified.
+         */
+        $activeRoomMap = \Illuminate\Support\Facades\DB::table('util_unit_rooms')
+            ->where('is_active', 1)
+            ->get(['unit_id', 'room_no'])
+            ->groupBy('unit_id');
+
+        $currentResidents = $currentResidents->map(function ($r) use ($activeRoomMap) {
+            $r->source_room_id = $r->room_id;
+
+            $unitRooms = $activeRoomMap->get($r->unit_id, collect());
+
+            $exactRoom = $unitRooms->first(function ($room) use ($r) {
+                return (string) $room->room_no === (string) $r->room_id;
+            });
+
+            if (!$exactRoom && $unitRooms->count() === 1) {
+                $r->room_id = $unitRooms->first()->room_no;
+            }
+
+            return $r;
+        });
+
+        $occ = $currentResidents
+            ->groupBy('unit_id')
+            ->map(function ($rows) {
+                return $rows->pluck('company_id')
+                    ->filter()
+                    ->unique()
+                    ->count();
+            });
+
+        $roomEmployees = $currentResidents
+            ->groupBy(function ($r) {
+                return $r->unit_id.'|'.$r->room_id;
+            });
+
+        $roomOcc = $currentResidents
+            ->groupBy(function ($r) {
+                return $r->unit_id.'|'.$r->room_id;
+            })
+            ->map(function ($rows) {
+                return $rows->pluck('company_id')
+                    ->filter()
+                    ->unique()
+                    ->count();
+            });
+
+        $rooms = \Illuminate\Support\Facades\DB::table('util_unit_rooms')
+            ->orderBy('room_no')
+            ->get()
+            ->groupBy('unit_id');
 
         $colonies = \Illuminate\Support\Facades\DB::table('util_unit')
-            ->whereNotNull('colony_type')->distinct()->orderBy('colony_type')->pluck('colony_type');
+            ->whereNotNull('colony_type')
+            ->distinct()
+            ->orderBy('colony_type')
+            ->pluck('colony_type');
 
-        $typeStats = \Illuminate\Support\Facades\DB::select("\n            SELECT type, COUNT(*) total,\n                   SUM(CASE WHEN occ_count IS NULL OR occ_count=0 THEN 1 ELSE 0 END) vacant,\n                   SUM(CASE WHEN occ_count>0 THEN 1 ELSE 0 END) occupied\n            FROM (\n                SELECT u.unit_id, o.c occ_count,\n                       CASE\n                         WHEN SUM(CASE WHEN r.residence_type IS NULL OR r.occupant_grade IS NULL THEN 1 ELSE 0 END) > 0 THEN 'UNSET'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.occupant_grade = 'BACHELOR' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'BACHELOR'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.occupant_grade = 'SENIOR_STAFF' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'HOSTEL'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type = 'CONTAINER' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'CONTAINER'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type IN ('HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C') THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'HOUSE'\n                         WHEN COUNT(r.id) > 0 AND SUM(CASE WHEN r.residence_type = 'COMMON' OR r.occupant_grade = 'COMMON' THEN 1 ELSE 0 END) = COUNT(r.id) THEN 'COMMON'\n                         ELSE NULL\n                       END AS type\n                FROM util_unit u\n                LEFT JOIN util_unit_rooms r ON r.unit_id=u.unit_id AND r.is_active=1\n                LEFT JOIN (SELECT unit_id, COUNT(DISTINCT company_id) c FROM electric_v1_occupancy GROUP BY unit_id) o\n                  ON o.unit_id=u.unit_id\n                WHERE u.is_active=1\n                GROUP BY u.unit_id, o.c\n            ) typed\n            WHERE type IS NOT NULL\n            GROUP BY type ORDER BY total DESC");
+        /*
+         * Overview cards use the SAME current assignment source.
+         */
+        $typeStats = \Illuminate\Support\Facades\DB::select("
+            SELECT
+                type,
+                COUNT(*) total,
+                SUM(CASE WHEN occ_count IS NULL OR occ_count = 0 THEN 1 ELSE 0 END) vacant,
+                SUM(CASE WHEN occ_count > 0 THEN 1 ELSE 0 END) occupied
+            FROM (
+                SELECT
+                    u.unit_id,
+                    o.c AS occ_count,
+                    CASE
+                        WHEN SUM(
+                            CASE
+                                WHEN r.residence_type IS NULL
+                                  OR r.occupant_grade IS NULL
+                                THEN 1 ELSE 0
+                            END
+                        ) > 0
+                        THEN 'UNSET'
+
+                        WHEN COUNT(r.id) > 0
+                         AND SUM(CASE WHEN r.occupant_grade = 'BACHELOR' THEN 1 ELSE 0 END) = COUNT(r.id)
+                        THEN 'BACHELOR'
+
+                        WHEN COUNT(r.id) > 0
+                         AND SUM(CASE WHEN r.occupant_grade = 'SENIOR_STAFF' THEN 1 ELSE 0 END) = COUNT(r.id)
+                        THEN 'HOSTEL'
+
+                        WHEN COUNT(r.id) > 0
+                         AND SUM(CASE WHEN r.residence_type = 'CONTAINER' THEN 1 ELSE 0 END) = COUNT(r.id)
+                        THEN 'CONTAINER'
+
+                        WHEN COUNT(r.id) > 0
+                         AND SUM(
+                            CASE
+                                WHEN r.residence_type IN ('HOUSE_A+', 'HOUSE_A', 'HOUSE_B', 'HOUSE_C')
+                                THEN 1 ELSE 0
+                            END
+                         ) = COUNT(r.id)
+                        THEN 'HOUSE'
+
+                        WHEN COUNT(r.id) > 0
+                         AND SUM(
+                            CASE
+                                WHEN r.residence_type = 'COMMON'
+                                  OR r.occupant_grade = 'COMMON'
+                                THEN 1 ELSE 0
+                            END
+                         ) = COUNT(r.id)
+                        THEN 'COMMON'
+
+                        ELSE NULL
+                    END AS type
+
+                FROM util_unit u
+
+                LEFT JOIN util_unit_rooms r
+                  ON r.unit_id = u.unit_id
+                 AND r.is_active = 1
+
+                LEFT JOIN (
+                    SELECT
+                        a2.unit_id AS unit_id,
+                        COUNT(DISTINCT a2.company_id) c
+                    FROM employee_residence_assignments a2
+                    INNER JOIN employees_master e2
+                      ON e2.company_id = a2.company_id
+                    WHERE a2.status = 'ACTIVE'
+                      AND e2.active = 'Yes'
+                      AND a2.start_date <= ?
+                      AND (a2.end_date IS NULL OR a2.end_date >= ?)
+                    GROUP BY a2.unit_id
+                ) o
+                  ON o.unit_id = u.unit_id
+
+                WHERE u.is_active = 1
+
+                GROUP BY u.unit_id, o.c
+            ) typed
+
+            WHERE type IS NOT NULL
+            GROUP BY type
+            ORDER BY total DESC
+        ", [$today, $today]);
 
         return view('ui.unit-master', [
-            'roomEmployees' => \Illuminate\Support\Facades\DB::table('electric_v1_occupancy as o')
-                ->leftJoin('employees_master as e', 'e.company_id', '=', 'o.company_id')
-                ->select('o.unit_id', 'o.room_id', 'o.company_id', 'e.name', 'e.department', 'e.designation', 'e.mobile_no', 'e.active')
-                ->get()->groupBy(fn($r) => $r->unit_id.'|'.$r->room_id),
-            'rooms' => \Illuminate\Support\Facades\DB::table('util_unit_rooms')->orderBy('room_no')->get()->groupBy('unit_id'),
-            'roomOcc' => \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
-                ->select('unit_id', 'room_id', \Illuminate\Support\Facades\DB::raw('COUNT(DISTINCT company_id) as c'))
-                ->groupBy('unit_id', 'room_id')->get()
-                ->mapWithKeys(fn($r) => [$r->unit_id.'|'.$r->room_id => $r->c]),
+            'roomEmployees' => $roomEmployees,
+            'rooms' => $rooms,
+            'roomOcc' => $roomOcc,
             'typeStats' => $typeStats,
             'type' => $type,
             'units' => $units,
@@ -689,6 +898,580 @@ class ParityUiController extends Controller
         return view('ui.meter-readings');
     }
 
+
+    // Monthly Meter Reading Entry
+    public function meterReadingsMonthlyData(Request $request)
+    {
+        $month = trim((string) $request->query('month', now()->format('Y-m')));
+
+        try {
+            $monthDate = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Invalid month. Expected YYYY-MM.',
+            ], 422);
+        }
+
+        $cycle = \Illuminate\Support\Facades\DB::table('util_month_cycle')
+            ->where(function ($q) use ($monthDate) {
+                $q->where('month_cycle', $monthDate->format('m-Y'))
+                  ->orWhere('month_cycle', $monthDate->format('Y-m'));
+            })
+            ->orderByDesc('cycle_end_date')
+            ->first();
+
+        if (! $cycle) {
+            return response()->json([
+                'status' => 'error',
+                'error' => 'Billing cycle is not configured for '.$monthDate->format('F Y').'.',
+            ], 422);
+        }
+
+        $cycleStart = (string) $cycle->cycle_start_date;
+        $cycleEnd   = (string) $cycle->cycle_end_date;
+
+        /*
+         * Existing official/draft run ka method respect karo.
+         * Agar koi method stored nahi hai to normal system default use hoga.
+         */
+        $storedMethod = \App\Models\BillRun::query()
+            ->where('month_cycle', (string) $cycle->month_cycle)
+            ->whereNotNull('method_code')
+            ->orderByDesc('id')
+            ->value('method_code');
+
+        $methodCode = strtoupper(trim((string) (
+            $storedMethod ?: 'ATTENDANCE_PRORATED'
+        )));
+
+        /*
+         * Exact previous billing cycle.
+         * Example:
+         * October previous = September cycle ending 2026-09-15
+         */
+        $previousCycle = \Illuminate\Support\Facades\DB::table('util_month_cycle')
+            ->whereDate('cycle_end_date', '<', $cycleEnd)
+            ->orderByDesc('cycle_end_date')
+            ->first();
+
+        $previousEnd = $previousCycle
+            ? (string) $previousCycle->cycle_end_date
+            : null;
+
+        $meters = \Illuminate\Support\Facades\DB::table('util_meter_unit')
+            ->where('is_active', 1)
+            ->orderBy('meter_id')
+            ->get();
+
+        $currentRows = \Illuminate\Support\Facades\DB::table('util_meter_readings')
+            ->whereDate('reading_date', $cycleEnd)
+            ->get()
+            ->keyBy(fn ($row) => (string) $row->meter_id);
+
+        $previousRows = collect();
+
+        if ($previousEnd) {
+            $previousRows = \Illuminate\Support\Facades\DB::table('util_meter_readings')
+                ->whereDate('reading_date', $previousEnd)
+                ->get()
+                ->keyBy(fn ($row) => (string) $row->meter_id);
+        }
+
+        /*
+         * Billing context follows same room allowance / occupancy /
+         * attendance rules used by billing engine.
+         */
+        $billingContext = $this->meterMonthlyBillingContext(
+            $cycleStart,
+            $cycleEnd,
+            $methodCode
+        );
+
+        /*
+         * Configured free allowance per unit.
+         * Dedicated room allowance table is authoritative.
+         * This is shown even when monthly occupancy snapshot is missing.
+         */
+        $configuredAllowance = [];
+
+        $dedicatedAllowanceRows = \Illuminate\Support\Facades\DB::table('electric_v1_room_allowance')
+            ->where('is_active', 1)
+            ->select(
+                'unit_id',
+                \Illuminate\Support\Facades\DB::raw('SUM(room_free_allowance) AS total_allowance')
+            )
+            ->groupBy('unit_id')
+            ->get();
+
+        foreach ($dedicatedAllowanceRows as $allowanceRow) {
+            $uid = trim((string) $allowanceRow->unit_id);
+
+            if ($uid !== '') {
+                $configuredAllowance[$uid] = (float) $allowanceRow->total_allowance;
+            }
+        }
+
+        /*
+         * Legacy allowance only as fallback where dedicated allowance
+         * does not exist for that unit.
+         */
+        $legacyAllowanceRows = \Illuminate\Support\Facades\DB::table('electric_v1_allowance')
+            ->where('is_active', 1)
+            ->select(
+                'unit_id',
+                \Illuminate\Support\Facades\DB::raw('SUM(free_electric) AS total_allowance')
+            )
+            ->groupBy('unit_id')
+            ->get();
+
+        foreach ($legacyAllowanceRows as $allowanceRow) {
+            $uid = trim((string) $allowanceRow->unit_id);
+
+            if ($uid !== '' && ! array_key_exists($uid, $configuredAllowance)) {
+                $configuredAllowance[$uid] = (float) $allowanceRow->total_allowance;
+            }
+        }
+
+        $rows = [];
+
+        foreach ($meters as $meter) {
+
+            $meterId = trim((string) $meter->meter_id);
+            $unitId  = trim((string) $meter->unit_id);
+
+            $previous = isset($previousRows[$meterId])
+                ? (float) $previousRows[$meterId]->reading_value
+                : null;
+
+            $current = isset($currentRows[$meterId])
+                ? (float) $currentRows[$meterId]->reading_value
+                : null;
+
+            $consumption = (
+                $previous !== null && $current !== null
+                    ? round($current - $previous, 3)
+                    : null
+            );
+
+            $ctx = $billingContext[$unitId] ?? [
+                'free_allowance' => 0.0,
+                'unit_attendance' => 0.0,
+                'occupied_room_count' => 0,
+                'occupied_room_allowances' => [],
+            ];
+
+            $configuredFree = (float) (
+                $configuredAllowance[$unitId]
+                ?? ($ctx['free_allowance'] ?? 0)
+            );
+
+            $ctx['configured_free_allowance'] = $configuredFree;
+
+            $billable = $this->meterMonthlyBillable(
+                $consumption,
+                $methodCode,
+                $ctx
+            );
+
+            $rows[] = [
+                'meter_id' => $meterId,
+                'unit_id' => $unitId,
+
+                'previous_reading' => $previous,
+                'current_reading' => $current,
+
+                'consumption' => $consumption,
+
+                'free_allowance' => round(
+                    $configuredFree,
+                    4
+                ),
+
+                'effective_free_allowance' => round(
+                    (float) ($ctx['free_allowance'] ?? 0),
+                    4
+                ),
+
+                'billable_units' => $billable,
+
+                'billing_method' => $methodCode,
+
+                'billing_context' => [
+                    'unit_attendance' =>
+                        round((float) ($ctx['unit_attendance'] ?? 0), 4),
+
+                    'occupied_room_count' =>
+                        (int) ($ctx['occupied_room_count'] ?? 0),
+
+                    'occupied_room_allowances' =>
+                        array_values($ctx['occupied_room_allowances'] ?? []),
+                ],
+            ];
+        }
+
+        return response()->json([
+            'status' => 'ok',
+
+            'month' => $monthDate->format('Y-m'),
+            'month_label' => $monthDate->format('F Y'),
+
+            'month_cycle' => (string) $cycle->month_cycle,
+
+            'cycle_start_date' => $cycleStart,
+            'cycle_end_date' => $cycleEnd,
+
+            'previous_cycle_end_date' => $previousEnd,
+
+            'method_code' => $methodCode,
+
+            'rows' => $rows,
+        ]);
+    }
+
+    private function meterMonthlyBillingContext(
+        string $cycleStart,
+        string $cycleEnd,
+        string $methodCode
+    ): array {
+
+        $cycleDays =
+            \Carbon\Carbon::parse($cycleStart)
+                ->diffInDays(\Carbon\Carbon::parse($cycleEnd)) + 1;
+
+        /*
+         * Dedicated room allowance table is authoritative.
+         */
+        $roomAllowRows =
+            \Illuminate\Support\Facades\DB::table('electric_v1_room_allowance')
+                ->get();
+
+        $legacyAllowRows =
+            \Illuminate\Support\Facades\DB::table('electric_v1_allowance')
+                ->where('is_active', 1)
+                ->get();
+
+        $roomAllowByUnit = [];
+
+        foreach ($roomAllowRows as $a) {
+
+            $u = trim((string) $a->unit_id);
+            $room = trim((string) $a->room_no);
+
+            if ($u === '' || $room === '') {
+                continue;
+            }
+
+            $roomAllowByUnit[$u][$room] = [
+                'allowance' => (float) $a->room_free_allowance,
+                'active' => (bool) $a->is_active,
+            ];
+        }
+
+        $legacyRoomAllowByUnit = [];
+        $unitFallbackAllow = [];
+
+        foreach ($legacyAllowRows as $a) {
+
+            $u = trim((string) $a->unit_id);
+            $room = trim((string) ($a->room_no ?? ''));
+
+            if ($u === '') {
+                continue;
+            }
+
+            if ($room === '') {
+                $unitFallbackAllow[$u] = (float) $a->free_electric;
+            } else {
+                $legacyRoomAllowByUnit[$u][$room] =
+                    (float) $a->free_electric;
+            }
+        }
+
+        /*
+         * Same attendance month used by SnapshotBuilder.
+         */
+        $monthDate = substr($cycleEnd, 0, 7).'-01';
+
+        $daysByEmp =
+            \Illuminate\Support\Facades\DB::table('electric_active_days_monthly')
+                ->where('billing_month_date', $monthDate)
+                ->pluck('active_days', 'company_id');
+
+        $occupancy =
+            \Illuminate\Support\Facades\DB::table('electric_v1_occupancy')
+                ->where('from_date', $cycleStart)
+                ->where('to_date', $cycleEnd)
+                ->get();
+
+        $units = [];
+
+        foreach ($occupancy as $o) {
+
+            $u = trim((string) $o->unit_id);
+            $room = trim((string) ($o->room_id ?? ''));
+
+            if ($u === '') {
+                continue;
+            }
+
+            /*
+             * Same safe blank-room mapping as SnapshotBuilder.
+             */
+            if (
+                $room === ''
+                && isset($roomAllowByUnit[$u])
+                && count($roomAllowByUnit[$u]) === 1
+            ) {
+                $room = array_key_first($roomAllowByUnit[$u]);
+            }
+
+            $units[$u]['rooms'][$room]['employees'][] = [
+                'company_id' => (string) $o->company_id,
+                'active_days' => (float) (
+                    $daysByEmp[$o->company_id] ?? 0
+                ),
+            ];
+        }
+
+        /*
+         * Attach room allowances using same priority.
+         */
+        foreach ($units as $u => &$unit) {
+
+            foreach ($unit['rooms'] as $rn => &$room) {
+
+                if (
+                    $rn !== ''
+                    && isset($roomAllowByUnit[$u][$rn])
+                ) {
+                    if ($roomAllowByUnit[$u][$rn]['active']) {
+                        $room['allowance'] =
+                            $roomAllowByUnit[$u][$rn]['allowance'];
+                    }
+
+                    continue;
+                }
+
+                if (
+                    $rn !== ''
+                    && isset($legacyRoomAllowByUnit[$u][$rn])
+                ) {
+                    $room['allowance'] =
+                        $legacyRoomAllowByUnit[$u][$rn];
+
+                    continue;
+                }
+
+                if (
+                    $rn === ''
+                    && isset($unitFallbackAllow[$u])
+                ) {
+                    $room['allowance'] =
+                        $unitFallbackAllow[$u];
+                }
+            }
+
+            unset($room);
+        }
+
+        unset($unit);
+
+        $result = [];
+
+        foreach ($units as $unitId => $unit) {
+
+            $rooms = $unit['rooms'] ?? [];
+
+            /*
+             * OCCUPIED ROOM EQUAL SPLIT
+             */
+            if ($methodCode === 'OCCUPIED_ROOM_EQUAL_SPLIT') {
+
+                $occupiedAllowances = [];
+                $attendance = 0.0;
+
+                foreach ($rooms as $room) {
+
+                    $employees = array_values(array_filter(
+                        $room['employees'] ?? [],
+                        function ($employee) {
+                            return (float) (
+                                $employee['active_days'] ?? 0
+                            ) > 0;
+                        }
+                    ));
+
+                    if (empty($employees)) {
+                        continue;
+                    }
+
+                    foreach ($employees as $employee) {
+                        $attendance +=
+                            (float) ($employee['active_days'] ?? 0);
+                    }
+
+                    /*
+                     * Keep zero when allowance missing.
+                     * Occupied room still counts in per-room consumption.
+                     */
+                    $occupiedAllowances[] =
+                        (float) ($room['allowance'] ?? 0);
+                }
+
+                $free = 0.0;
+
+                foreach ($occupiedAllowances as $allowance) {
+                    if ($allowance > 0) {
+                        $free += $allowance;
+                    }
+                }
+
+                $result[$unitId] = [
+                    'free_allowance' => $free,
+                    'unit_attendance' => $attendance,
+
+                    'occupied_room_count' =>
+                        count($occupiedAllowances),
+
+                    'occupied_room_allowances' =>
+                        $occupiedAllowances,
+                ];
+
+                continue;
+            }
+
+            /*
+             * ATTENDANCE PRORATED
+             */
+            $unitFree = 0.0;
+            $unitAttendance = 0.0;
+
+            foreach ($rooms as $room) {
+
+                $employees = $room['employees'] ?? [];
+
+                if (empty($employees)) {
+                    continue;
+                }
+
+                $allowance =
+                    (float) ($room['allowance'] ?? 0);
+
+                $persons = count($employees);
+
+                if ($persons <= 0) {
+                    continue;
+                }
+
+                foreach ($employees as $employee) {
+
+                    $days =
+                        (float) ($employee['active_days'] ?? 0);
+
+                    $unitFree +=
+                        ($allowance * ($days / $cycleDays))
+                        / $persons;
+
+                    $unitAttendance += $days;
+                }
+            }
+
+            $result[$unitId] = [
+                'free_allowance' => $unitFree,
+                'unit_attendance' => $unitAttendance,
+                'occupied_room_count' => 0,
+                'occupied_room_allowances' => [],
+            ];
+        }
+
+        return $result;
+    }
+
+    private function meterMonthlyBillable(
+        ?float $consumption,
+        string $methodCode,
+        array $context
+    ): ?float {
+
+        /*
+         * Reversed reading is not billable.
+         */
+        if ($consumption === null || $consumption < 0) {
+            return null;
+        }
+
+        if ($methodCode === 'OCCUPIED_ROOM_EQUAL_SPLIT') {
+
+            $count =
+                (int) ($context['occupied_room_count'] ?? 0);
+
+            if ($count <= 0) {
+                return null;
+            }
+
+            $perRoom = $consumption / $count;
+            $billable = 0.0;
+
+            foreach (
+                ($context['occupied_room_allowances'] ?? [])
+                as $allowance
+            ) {
+                $allowance = (float) $allowance;
+
+                if ($allowance <= 0) {
+                    continue;
+                }
+
+                $billable += max(
+                    $perRoom - $allowance,
+                    0
+                );
+            }
+
+            return round($billable, 4);
+        }
+
+        /*
+         * Normal system method.
+         */
+        if ($methodCode === 'ATTENDANCE_PRORATED') {
+
+            $attendance =
+                (float) ($context['unit_attendance'] ?? 0);
+
+            /*
+             * Normal case: attendance-based effective allowance.
+             * Fallback: if occupancy snapshot is missing, use configured
+             * unit/room allowance so meter entry page still shows billable units.
+             */
+            $allowance = $attendance > 0
+                ? (float) ($context['free_allowance'] ?? 0)
+                : (float) ($context['configured_free_allowance'] ?? 0);
+
+            return round(
+                max(
+                    $consumption - $allowance,
+                    0
+                ),
+                4
+            );
+        }
+
+        return null;
+    }
+
+    public function meterReadingsMonthlySave(Request $request)
+    {
+        $result = app(\App\Services\Billing\EmployeesMeterParityService::class)
+            ->meterReadingsMonthlySave($request->all());
+
+        $code = (int) ($result['_http'] ?? 200);
+        unset($result['_http']);
+
+        return response()->json($result, $code);
+    }
+
     // Read-only analysis data for Meter Readings page. No writes, no billing side effects.
     public function meterReadingsAnalysisData(Request $request)
     {
@@ -769,6 +1552,35 @@ class ParityUiController extends Controller
                 'closing_reading' => null,
                 'consumption' => 0,
                 'reading_status' => 'Mapping only',
+            ]);
+        }
+
+        // NODESKY_METER_OPTIONS_FASTPATH_20260922
+        // Dropdowns only need master/meta rows.
+        // Do not scan meter reading history just to populate filters.
+        if ($request->boolean('options_only')) {
+
+            usort($optionRows, function ($a, $b) {
+                foreach (['department', 'building', 'unit_id', 'room_no'] as $key) {
+                    $cmp = strnatcasecmp(
+                        (string)($a[$key] ?? ''),
+                        (string)($b[$key] ?? '')
+                    );
+
+                    if ($cmp !== 0) {
+                        return $cmp;
+                    }
+                }
+
+                return 0;
+            });
+
+            return response()->json([
+                'status' => 'ok',
+                'source' => 'master_mapping',
+                'options' => [
+                    'rows' => array_slice($optionRows, 0, 5000),
+                ],
             ]);
         }
 

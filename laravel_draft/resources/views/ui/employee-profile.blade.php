@@ -151,7 +151,11 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
         </div>
         <div class="ep-sub">
           Company ID: {{ $employee['company_id'] }}<br>
-          Residence: {{ $residence['unit_id'] ?: '—' }} &nbsp;|&nbsp; {{ $residence['residence_type'] ?: 'No active residence assigned' }}
+          <span style="font-size:14px;font-weight:700;line-height:1.5">
+            Residence: {{ $residence['unit_id'] ?: '—' }}
+            &nbsp;|&nbsp; Room: {{ $residence['room_no'] ?: '—' }}
+            &nbsp;|&nbsp; {{ $residence['residence_type'] ?: 'No active residence assigned' }}
+          </span>
         </div>
         <div style="margin-top:12px;padding:12px 14px;background:#f8f9fb;border:1px solid #e2e8f0;border-radius:10px;font-family:Inter,sans-serif">
           @if(session('status'))<div style="color:#047857;font-size:13px;font-weight:600;margin-bottom:8px">{{ session('status') }}</div>@endif
@@ -225,7 +229,11 @@ $initials = collect(preg_split('/\s+/', trim($employee['name'])))
     <div class="ep-kpi violet">
       <div class="ep-kpi-label">Current Residence</div>
       <div class="ep-kpi-value" style="font-size:25px">{{ $residence['unit_id'] ?: '—' }}</div>
-      <div class="ep-kpi-note">{{ $residence['residence_type'] ?: 'No active assignment' }}</div>
+      <div class="ep-kpi-note" style="font-size:14px;font-weight:700;line-height:1.45">
+        Room: {{ $residence['room_no'] ?: '—' }}
+        &nbsp;|&nbsp;
+        {{ $residence['residence_type'] ?: 'No active assignment' }}
+      </div>
     </div>
     <div class="ep-kpi amber">
       <div class="ep-kpi-label">Family Status</div>
@@ -992,7 +1000,10 @@ document.addEventListener('keydown', event => {
   async function fetchJson(url){
     const res = await fetch(url, {headers:{'Accept':'application/json'}});
     if(!res.ok) throw new Error('Request failed: ' + url + ' HTTP ' + res.status);
-    return await res.json();
+    const data = await res.json();
+    return Array.isArray(data)
+      ? data
+      : (Array.isArray(data.rows) ? data.rows : data);
   }
 
   function fillSimpleSelect(el, rows, emptyLabel){
@@ -1010,7 +1021,8 @@ document.addEventListener('keydown', event => {
   async function loadResidenceTypes(){
     resetBelow(1);
     try{
-      const rows = await fetchJson('/get-residence-types?_=' + Date.now());
+      const data = await fetchJson('/billing/api/v2/people-residency/residence-types?_=' + Date.now());
+      const rows = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
       fillSimpleSelect(typeEl, rows, 'Select residency type');
       setHint('Select residency type, colony, block floor, then room/house.', false);
     }catch(e){
@@ -1023,7 +1035,7 @@ document.addEventListener('keydown', event => {
     if(!typeEl.value) return;
 
     try{
-      const rows = await fetchJson('/get-colonies?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+      const rows = await fetchJson('/billing/api/v2/people-residency/colonies?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
       fillSimpleSelect(colonyEl, rows, 'Select colony');
       setHint('Now select colony type.', false);
     }catch(e){
@@ -1036,7 +1048,7 @@ document.addEventListener('keydown', event => {
     if(!typeEl.value || !colonyEl.value) return;
 
     try{
-      const rows = await fetchJson('/get-blocks/' + encodeURIComponent(colonyEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+      const rows = await fetchJson('/billing/api/v2/people-residency/blocks?colony=' + encodeURIComponent(colonyEl.value) + '&residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
       fillSimpleSelect(blockEl, rows, 'Select block floor');
       setHint('Now select block floor.', false);
     }catch(e){
@@ -1049,7 +1061,7 @@ document.addEventListener('keydown', event => {
     if(!typeEl.value || !colonyEl.value || !blockEl.value) return;
 
     try{
-      const rows = await fetchJson('/get-rooms/' + encodeURIComponent(colonyEl.value) + '/' + encodeURIComponent(blockEl.value) + '?residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
+      const rows = await fetchJson('/billing/api/v2/people-residency/rooms?colony=' + encodeURIComponent(colonyEl.value) + '&block=' + encodeURIComponent(blockEl.value) + '&residence_type=' + encodeURIComponent(typeEl.value) + '&_=' + Date.now());
 
       resetSelect(roomEl, 'Select room/house');
 
@@ -1142,5 +1154,9 @@ document.addEventListener('keydown', event => {
   overflow-y: auto !important;
 }
 </style>
+
+
+{{-- EP_PROFILE_SMART_RESIDENCE_V1 --}}
+<script src="{{ asset('js/employee-profile-smart-residence.js') }}?v={{ filemtime(public_path('js/employee-profile-smart-residence.js')) }}"></script>
 
 @endsection

@@ -308,16 +308,65 @@ class EmployeesMeterParityService
 
     public function employeeDelete(string $companyId): array
     {
-        $affected = DB::table('employees_master')->where('company_id', $companyId)->update([
-            'active' => 'No',
-            'updated_at' => now(),
-        ]);
+        return DB::transaction(function () use ($companyId) {
 
-        if ($affected === 0) {
-            return ['status' => 'error', 'error' => 'CompanyID not found', '_http' => 404];
-        }
+            $companyId = trim($companyId);
 
-        return ['status' => 'ok', 'company_id' => $companyId, 'CompanyID' => $companyId, 'policy' => 'soft-delete'];
+            $employee = DB::table('employees_master')
+                ->where('company_id', $companyId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$employee) {
+                return [
+                    'status' => 'error',
+                    'error' => 'CompanyID not found',
+                    '_http' => 404
+                ];
+            }
+
+            /*
+             * LEFT employee must never keep an ACTIVE residence.
+             * Close all open assignments and remove live occupancy.
+             */
+            DB::table('employee_residence_assignments')
+                ->where('company_id', $companyId)
+                ->where('status', 'ACTIVE')
+                ->whereNull('end_date')
+                ->update([
+                    'end_date' => now()->toDateString(),
+                    'status' => 'CLOSED',
+                    'closure_reason' => 'EMPLOYEE_LEFT',
+                    'updated_at' => now(),
+                ]);
+
+            DB::table('electric_v1_occupancy')
+                ->where('company_id', $companyId)
+                ->delete();
+
+            DB::table('employees_master')
+                ->where('company_id', $companyId)
+                ->update([
+                    'active' => 'No',
+
+                    'unit_id' => null,
+                    'colony_type' => null,
+                    'block_floor' => null,
+                    'room_no' => null,
+                    'shared_room' => null,
+                    'residence_status' => 'UNASSIGNED',
+
+                    'updated_at' => now(),
+                ]);
+
+            return [
+                'status' => 'ok',
+                'company_id' => $companyId,
+                'CompanyID' => $companyId,
+                'policy' => 'soft-delete',
+                'residence' => 'auto-unassigned',
+            ];
+        });
     }
 
     public function meterReadingLatest(string $unitId): array
@@ -397,6 +446,164 @@ class EmployeesMeterParityService
                 'meter_id' => $meterId,
                 'reading_date' => $readingDate,
                 'billing_sync' => $sync,
+            ];
+        });
+    }
+
+
+    public function meterReadingsMonthlySave(array $payload): array
+    {
+        $month = trim((string) ($payload['month'] ?? ''));
+        $rows = $payload['rows'] ?? [];
+
+        try {
+            $monthDate = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        } catch (\Throwable $e) {
+            return [
+                'status' => 'error',
+                'error' => 'Invalid month. Expected YYYY-MM.',
+                '_http' => 422,
+            ];
+        }
+
+        if (! is_array($rows)) {
+            return [
+                'status' => 'error',
+                'error' => 'Invalid rows payload.',
+                '_http' => 422,
+            ];
+        }
+
+        $cycle = DB::table('util_month_cycle')
+            ->where(function ($q) use ($monthDate) {
+                $q->where('month_cycle', $monthDate->format('m-Y'))
+                  ->orWhere('month_cycle', $monthDate->format('Y-m'));
+            })
+            ->orderByDesc('cycle_end_date')
+            ->first();
+
+        if (! $cycle) {
+            return [
+                'status' => 'error',
+                'error' => 'Billing cycle is not configured for '.$monthDate->format('F Y').'.',
+                '_http' => 422,
+            ];
+        }
+
+        $readingDate = (string) $cycle->cycle_end_date;
+
+        $prepared = [];
+        $errors = [];
+
+        foreach ($rows as $index => $row) {
+            $meterId = trim((string) ($row['meter_id'] ?? ''));
+            $value = $row['current_reading'] ?? null;
+
+            if ($meterId === '' || $value === null || $value === '') {
+                continue;
+            }
+
+            if (! is_numeric($value) || (float) $value < 0) {
+                $errors[] = [
+                    'row' => $index + 1,
+                    'meter_id' => $meterId,
+                    'error' => 'Current reading must be a valid non-negative number.',
+                ];
+                continue;
+            }
+
+            $mapping = DB::table('util_meter_unit')
+                ->where('meter_id', $meterId)
+                ->where('is_active', 1)
+                ->first();
+
+            if (! $mapping) {
+                $errors[] = [
+                    'row' => $index + 1,
+                    'meter_id' => $meterId,
+                    'error' => 'Active meter mapping not found.',
+                ];
+                continue;
+            }
+
+            $prepared[] = [
+                'meter_id' => $meterId,
+                'unit_id' => trim((string) $mapping->unit_id),
+                'reading_value' => round((float) $value, 3),
+            ];
+        }
+
+        if (! empty($errors)) {
+            return [
+                'status' => 'error',
+                'error' => 'Some rows are invalid. Nothing was saved.',
+                'errors' => $errors,
+                '_http' => 422,
+            ];
+        }
+
+        if (empty($prepared)) {
+            return [
+                'status' => 'error',
+                'error' => 'No changed readings to save.',
+                '_http' => 422,
+            ];
+        }
+
+        return DB::transaction(function () use ($prepared, $readingDate, $cycle) {
+            $inserted = 0;
+            $updated = 0;
+            $syncRows = [];
+
+            foreach ($prepared as $row) {
+                $existing = DB::table('util_meter_readings')
+                    ->where('meter_id', $row['meter_id'])
+                    ->whereDate('reading_date', $readingDate)
+                    ->first();
+
+                if ($existing) {
+                    DB::table('util_meter_readings')
+                        ->where('id', $existing->id)
+                        ->update([
+                            'unit_id' => $row['unit_id'],
+                            'reading_value' => $row['reading_value'],
+                            'updated_at' => now(),
+                        ]);
+
+                    $updated++;
+                } else {
+                    DB::table('util_meter_readings')->insert([
+                        'meter_id' => $row['meter_id'],
+                        'unit_id' => $row['unit_id'],
+                        'reading_date' => $readingDate,
+                        'reading_value' => $row['reading_value'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    $inserted++;
+                }
+
+                $syncRows[] = [
+                    'meter_id' => $row['meter_id'],
+                    'unit_id' => $row['unit_id'],
+                    'result' => $this->syncElectricV1CycleEnd(
+                        $row['unit_id'],
+                        $readingDate,
+                        $row['reading_value']
+                    ),
+                ];
+            }
+
+            return [
+                'status' => 'ok',
+                'message' => 'Monthly meter readings saved successfully.',
+                'month_cycle' => (string) $cycle->month_cycle,
+                'reading_date' => $readingDate,
+                'inserted' => $inserted,
+                'updated' => $updated,
+                'saved' => $inserted + $updated,
+                'billing_sync' => $syncRows,
             ];
         });
     }

@@ -13,7 +13,9 @@ Route::middleware(['ensure.auth', 'force.password.change', 'role:SUPER_ADMIN,BIL
         Route::get('/registry/{companyId}', [PeopleResidencyController::class, 'registryGet']);
         Route::get('/residence-types', [PeopleResidencyController::class, 'residenceTypes']);
         Route::get('/colonies', [PeopleResidencyController::class, 'colonies']);
+        Route::get('/blocks', [PeopleResidencyController::class, 'blocksQuery']);
         Route::get('/blocks/{colony}', [PeopleResidencyController::class, 'blocks']);
+        Route::get('/rooms', [PeopleResidencyController::class, 'roomsQuery']);
         Route::get('/rooms/{colony}/{block}', [PeopleResidencyController::class, 'rooms']);
     });
 

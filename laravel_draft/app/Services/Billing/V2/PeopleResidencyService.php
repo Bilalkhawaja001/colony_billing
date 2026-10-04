@@ -166,7 +166,26 @@ class PeopleResidencyService
             DB::table('employees_master')->insert($this->employeeWriteData($data, true));
         });
 
-        return ['status' => 'ok', 'engine' => 'V2', 'company_id' => $data['company_id'], 'message' => 'Employee created successfully.'];
+        // If a room was supplied at creation time, route it through the normal
+        // assign flow so assignment history and electric occupancy rows are
+        // created too. Writing employees_master alone leaves the employee out
+        // of billing entirely.
+        $residenceNote = '';
+        $roomNo = trim((string) ($data['room_no'] ?? ''));
+        $unitId = trim((string) ($data['unit_id'] ?? ''));
+        if ($roomNo !== '' && $unitId !== '' && strtoupper($unitId) !== 'OUTSIDE') {
+            $assign = $this->assignResidence($data['company_id'], [
+                'unit_id' => $unitId,
+                'room_no' => $roomNo,
+                'effective_date' => $data['join_date'] ?? now()->toDateString(),
+                'remarks' => 'Auto-assigned at employee creation',
+            ]);
+            if (($assign['status'] ?? '') !== 'ok') {
+                $residenceNote = ' Residence not assigned: '.($assign['error'] ?? 'unknown error');
+            }
+        }
+
+        return ['status' => 'ok', 'engine' => 'V2', 'company_id' => $data['company_id'], 'message' => 'Employee created successfully.'.$residenceNote];
     }
 
     public function updateEmployee(string $companyId, array $payload): array
@@ -179,7 +198,13 @@ class PeopleResidencyService
         $data = $this->normalizeEmployee($payload);
         unset($data['company_id']);
         $write = $this->employeeWriteData($data, false);
-        if ($write === []) {
+        // Residence fields are owned by the assign/shift flow only.
+        // Editing them here would desync employees_master from
+        // employee_residence_assignments and electric_v1_occupancy.
+        foreach (['unit_id','colony_type','block_floor','room_no','shared_room'] as $residenceField) {
+            unset($write[$residenceField]);
+        }
+        if ($write === ['updated_at' => $write['updated_at'] ?? null] || $write === []) {
             return $this->error('No valid employee fields supplied.', 422);
         }
 
